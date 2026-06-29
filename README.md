@@ -11,7 +11,7 @@
   <img src="images/0334-DsgkuIt.jpg" width="140" style="border-radius:8px; margin:4px;" />
 </p>
 
-**A comprehensive, ready-to-use fitness exercise dataset with 1,324 exercises — each with animation GIFs, thumbnail images, muscle group info, equipment data, and full multilingual instructions (English, Spanish, Italian, Turkish).**
+**A comprehensive, ready-to-use fitness exercise dataset with 1,324 exercises — each with animation GIFs, thumbnail images, muscle group info, equipment data, and full multilingual instructions (English, Spanish, Italian, Turkish, Russian).**
 
 [![Exercises](https://img.shields.io/badge/Exercises-1324-blue?style=flat-square)](data/exercises.json)
 [![Videos](https://img.shields.io/badge/Animation%20GIFs-1324-green?style=flat-square)](videos/)
@@ -43,7 +43,7 @@ is byte-for-byte identical to this repo's `videos/0025-EIeI8Vf.gif`. The assets 
 
 **Added in this repository** on top of the original ExerciseDB data:
 
-- 🇪🇸 Spanish, 🇮🇹 Italian, and 🇹🇷 Turkish translations of the instructions
+- 🇪🇸 Spanish, 🇮🇹 Italian, 🇹🇷 Turkish, and 🇷🇺 Russian translations of the instructions
 - the interactive browser (`index.html`) and developer setup guide (`setup.html`)
 - formatting, cleanup, and 1:1 media alignment
 
@@ -89,7 +89,7 @@ Each exercise entry contains:
 | Muscle Group | Supporting / synergist muscles |
 | Equipment | Equipment required (or `body weight` for bodyweight) |
 | Instructions | Step-by-step instructions for each exercise |
-| Available Languages | 🇬🇧 English · 🇪🇸 Spanish · 🇮🇹 Italian · 🇹🇷 Turkish |
+| Available Languages | 🇬🇧 English · 🇪🇸 Spanish · 🇮🇹 Italian · 🇹🇷 Turkish · 🇷🇺 Russian |
 | Thumbnail | Static `.jpg` preview image |
 | Animation GIF | `.gif` animation showing the movement |
 
@@ -105,7 +105,7 @@ A fully client-side exercise explorer with:
 - Live search across all 1,324 exercises
 - Filter by category, equipment, and target muscle
 - Infinite scroll grid with thumbnail previews
-- Click any card to see full details, GIF animation, and instructions in English, Spanish, Italian, or Turkish
+- Click any card to see full details, GIF animation, and instructions in English, Spanish, Italian, Turkish, or Russian
 
 ### `setup.html` — Developer Setup Guide
 
