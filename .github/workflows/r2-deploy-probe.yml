@@ -1,0 +1,24 @@
+name: R2 deploy capability probe
+on:
+  push:
+    branches:
+      - deploy/product-excellence-r2-1
+permissions:
+  contents: write
+jobs:
+  probe:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify write-back
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf 'ok\n' > .deploy-capability-ok
+          rm -f .github/workflows/r2-deploy-probe.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "chore: verify R2 deploy materialization"
+          git push origin HEAD:deploy/product-excellence-r2-1
