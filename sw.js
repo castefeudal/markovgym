@@ -1,8 +1,9 @@
-const VERSION='2026.09-r2-library-flow-fix1';
+const VERSION='2026.09-r2-library-flow-fix2';
 const PREFIX='mmg-gym-';
 const SHELL=PREFIX+'shell-'+VERSION;
 const MEDIA=PREFIX+'media-'+VERSION;
-const SHELL_URLS=['./','./index.html','./r2.payload.b64','./manifest.webmanifest'];
+const PAYLOAD_URL='./r2.payload.b64?v=20260918-library-flow-fix2';
+const SHELL_URLS=['./','./index.html',PAYLOAD_URL,'./manifest.webmanifest'];
 const MEDIA_MAX=180;
 
 self.addEventListener('install',event=>{
@@ -31,7 +32,10 @@ self.addEventListener('fetch',event=>{
   if(url.origin!==self.location.origin) return;
 
   if(request.mode==='navigate'){
-    event.respondWith(fetch(request).catch(async()=>{
+    event.respondWith(fetch(request,{cache:'no-store'}).then(async response=>{
+      if(response.ok) (await caches.open(SHELL)).put('./index.html',response.clone());
+      return response;
+    }).catch(async()=>{
       return (await caches.match('./index.html'))||(await caches.match('./legacy-base.html'));
     }));
     return;
@@ -51,7 +55,15 @@ self.addEventListener('fetch',event=>{
     return;
   }
 
-  if(url.pathname.endsWith('/r2.payload.b64')||url.pathname.endsWith('/manifest.webmanifest')||url.pathname.endsWith('/index.html')){
+  if(url.pathname.endsWith('/r2.payload.b64')){
+    event.respondWith(fetch(request,{cache:'no-store'}).then(async response=>{
+      if(response.ok) (await caches.open(SHELL)).put(request,response.clone());
+      return response;
+    }).catch(()=>caches.match(request)));
+    return;
+  }
+
+  if(url.pathname.endsWith('/manifest.webmanifest')||url.pathname.endsWith('/index.html')){
     event.respondWith(caches.match(request).then(hit=>hit||fetch(request).then(async response=>{
       if(response.ok) (await caches.open(SHELL)).put(request,response.clone());
       return response;
