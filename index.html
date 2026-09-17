@@ -27,7 +27,7 @@
     };
     try{
       if(!('DecompressionStream' in window)) return fallback();
-      const response=await fetch('./r2.payload.b64',{cache:'no-store'});
+      const response=await fetch('./r2.payload.b64?v=20260918-library-flow-fix2',{cache:'no-store'});
       if(!response.ok) throw new Error('payload '+response.status);
       const b64=(await response.text()).trim();
       if(b64.length<600000) throw new Error('payload truncated');
@@ -36,7 +36,7 @@
       const stream=new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
       const html=new TextDecoder().decode(await new Response(stream).arrayBuffer());
       if(html.length<2500000||!html.includes('MARKOV MADE GYM')) throw new Error('invalid R2 payload');
-      const libraryFlowFix='<style id="mmg-library-flow-fix">#library .filters-body{min-height:0;overflow-y:auto;overflow-x:hidden}#library .filter-group{min-width:0}#library .filter-list{max-height:none;overflow:visible;min-width:0}#library .filter-btn{grid-template-columns:18px minmax(0,1fr) minmax(2.5ch,auto);height:auto;min-width:0}#library .filter-btn span{display:block;min-width:0;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.25}#library .filter-btn b{justify-self:end;min-width:3ch;text-align:right;white-space:nowrap}</style>';
+      const libraryFlowFix='<style id="mmg-library-flow-fix-v2">.filters{min-height:0}.filters .filters-body{flex:1 1 auto;min-height:0;overflow-y:auto!important;overflow-x:hidden!important;align-content:start}.filters .filter-group{position:relative;display:block;min-width:0;overflow:visible}.filters .filter-group summary{position:static!important}.filters .filter-list{display:flex!important;flex-direction:column!important;max-height:none!important;overflow:visible!important;min-width:0}.filters .filter-btn{display:grid!important;grid-template-columns:18px minmax(0,1fr) minmax(3ch,auto)!important;align-items:center;height:auto;min-height:36px;min-width:0}.filters .filter-btn span{display:block;min-width:0;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.25}.filters .filter-btn b{justify-self:end;min-width:3ch;text-align:right;white-space:nowrap}</style>';
       const patchedHtml=html.includes('</head>')?html.replace('</head>',libraryFlowFix+'</head>'):html;
       document.open();
       document.write(patchedHtml);
@@ -46,11 +46,6 @@
       fallback();
     }
   })();
-  </script>
-  <script>
-    if('serviceWorker' in navigator){
-      addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
-    }
   </script>
 </body>
 </html>
