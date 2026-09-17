@@ -36,8 +36,10 @@
       const stream=new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
       const html=new TextDecoder().decode(await new Response(stream).arrayBuffer());
       if(html.length<2500000||!html.includes('MARKOV MADE GYM')) throw new Error('invalid R2 payload');
+      const libraryFlowFix='<style id="mmg-library-flow-fix">#library .filters-body{min-height:0;overflow-y:auto;overflow-x:hidden}#library .filter-group{min-width:0}#library .filter-list{max-height:none;overflow:visible;min-width:0}#library .filter-btn{grid-template-columns:18px minmax(0,1fr) minmax(2.5ch,auto);height:auto;min-width:0}#library .filter-btn span{display:block;min-width:0;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.25}#library .filter-btn b{justify-self:end;min-width:3ch;text-align:right;white-space:nowrap}</style>';
+      const patchedHtml=html.includes('</head>')?html.replace('</head>',libraryFlowFix+'</head>'):html;
       document.open();
-      document.write(html);
+      document.write(patchedHtml);
       document.close();
     }catch(error){
       console.error('[MMG R2 bootstrap]',error);
