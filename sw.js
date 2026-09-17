@@ -1,4 +1,4 @@
-const VERSION='2026.09-r2-bootstrap';
+const VERSION='2026.09-r2-library-flow-fix1';
 const PREFIX='mmg-gym-';
 const SHELL=PREFIX+'shell-'+VERSION;
 const MEDIA=PREFIX+'media-'+VERSION;
@@ -6,6 +6,7 @@ const SHELL_URLS=['./','./index.html','./r2.payload.b64','./manifest.webmanifest
 const MEDIA_MAX=180;
 
 self.addEventListener('install',event=>{
+  self.skipWaiting();
   event.waitUntil(caches.open(SHELL).then(cache=>cache.addAll(SHELL_URLS)));
 });
 
