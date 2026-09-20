@@ -3,6 +3,10 @@ __pycache__/
 .DS_Store
 .venv/
 *.zip
+node_modules/
+test-results/
+playwright-report/
+artifacts/
 
 # Claude Code local settings (do not publish)
 .claude/
