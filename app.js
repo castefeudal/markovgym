@@ -781,8 +781,35 @@
   }
   var MEDIA_PLACEHOLDER = 'images/exercise-placeholder.svg';
   var MEDIA_INLINE_FALLBACK = 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 420"><rect width="640" height="420" fill="#101318"/><g fill="none" stroke="#6f7782" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" opacity=".74"><circle cx="320" cy="120" r="34"/><path d="M320 154v92M268 202l52-32 52 32M286 344l34-98 34 98M250 244h140"/></g><path d="M70 360h500" stroke="#d8a431" stroke-width="4" opacity=".55"/><text x="320" y="395" text-anchor="middle" font-family="Arial,sans-serif" font-size="18" letter-spacing="4" fill="#8d949e">MARKOV MADE GYM</text></svg>');
+  var CARD_MOTION_OBSERVER = null;
   function exStill(ex) { return 'images/' + ex.slug + '.jpg'; }
   function exMotion(ex) { return 'videos/' + ex.slug + '.gif'; }
+  function setCardMotion(img, ex, active) {
+    if (!img || !ex || REDUCED_MOTION.matches) return;
+    img.dataset.still = exStill(ex);
+    img.dataset.mediaFailed = '';
+    if (active) {
+      img.dataset.motion = '1';
+      img.setAttribute('data-ex-media', '');
+      if (img.src.indexOf(exMotion(ex)) === -1) img.src = exMotion(ex);
+    } else if (img.dataset.motion === '1') {
+      img.dataset.motion = '0';
+      img.src = img.dataset.still;
+    }
+  }
+  function observeTouchMotionCards() {
+    if (FINE_POINTER.matches || REDUCED_MOTION.matches || !window.IntersectionObserver) return;
+    if (!CARD_MOTION_OBSERVER) {
+      CARD_MOTION_OBSERVER = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          var card = entry.target;
+          setCardMotion(qs('img', card), BY_ID[card.dataset.id], entry.isIntersecting);
+        });
+      }, { rootMargin: '140px 0px', threshold: 0.01 });
+    }
+    CARD_MOTION_OBSERVER.disconnect();
+    qsa('#grid .card').forEach(function (card) { CARD_MOTION_OBSERVER.observe(card); });
+  }
   function mediaFallback(img) {
     if (!img || img.dataset.mediaFailed === 'inline') return;
     if (img.dataset.mediaFailed === 'final') { img.dataset.mediaFailed='inline'; img.src=MEDIA_INLINE_FALLBACK; img.classList.add('media-fallback','media-fallback-inline'); img.removeAttribute('data-motion'); return; }
@@ -1014,6 +1041,7 @@
     qs('#search-box').setAttribute('data-filled', String(!!S.query));
     renderCoachLib(S.lastFiltered);
     renderMuscleBoard();
+    observeTouchMotionCards();
   }
 
   function filterListHtml(values, counts, labelFn, kind, selected) {
@@ -1327,6 +1355,7 @@
               '<label>' + esc(t('wReps')) + '<input type="text" inputmode="numeric" data-field="reps" value="' + esc(item.reps) + '"></label>' +
               '<label>' + esc(t('wWeight')) + '<input type="text" inputmode="decimal" data-field="weight" value="' + esc(item.weight) + '"></label>' +
             '</div>' +
+            '<button class="btn btn-quiet btn-sm workout-tools-link" type="button" data-open-gym-tools>' + (S.lang === 'en' ? 'Open load tools →' : 'Открыть калькуляторы нагрузки →') + '</button>' +
             '<div class="workout-set-summary"><span>' + esc(t('workoutSetsDone',{done:completedSetCount(item),total:item.sets})) + '</span><span class="workout-set-dots" aria-hidden="true">' + ensureSetLog(item).map(function(set){return '<i class="workout-set-dot" data-done="'+String(!!set.completed)+'"></i>';}).join('') + '</span></div>' +
             '<label class="workout-complete"><input type="checkbox" data-field="done"' + (item.done ? ' checked' : '') + '> ' + esc(t('wDone')) + '</label>' +
           '</div>' +
@@ -5053,19 +5082,14 @@
         var ex = BY_ID[card.dataset.id];
         var img = qs('img', card);
         if (!ex || !img || img.dataset.motion === '1') return;
-        img.dataset.still = exStill(ex);
-        img.dataset.motion = '1';
-        img.dataset.mediaFailed = '';
-        img.setAttribute('data-ex-media', '');
-        img.src = exMotion(ex);
+        setCardMotion(img, ex, true);
       });
       $('grid').addEventListener('pointerout', function (e) {
         var card = e.target.closest('.card');
         if (!card || card.contains(e.relatedTarget)) return;
         var img = qs('img', card);
         if (!img || img.dataset.motion !== '1') return;
-        img.dataset.motion = '0';
-        img.src = img.dataset.still;
+        setCardMotion(img, BY_ID[card.dataset.id], false);
       });
     }
 
@@ -5122,6 +5146,14 @@
     list.addEventListener('click', function (e) {
       if(e.target.closest('[data-resume-session]')){openRun();return;}
       var item = e.target.closest('.workout-item');
+      var toolsLink = e.target.closest('[data-open-gym-tools]');
+      if (toolsLink && item) {
+        var reps = qs('[data-field="reps"]', item);
+        var weight = qs('[data-field="weight"]', item);
+        try { sessionStorage.setItem('mmg.gym-prefill.v1', JSON.stringify({ weight: weight ? weight.value : '', reps: reps ? reps.value : '' })); } catch (error) { /* optional convenience only */ }
+        location.hash = 'tools';
+        return;
+      }
       var open = e.target.closest('[data-open]');
       if (open) { openExercise(open.dataset.open, open); return; }
       if (!item) return;
@@ -6063,10 +6095,10 @@
   function renderV7Settings(){if(!$('settings'))return;$('v7-settings-sub').textContent=v7c('settingsSub');$('v7-theme-title').textContent=v7c('appearance');$('v7-log-title').textContent=v7c('logging');$('v7-coach-title').textContent=v7c('coach');$('v7-data-title').textContent=v7c('data');$('v7-log-text').textContent=S.lang==='en'?'RIR/RPE stay hidden unless you explicitly enable them.':'RIR/RPE скрыты, пока вы явно их не включите.';$('v7-coach-text').textContent=S.lang==='en'?'Show contextual explanations and guidance.':'Показывать контекстные объяснения и рекомендации.';$('v7-data-text').textContent=v7c('settingsDataText');var themes=[['obsidian',S.lang==='en'?'Dark':'Тёмная'],['soft',S.lang==='en'?'Soft':'Мягкая'],['ivory',S.lang==='en'?'Light':'Светлая']];$('v7-theme-actions').innerHTML=themes.map(function(x){return'<button class="btn '+(S.theme===x[0]?'btn-primary':'btn-solid')+' btn-sm" type="button" data-v7-theme="'+x[0]+'">'+esc(x[1])+'</button>';}).join('');$('v7-logging-actions').innerHTML='<button class="v7-setting-toggle" type="button" data-v7-setting="rir" aria-pressed="'+String(!!S.settings.rir)+'"><span>'+esc(v7c('rir'))+'</span><b>'+(S.settings.rir?'ON':'OFF')+'</b></button><button class="v7-setting-toggle" type="button" data-v7-setting="rpe" aria-pressed="'+String(!!S.settings.rpe)+'"><span>'+esc(v7c('rpe'))+'</span><b>'+(S.settings.rpe?'ON':'OFF')+'</b></button>';$('v7-coach-actions').innerHTML='<button class="v7-setting-toggle" type="button" data-v7-coach aria-pressed="'+String(!!S.coachOn)+'"><span>'+esc(v7c('coachOn'))+'</span><b>'+(S.coachOn?'ON':'OFF')+'</b></button>';$('v7-data-actions').innerHTML='<button class="btn btn-solid btn-sm" type="button" data-v7-data="export">'+esc(v7c('export'))+'</button><button class="btn btn-solid btn-sm" type="button" data-v7-data="import">'+esc(v7c('import'))+'</button><button class="btn btn-quiet btn-sm btn-danger" type="button" data-v7-data="clear">'+esc(v7c('clear'))+'</button>';
   }
   function renderV7Nav(){qsa('[data-v7-nav]').forEach(function(el){el.textContent=v7c(el.dataset.v7Nav);});var moreSub={program:S.lang==='en'?'Weekly structure and the next workout':'Структура недели и следующая тренировка',nutrition:S.lang==='en'?'Calories, macros and feedback':'Калории, макросы и обратная связь',knowledge:S.lang==='en'?'Practical contextual guides':'Практические разборы по контексту',method:S.lang==='en'?'Decision framework':'Логика принятия решений',settings:S.lang==='en'?'Interface, logging and data':'Интерфейс, логирование и данные',about:S.lang==='en'?'Author and system boundaries':'Автор и границы системы'};qsa('[data-v7-more]').forEach(function(el){el.textContent=v7c(el.dataset.v7More);});qsa('[data-v7-more-sub]').forEach(function(el){el.textContent=moreSub[el.dataset.v7MoreSub]||'';});var mt=qs('[data-v7-mobile-title]');if(mt)mt.textContent=v7c('moreTitle');}
-  function v7FocusRoute(route){var el=$(route==='home'&&!v7Returning()? 'hero-title' : route==='home'?'v7-home-title': route==='more'?'v7-more-title':route==='settings'?'v7-settings-title':route+'-title');if(el){el.setAttribute('tabindex','-1');requestAnimationFrame(function(){try{el.focus({preventScroll:true});}catch(e){}var anchor=el.closest('section')||el;anchor.scrollIntoView({block:'start',behavior:'auto'});});}else window.scrollTo(0,0);}
-  function applyV7Route(focus){var route=v7RouteFromHash();document.body.dataset.v7Route=route;var ids=['home','system','start','method','muscles','library','workout','nutrition','program','progress','knowledge','about','how','faq','contact','more','settings'];ids.forEach(function(id){var el=$(id);if(el)el.hidden=true;});var hero=qs('.hero');if(hero)hero.hidden=true;var returning=v7Returning();if(route==='home'){if(returning){$('home').hidden=false;renderV7Home();}else{if(hero)hero.hidden=false;$('start').hidden=false;}}else{(V7_ROUTES[route]||[]).forEach(function(id){var el=$(id);if(el)el.hidden=false;});}if(route==='program'){if(!v7ProgramStartTracked){track('program_start',{});v7ProgramStartTracked=true;}var pf=$('plan-form');if(pf&&!pf.dataset.v7Prefilled){prefillPlan();pf.dataset.v7Prefilled='true';renderProgramWizard();}}var footer=qs('.footer');if(footer)footer.hidden=!(['more','settings','about','method','knowledge','how','faq','contact'].indexOf(route)!==-1);qsa('.v7-primary-nav>.v7-nav-link').forEach(function(a){var on=a.getAttribute('href')==='#'+route;a.toggleAttribute('aria-current',on);if(on)a.setAttribute('aria-current','page');});var nav=$('mobile-app-nav');if(nav)qsa('[data-mobile-dest]',nav).forEach(function(a){var on=a.dataset.mobileDest===route;a.classList.toggle('is-active',on);if(on)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');});syncV7Floating();renderV8Shell(route,!!focus);if(focus)v7FocusRoute(route);}
+  function v7FocusRoute(route){var el=$(route==='home'&&!v7Returning()? 'hero-title' : route==='home'?'v7-home-title': route==='more'?'v7-more-title':route==='settings'?'v7-settings-title':route==='tools'?'gym-tools-title':route+'-title');if(el){el.setAttribute('tabindex','-1');requestAnimationFrame(function(){try{el.focus({preventScroll:true});}catch(e){}var anchor=el.closest('section')||el;anchor.scrollIntoView({block:'start',behavior:'auto'});});}else window.scrollTo(0,0);}
+  function applyV7Route(focus){var route=v7RouteFromHash();document.body.dataset.v7Route=route;var ids=['home','system','start','method','muscles','library','workout','nutrition','program','progress','knowledge','about','how','faq','contact','more','settings','tools'];ids.forEach(function(id){var el=$(id);if(el)el.hidden=true;});var hero=qs('.hero');if(hero)hero.hidden=true;var returning=v7Returning();if(route==='home'){if(returning){$('home').hidden=false;renderV7Home();}else{if(hero)hero.hidden=false;$('start').hidden=false;}}else{(V7_ROUTES[route]||[]).forEach(function(id){var el=$(id);if(el)el.hidden=false;});}if(route==='program'){if(!v7ProgramStartTracked){track('program_start',{});v7ProgramStartTracked=true;}var pf=$('plan-form');if(pf&&!pf.dataset.v7Prefilled){prefillPlan();pf.dataset.v7Prefilled='true';renderProgramWizard();}}var footer=qs('.footer');if(footer)footer.hidden=!(['more','settings','about','method','knowledge','how','faq','contact'].indexOf(route)!==-1);qsa('.v7-primary-nav>.v7-nav-link').forEach(function(a){var on=a.getAttribute('href')==='#'+route;a.toggleAttribute('aria-current',on);if(on)a.setAttribute('aria-current','page');});var nav=$('mobile-app-nav');if(nav)qsa('[data-mobile-dest]',nav).forEach(function(a){var on=a.dataset.mobileDest===route;a.classList.toggle('is-active',on);if(on)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');});syncV7Floating();renderV8Shell(route,!!focus);if(focus)v7FocusRoute(route);}
   function navigateV7(route,focus){route=V7_ROUTE_IDS[route]?route:'home';if(location.hash!=='#'+route)location.hash=route;else{applyV7Route(focus!==false);}}
-  function syncV7Floating(){var route=v7RouteFromHash(),bar=$('mfb');if(bar){var show=MOBILE_MQ.matches&&route==='library';bar.setAttribute('data-open',String(show));}var sticky=$('mobile-rest-timer');if(sticky)sticky.classList.toggle('is-raised',!!(bar&&bar.getAttribute('data-open')==='true'));}
+  function syncV7Floating(){var route=v7RouteFromHash(),bar=$('mfb');if(bar){var show=MOBILE_MQ.matches&&route==='library',library=$('library'),results=library&&qs('.results-head',library);if(show&&results&&bar.parentNode!==results)results.insertBefore(bar,results.firstChild);else if(!show&&bar.parentNode!==document.body)document.body.appendChild(bar);bar.setAttribute('data-open',String(show));}var sticky=$('mobile-rest-timer');if(sticky)sticky.classList.toggle('is-raised',!!(bar&&bar.getAttribute('data-open')==='true'));}
   function startPlanDayV7(dayIndex,startRun){if(!S.plan||!S.plan.days)return;v7EnsurePlanWeek();var day=S.plan.days[dayIndex];if(!day)return;S.workout=day.items.map(function(it){return normalizeWorkoutRecord({id:it.ex.id,sets:it.sets,reps:it.reps,weight:'',done:false,setLog:[]});});S.meta.name=(S.lang==='en'?'Day ':'День ')+(dayIndex+1)+' · '+(DAY_NAMES[day.key]?(DAY_NAMES[day.key][S.lang]||DAY_NAMES[day.key].ru):day.key);S.meta.date=todayISO();S.meta.note='';S.meta.planDay=dayIndex;saveWorkout();saveMeta();renderWorkout();renderResults();track('program_day_start',{day:dayIndex+1});navigateV7('workout',true);showToast(t('planDayAdded',{n:dayIndex+1}));if(startRun)setTimeout(openRun,80);}
   function parseRepUpperV7(value){var nums=String(value||'').match(/\d+(?:[.,]\d+)?/g);if(!nums||!nums.length)return null;return Math.max.apply(null,nums.map(function(x){return Number(x.replace(',','.'));}).filter(isFinite));}
   function progressionAdviceV7(id,item){var upper=parseRepUpperV7(item&&item.reps);if(!upper)return null;var rows=[];for(var i=0;i<S.history.length&&rows.length<2;i++){var hit=(S.history[i].items||[]).filter(function(x){return x.id===id;})[0];if(!hit||!Array.isArray(hit.setLog))continue;var complete=hit.setLog.filter(function(x){return x&&x.completed;});if(!complete.length||complete.length<(Number(hit.sets)||complete.length))continue;var ok=complete.every(function(x){return Number(String(x.reps||'').replace(',','.'))>=upper&&isFinite(Number(String(x.weight||'').replace(',','.')))&&Number(String(x.weight||'').replace(',','.'))>0;});if(ok)rows.push(complete);}if(rows.length<2)return null;var latest=rows[0],base=Math.max.apply(null,latest.map(function(x){return Number(String(x.weight).replace(',','.'));}));if(!isFinite(base)||base<=0)return null;var ex=BY_ID[id],lower=ex&&['upper legs','lower legs'].indexOf(ex.zone)!==-1,compound=ex&&exKind(ex)==='compound';var inc=lower?2.5:(compound?2:1);return{weight:Math.round((base+inc)*10)/10,inc:inc};}
@@ -6183,6 +6215,12 @@
     bindObservers();
     heroPeek();
     refreshDataDependentUI();
+    if (initialRoute !== 'home') {
+      window.setTimeout(function () {
+        var target = initialRoute === 'tools' ? $('tools') : $(initialRoute);
+        if (target && !target.hidden) target.scrollIntoView({ block: 'start', behavior: 'auto' });
+      }, 0);
+    }
     window.dispatchEvent(new CustomEvent('mmg:ready', { detail: { exercises: DATA_READY ? EX.length : DATA_EXPECTED, content: !!contentLoaded, dataReady: DATA_READY } }));
 
     if (!DATA_READY) {

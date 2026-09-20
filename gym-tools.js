@@ -126,7 +126,21 @@ function calculateAll() {
   const e1rm = section.querySelector('[data-gym-form="e1rm"]');
   const plates = section.querySelector('[data-gym-form="plates"]');
   const warmup = section.querySelector('[data-gym-form="warmup"]');
+  applyPrefill(e1rm);
   showOneRepMax(e1rm); showPlates(plates); showWarmup(warmup); renderVolume();
+}
+
+function applyPrefill(form) {
+  let applied = false;
+  try {
+    const raw = sessionStorage.getItem('mmg.gym-prefill.v1');
+    if (!raw) return false;
+    const value = JSON.parse(raw);
+    if (value?.weight && form.querySelector('#gym-e1rm-weight')) { form.querySelector('#gym-e1rm-weight').value = value.weight; applied = true; }
+    if (value?.reps && form.querySelector('#gym-e1rm-reps')) { form.querySelector('#gym-e1rm-reps').value = value.reps; applied = true; }
+    sessionStorage.removeItem('mmg.gym-prefill.v1');
+  } catch { /* optional convenience only */ }
+  return applied;
 }
 
 function bindForms() {
@@ -151,10 +165,26 @@ function addNavigation() {
   }
 }
 
+function addWorkoutLink() {
+  const head = document.querySelector('#workout .section-head');
+  if (!head || head.querySelector('[data-gym-workout-link]')) return;
+  const link = document.createElement('a');
+  link.className = 'btn btn-quiet gym-workout-link';
+  link.href = '#tools';
+  link.dataset.gymWorkoutLink = 'true';
+  link.textContent = text('Калькуляторы нагрузки', 'Load calculators');
+  head.appendChild(link);
+}
+
 function syncRoute() {
   const route = (location.hash || '#home').slice(1).split('?')[0];
   if (section) section.hidden = route !== 'tools';
+  if (route === 'tools' && section) {
+    const form = section.querySelector('[data-gym-form="e1rm"]');
+    if (form && applyPrefill(form)) showOneRepMax(form);
+  }
   addNavigation();
+  addWorkoutLink();
 }
 
 function init() {
@@ -170,6 +200,7 @@ function init() {
   const observer = new MutationObserver(() => {
     if (lastLanguage !== document.documentElement.lang) { lastLanguage = document.documentElement.lang; renderShell(); }
     addNavigation();
+    addWorkoutLink();
   });
   observer.observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] });
   observer.observe(document.body, { childList: true, subtree: true });

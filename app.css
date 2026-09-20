@@ -1912,7 +1912,7 @@ html[data-theme="obsidian"]{
   --v8-signal-soft:rgba(215,170,71,.10);
   --v8-text:#f2f0ea;
   --v8-text-2:#a9afb7;
-  --v8-text-3:#777f89;
+  --v8-text-3:#9aa1aa;
   --color-bg-primary:var(--v8-canvas);
   --color-bg-secondary:var(--v8-workspace);
   --color-surface-primary:var(--v8-surface);
@@ -1943,7 +1943,7 @@ html[data-theme="soft"]{
   --v8-signal-soft:rgba(118,87,23,.09);
   --v8-text:#2c2924;
   --v8-text-2:#625d54;
-  --v8-text-3:#756e63;
+  --v8-text-3:#625d54;
   --color-bg-primary:var(--v8-canvas);
   --color-bg-secondary:var(--v8-workspace);
   --color-surface-primary:var(--v8-surface);
@@ -1974,7 +1974,7 @@ html[data-theme="ivory"]{
   --v8-signal-soft:rgba(123,90,19,.075);
   --v8-text:#17191c;
   --v8-text-2:#555b63;
-  --v8-text-3:#727881;
+  --v8-text-3:#5f666e;
   --color-bg-primary:var(--v8-canvas);
   --color-bg-secondary:var(--v8-workspace);
   --color-surface-primary:var(--v8-surface);
@@ -2495,7 +2495,7 @@ body{min-width:0;overflow-x:hidden}
 img,svg,video{max-width:100%}
 .gym-tools-shell{padding-bottom:var(--section-y)}
 .gym-tools-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--space-5);align-items:start}
-.gym-tool-card{min-width:0;padding:var(--space-6)}
+.gym-tool-card{display:flex;flex-direction:column;grid-template-columns:none;min-width:0;min-height:0;padding:var(--space-6);border:1px solid var(--v8-line);border-radius:var(--v8-radius-md);background:var(--v8-surface);color:var(--v8-text)}
 .gym-tool-card h2{margin:.2rem 0 0;font-size:var(--step-2)}
 .gym-tool-card .card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:var(--space-4);margin-bottom:var(--space-3)}
 .gym-tool-card .tool-mark{font-family:var(--font-display);font-size:.7rem;color:var(--color-accent);letter-spacing:.1em}
@@ -2517,6 +2517,20 @@ img,svg,video{max-width:100%}
 .gym-volume-kpis span{color:var(--color-text-muted);font-size:.72rem}.gym-volume-kpis b{font-variant-numeric:tabular-nums}
 .gym-tool-volume .btn{margin-top:var(--space-4)}
 .gym-tool-card .form-error{margin:0;color:var(--color-danger)}
+.tiny{font-size:.76rem;line-height:1.55;color:var(--v8-text-2)}
+.small{font-size:.86rem;color:var(--v8-text-2)}
+.v8-context-meta,.v8-context-side{color:var(--v8-text-2)}
+.card-meta .meta-tag{font-size:.68rem;color:var(--v8-text-2)}
+.card-actions{opacity:.94}
+.workout-tools-link{justify-content:flex-start;min-height:34px;padding:5px 0;font-size:.68rem;color:var(--v8-text-2)}
+body[data-v7-route="tools"] #tools{padding-top:clamp(28px,3vw,46px)}
+body[data-v7-route="library"] #library{scroll-margin-bottom:calc(var(--bottom-nav-h) + var(--context-bar-h) + 100px)}
 @media(max-width:900px){.gym-tools-grid{grid-template-columns:1fr}.gym-tool-card{padding:var(--space-5)}}
 @media(max-width:520px){.gym-tool-form{grid-template-columns:1fr}.plate-options{grid-template-columns:repeat(2,minmax(0,1fr))}.gym-percent-table{grid-template-columns:repeat(2,minmax(0,1fr))}.gym-warmup-list small{text-align:left}.gym-volume-kpis{grid-template-columns:1fr}}
+@media(max-width:840px){
+  body[data-v7-route="library"] #library{padding-bottom:calc(var(--section-y) + var(--context-bar-h) + var(--bottom-nav-h) + var(--safe-bottom) + 24px)}
+  body[data-v7-route="library"] .mobile-filter-bar{position:static;top:auto;bottom:auto;left:auto;right:auto;z-index:auto;margin:0 0 14px;border:1px solid var(--v8-line-strong);border-radius:10px;transform:none;background:var(--v8-overlay);box-shadow:var(--v8-shadow-surface)}
+  body[data-v8-returning="false"]{padding-bottom:calc(var(--context-bar-h) + var(--safe-bottom) + 18px)}
+  body[data-v8-returning="false"]:not([data-v7-route="library"]) .mobile-filter-bar{bottom:calc(10px + var(--safe-bottom))}
+}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}}
