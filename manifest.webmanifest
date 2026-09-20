@@ -1,8 +1,8 @@
 {
-  "id": "https://markovmade.com/gym/",
+  "id": "./",
   "name": "MARKOV MADE GYM",
   "short_name": "MMG",
-  "description": "Локальный тренировочный журнал и библиотека упражнений MARKOV MADE GYM.",
+  "description": "Локальный тренировочный журнал, библиотека упражнений и инструменты зала MARKOV MADE GYM.",
   "start_url": "./#home",
   "scope": "./",
   "display": "standalone",
@@ -11,5 +11,13 @@
   "theme_color": "#0b0b0b",
   "lang": "ru",
   "orientation": "any",
-  "categories": ["fitness", "health", "lifestyle"]
+  "icons": [
+    { "src": "./images/gym-mark.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ],
+  "categories": ["fitness", "health", "lifestyle"],
+  "shortcuts": [
+    { "name": "Библиотека", "short_name": "Библиотека", "url": "./#library" },
+    { "name": "Тренировка", "short_name": "Тренировка", "url": "./#workout" },
+    { "name": "Инструменты зала", "short_name": "Инструменты", "url": "./#tools" }
+  ]
 }
