@@ -12,6 +12,14 @@ test('canonical shell does not use payload bootstrap or document.write', async (
   assert.match(index, /gym-tools\.js/);
 });
 
+test('bootstrap subscribes before the app can emit ready', async () => {
+  const index = await read('index.html');
+  const bootstrap = index.indexOf('src="./bootstrap.js"');
+  const app = index.indexOf('src="./app.js"');
+  assert.ok(bootstrap >= 0 && app >= 0, 'bootstrap.js and app.js must be present');
+  assert.ok(bootstrap < app, 'bootstrap.js must load before app.js so mmg:ready cannot be missed');
+});
+
 test('exercise dataset keeps all 1324 compact records', async () => {
   const dataset = JSON.parse(await read('data/exercises-compact.json'));
   assert.equal(dataset.x.length, 1324);
