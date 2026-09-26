@@ -54,6 +54,34 @@ test('stale markovgym service workers are reset once and shell assets are networ
   assert.match(sw, /fetch\(request, \{ cache: 'no-store' \}\)/);
 });
 
+test('exercise detail view keeps full-frame media and structured guidance', async () => {
+  const index = await read('index.html');
+  const body = await read('app-body.html');
+  const app = await read('app.js');
+  const css = await read('app.css');
+  for (const html of [index, body]) {
+    assert.match(html, /id="modal-media-expand"/);
+    assert.match(html, /id="modal-tabs"/);
+    assert.match(html, /id="modal-cues"/);
+    assert.match(html, /id="modal-errors"/);
+    assert.match(html, /class="modal-visual"/);
+  }
+  assert.match(app, /function exerciseTechniqueModel\(ex\)/);
+  assert.match(app, /C && C\.card && C\.card\.enhanced/);
+  assert.match(app, /function defaultBreathingCue\(ex\)/);
+  assert.match(app, /function toggleModalMedia\(\)/);
+  assert.match(app, /class="run-tech-cues"/);
+  assert.match(css, /#modal \.modal-media img\{[\s\S]*?object-fit:contain/);
+  assert.match(css, /#run \.run-media-frame \.run-media\{[\s\S]*?object-fit:contain/);
+  assert.match(css, /\.card-media img\{[\s\S]*?object-fit:contain/);
+});
+
+test('detail assets use a cache-busting revision', async () => {
+  const index = await read('index.html');
+  assert.match(index, /app\.css\?v=20260927-detail1/);
+  assert.match(index, /app\.js\?v=20260927-detail1/);
+});
+
 test('exercise dataset keeps all 1324 compact records', async () => {
   const dataset = JSON.parse(await read('data/exercises-compact.json'));
   assert.equal(dataset.x.length, 1324);
