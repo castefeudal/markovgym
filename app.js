@@ -1632,9 +1632,13 @@
     }
 
     if (!rows.length) {
-      list.innerHTML = '<div class="empty"><b>' + esc(t('workoutEmptyTitle')) + '</b><p>' +
-        esc(t('workoutEmptyText')) + '</p><a class="btn btn-primary btn-sm" href="#library">' +
-        esc(t('workoutOpenLibrary')) + ' →</a></div>';
+      var nextPlanDay = v7NextPlanDay();
+      var planAction = S.plan && nextPlanDay >= 0
+        ? '<button class="btn btn-primary btn-sm" type="button" data-v7-action="planDay" data-v7-day="' + nextPlanDay + '">' + esc(S.lang === 'en' ? 'Load next programme session' : 'Загрузить следующую тренировку программы') + '</button>'
+        : '';
+      list.innerHTML = '<div class="empty v10-workout-empty"><b>' + esc(t('workoutEmptyTitle')) + '</b><p>' +
+        esc(S.plan && nextPlanDay >= 0 ? (S.lang === 'en' ? 'Your programme already has the next session ready. Load it or build a session manually from the library.' : 'В программе уже готова следующая тренировка. Загрузи её одним действием или собери сессию вручную из библиотеки.') : t('workoutEmptyText')) + '</p><div class="v10-empty-actions">' + planAction + '<a class="btn btn-solid btn-sm" href="#library">' +
+        esc(t('workoutOpenLibrary')) + ' →</a></div></div>';
     } else {
       list.innerHTML = rows.map(function (r, i) {
         var ex = r.ex, item = r.item;
@@ -1917,6 +1921,11 @@
 
   function renderPlanPlaceholder() {
     var out = $('plan-out');
+    if (!out) return;
+    if (S.plan && Array.isArray(S.plan.days) && S.plan.days.length) {
+      renderStoredPlanV10();
+      return;
+    }
     if (out.getAttribute('data-filled') === 'true') return;
     out.innerHTML = '<div class="empty v8-empty-flat">' +
       '<b>' + esc(t('planEmptyTitle')) + '</b><p>' + esc(t('planEmptyText')) + '</p></div>';
@@ -1941,6 +1950,12 @@
     var perSession = clamp(Math.round(time / 12), 3, 8);
     if (level === 'beginner') perSession = clamp(perSession - 1, 3, 6);
     if (days >= 5) perSession = clamp(perSession - 1, 3, 7);
+    var recovery = $('p-recovery') ? $('p-recovery').value : 'mid';
+    if (recovery === 'low') {
+      setsLo = Math.max(2, setsLo - 1);
+      setsHi = Math.max(2, setsHi - 1);
+      perSession = Math.max(3, perSession - 1);
+    }
 
     var split = splitFor(days, level, goal).slice(0, days);
     var used = Object.create(null);
@@ -1994,19 +2009,19 @@
       return { key: key, index: dayIndex, items: items };
     });
 
-    lastPlan = { week: week, goal: goal, level: level, days: days, time: time, place: place, focus: focus };
+    lastPlan = { week: week, goal: goal, level: level, days: days, time: time, place: place, focus: focus, ctx: {goal:goal,level:level,days:days,time:time,place:place,focus:focus,style:$('p-style')?$('p-style').value:'balanced',recovery:recovery,cardio:$('p-cardio')?$('p-cardio').value:'light',steps:$('p-steps')?$('p-steps').value:'mid'} };
 
     var goalLabel = $('p-goal').selectedOptions[0].textContent;
     var placeLabel = $('p-place').selectedOptions[0].textContent;
     var levelLabel = $('p-level').selectedOptions[0].textContent;
 
-    var weekHtml = week.map(function (day) {
+    var weekHtml = week.map(function (day, dayIndex) {
       var name = DAY_NAMES[day.key][S.lang] || DAY_NAMES[day.key].ru;
-      return '<div class="plan-day">' +
+      return '<div class="plan-day" data-plan-day="' + dayIndex + '">' +
         '<div class="plan-day-head"><b>' + esc(t('planDay', { n: day.index + 1 })) + ' · ' + esc(name) + '</b>' +
         '<span>' + esc(t('planRest')) + ' ' + day.items[0].rest + ' ' + esc(t('planSec')) + '</span></div>' +
-        day.items.map(function (it) {
-          return '<div class="plan-ex">' +
+        day.items.map(function (it, itemIndex) {
+          return '<div class="plan-ex" data-plan-day="' + dayIndex + '" data-plan-item="' + itemIndex + '">' +
             '<button class="plan-ex-name" type="button" data-open="' + esc(it.ex.id) + '">' + esc(exName(it.ex)) + '</button>' +
             '<span class="meta-tag">' + esc(labelEq(it.ex.equip)) + '</span>' +
             '<span class="plan-ex-dose">' + it.sets + ' × ' + esc(it.reps) + '</span>' +
@@ -2022,7 +2037,7 @@
         '<p class="small v8-mt-2">' + esc(t('planWeekly', { days: days, time: time, ex: perSession })) + '</p>' +
       '</div>' +
       '<div class="plan-week">' + weekHtml + '</div>' +
-      '<div class="note"><b>' + esc(t('planCardio')) + '.</b> ' + esc(CARDIO_TEXT[goal][S.lang] || CARDIO_TEXT[goal].ru) + '</div>' +
+      '<div class="note"><b>' + esc(t('planCardio')) + '.</b> ' + esc(planCardioTextV10({goal:goal,cardio:$('p-cardio')?$('p-cardio').value:'light',steps:$('p-steps')?$('p-steps').value:'mid'})) + '</div>' +
       '<div class="note"><b>' + esc(t('planProgress')) + '.</b> ' + esc(PROGRESS_TEXT[level][S.lang] || PROGRESS_TEXT[level].ru) + '</div>' +
       '<div class="note note-warn">' + esc(S.lang === 'en' ? (EN['plan.disclaimer'] || '') : (RU_DOM['plan.disclaimer'] || '')) + '</div>' +
       '<div class="plan-actions">' +
@@ -2043,7 +2058,11 @@
     });
 
     decoratePlan(week, {
-      days: days, time: time, goal: goal, level: level, place: place,
+      days: days, time: time, goal: goal, level: level, place: place, focus: focus,
+      style: $('p-style') ? $('p-style').value : 'balanced',
+      recovery: $('p-recovery') ? $('p-recovery').value : 'mid',
+      cardio: $('p-cardio') ? $('p-cardio').value : 'light',
+      steps: $('p-steps') ? $('p-steps').value : 'mid',
       goalLabel: goalLabel, levelLabel: levelLabel, placeLabel: placeLabel
     });
   }
@@ -2061,7 +2080,7 @@
       });
       lines.push('');
     });
-    lines.push(t('planCardio') + ': ' + (CARDIO_TEXT[lastPlan.goal][S.lang] || CARDIO_TEXT[lastPlan.goal].ru));
+    lines.push(t('planCardio') + ': ' + planCardioTextV10(lastPlan.ctx || { goal:lastPlan.goal, cardio:'light', steps:'mid' }));
     lines.push(t('planProgress') + ': ' + (PROGRESS_TEXT[lastPlan.level][S.lang] || PROGRESS_TEXT[lastPlan.level].ru));
     lines.push('', 'markovmade.com/gym');
     return lines.join('\n');
@@ -2309,6 +2328,11 @@
   function saveDiary() { store.set(K.diary, JSON.stringify(S.diary.slice(0, 400))); }
   function saveTips() { store.set(K.tips, JSON.stringify(S.tips)); }
   function saveSettings() { store.set(K.settings, JSON.stringify(S.settings)); }
+  function applyReadability() {
+    var mode = S.settings && ['balanced','comfortable','large'].indexOf(S.settings.reading) !== -1 ? S.settings.reading : 'balanced';
+    if (S.settings) S.settings.reading = mode;
+    document.documentElement.setAttribute('data-reading', mode);
+  }
   function serialisePlanV7(plan){
     if(!plan||!Array.isArray(plan.days))return null;
     return {v:2,createdAt:Number(plan.createdAt)||Date.now(),weekKey:String(plan.weekKey||v7CurrentWeekKey()),completedDays:Array.isArray(plan.completedDays)?plan.completedDays.map(Number).filter(function(n){return n>=0&&n<12;}):[],ctx:plan.ctx||{},days:plan.days.map(function(day,i){return {key:String(day.key||''),index:Number(day.index)>=0?Number(day.index):i,items:(day.items||[]).map(function(it){var ex=it&&it.ex;return {id:String(ex&&ex.id||it&&it.id||''),sets:Number(it&&it.sets)||3,reps:String(it&&it.reps||'10–12').slice(0,24),rest:Number(it&&it.rest)||90};}).filter(function(it){return !!BY_ID[it.id];})};})};
@@ -2341,7 +2365,7 @@
   S.recentSearches = [];
   S.recentExercises = [];
   S.runSession = null;
-  S.settings = { rir:false, rpe:false };
+  S.settings = { rir:false, rpe:false, reading:'balanced' };
 
   function migrateEco() {
     var p = store.json(K.profile, null);
@@ -2390,7 +2414,8 @@
     S.plan = restorePlanV7(store.json(K.plan,null));
     if(S.plan) savePlanV7();
     var settings=store.json(K.settings,null);
-    S.settings=(settings&&typeof settings==='object')?{rir:!!settings.rir,rpe:!!settings.rpe}:{rir:false,rpe:false};
+    S.settings=(settings&&typeof settings==='object')?{rir:!!settings.rir,rpe:!!settings.rpe,reading:['balanced','comfortable','large'].indexOf(settings.reading)!==-1?settings.reading:'balanced'}:{rir:false,rpe:false,reading:'balanced'};
+    applyReadability();
   }
 
   /* ---------- 15.5 ОБЩИЕ ПРИМИТИВЫ РЕНДЕРА ------------------------------- */
@@ -2900,7 +2925,7 @@
     var level = S.console.level || S.profile.level;
     var place = S.console.place || S.profile.place;
     if (goal && map[goal]) $('p-goal').value = map[goal];
-    if (level) $('p-level').value = level;
+    if (level) $('p-level').value = level === 'medium' ? 'middle' : level;
     if (place) $('p-place').value = place;
     if (S.console.time) $('p-time').value=String(S.console.time);
     else if(S.profile.typicalSessionMinutes) $('p-time').value=String(S.profile.typicalSessionMinutes);
@@ -4157,7 +4182,7 @@
   }
 
   /* ---------- 16.11 УПРАВЛЕНИЕ ДАННЫМИ ----------------------------------- */
-  var DATA_KEYS = ['fav', 'workout', 'lang', 'theme', 'density', 'profile', 'meta', 'history', 'diary', 'kbju', 'tips', 'coach', 'rest'];
+  var DATA_KEYS = ['fav', 'workout', 'lang', 'theme', 'density', 'profile', 'meta', 'history', 'diary', 'kbju', 'tips', 'coach', 'rest', 'plan', 'settings', 'recentSearch', 'recentExercises'];
 
   function exportAll() {
     var payload = { v: 3, kind: 'mmg-backup', at: new Date().toISOString(), data: {} };
@@ -6224,7 +6249,7 @@
     }
     if(name==='kbju')return(value&&typeof value==='object'&&!Array.isArray(value))?JSON.stringify(value):null;
     if(name==='plan'){var restored=restorePlanV7(value);return restored?JSON.stringify(serialisePlanV7(restored)):JSON.stringify(null);}
-    if(name==='settings')return(value&&typeof value==='object'&&!Array.isArray(value))?JSON.stringify({rir:!!value.rir,rpe:!!value.rpe}):null;
+    if(name==='settings')return(value&&typeof value==='object'&&!Array.isArray(value))?JSON.stringify({rir:!!value.rir,rpe:!!value.rpe,reading:['balanced','comfortable','large'].indexOf(value.reading)!==-1?value.reading:'balanced'}):null;
     return null;
   }
   exportAll = function(){
