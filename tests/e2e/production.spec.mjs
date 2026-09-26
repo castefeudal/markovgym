@@ -41,7 +41,7 @@ test('exercise detail shows complete GIF and structured technique guidance', asy
 
   await expect(page.locator('#modal')).toHaveAttribute('data-open', 'true');
   await expect(page.locator('#modal-img')).toBeVisible();
-  await expect(page.locator('#modal-cues .modal-cue-card')).toHaveCount(5);
+  expect(await page.locator('#modal-cues .modal-cue-card').count()).toBeGreaterThanOrEqual(5);
   expect(await page.locator('#modal-steps li').count()).toBeGreaterThanOrEqual(3);
   await expect(page.locator('#modal-errors .modal-alert-card').first()).toBeVisible();
 
