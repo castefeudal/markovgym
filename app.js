@@ -5160,6 +5160,12 @@
     qsa('#theme-switch-m [data-theme]').forEach(function (b) {
       b.setAttribute('aria-pressed', String(b.dataset.theme === S.theme));
     });
+    qsa('[data-v7-theme]').forEach(function (b) {
+      var active = b.dataset.v7Theme === S.theme;
+      b.setAttribute('aria-pressed', String(active));
+      var mark = qs('.theme-choice-check', b);
+      if (mark) mark.textContent = active ? '✓' : '';
+    });
     var colors = { obsidian: '#070A0E', soft: '#EAF0F6', ivory: '#F6F5F1' };
     var labels = {
       obsidian: { ru: 'Тёмная', en: 'Dark' },
