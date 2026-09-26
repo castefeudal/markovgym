@@ -5045,29 +5045,27 @@
       }
     });
 
-    // Анимация только по наведению и только на устройствах с мышью
-    if (FINE_POINTER.matches) {
-      $('grid').addEventListener('pointerover', function (e) {
-        var card = e.target.closest('.card');
-        if (!card || card.contains(e.relatedTarget)) return;
-        var ex = BY_ID[card.dataset.id];
-        var img = qs('img', card);
-        if (!ex || !img || img.dataset.motion === '1') return;
-        img.dataset.still = exStill(ex);
-        img.dataset.motion = '1';
-        img.dataset.mediaFailed = '';
-        img.setAttribute('data-ex-media', '');
-        img.src = exMotion(ex);
-      });
-      $('grid').addEventListener('pointerout', function (e) {
-        var card = e.target.closest('.card');
-        if (!card || card.contains(e.relatedTarget)) return;
-        var img = qs('img', card);
-        if (!img || img.dataset.motion !== '1') return;
-        img.dataset.motion = '0';
-        img.src = img.dataset.still;
-      });
-    }
+    // GIF-превью работают на мыши, стилусе и гибридных/сенсорных устройствах.
+    $('grid').addEventListener('pointerover', function (e) {
+      var card = e.target.closest('.card');
+      if (!card || card.contains(e.relatedTarget)) return;
+      var ex = BY_ID[card.dataset.id];
+      var img = qs('img', card);
+      if (!ex || !img || img.dataset.motion === '1') return;
+      img.dataset.still = exStill(ex);
+      img.dataset.motion = '1';
+      img.dataset.mediaFailed = '';
+      img.setAttribute('data-ex-media', '');
+      img.src = exMotion(ex);
+    });
+    $('grid').addEventListener('pointerout', function (e) {
+      var card = e.target.closest('.card');
+      if (!card || card.contains(e.relatedTarget)) return;
+      var img = qs('img', card);
+      if (!img || img.dataset.motion !== '1') return;
+      img.dataset.motion = '0';
+      img.src = img.dataset.still;
+    });
 
     // Мобильная панель фильтров
     var openFilters = function () {
