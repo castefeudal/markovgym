@@ -1,4 +1,4 @@
-const VERSION = '2026.09-r3-media1';
+const VERSION = '2026.09-r3-media2';
 const PREFIX = 'mmg-gym-';
 const SHELL = `${PREFIX}shell-${VERSION}`;
 const MEDIA = `${PREFIX}media-${VERSION}`;
@@ -59,7 +59,13 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  if (/\/(images|videos)\//.test(url.pathname)) {
+  if (/\/videos\//.test(url.pathname)) {
+    // Exercise GIFs are intentionally not intercepted. Let the browser fetch
+    // them directly so animation/range responses cannot be altered by Cache API.
+    return;
+  }
+
+  if (/\/images\//.test(url.pathname)) {
     event.respondWith((async () => {
       const cache = await caches.open(MEDIA);
       const hit = await cache.match(request);
