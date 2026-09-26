@@ -932,6 +932,8 @@
     var fav = isFav(ex.id);
     var added = inWorkout(ex.id);
     var name = exName(ex);
+    var kind = detailKindLabel(ex);
+    var level = detailLevelLabel(ex);
     var meta = ex.secondary.slice(0, 2).map(function (m) {
       return '<span class="meta-tag">+ ' + esc(labelMu(m)) + '</span>';
     }).join('');
@@ -946,6 +948,7 @@
       '<div class="card-body">' +
         '<p class="card-target">' + esc(labelMu(ex.target)) + '</p>' +
         '<h3 class="card-title">' + esc(name) + '</h3>' +
+        '<div class="card-specs"><span>' + esc(kind) + '</span><span>' + esc(level) + '</span></div>' +
         '<div class="card-meta"><span class="meta-tag">' + premiumIcon('equipment') + esc(labelEq(ex.equip)) + '</span>' + meta + '</div>' +
         '<div class="card-actions">' +
           '<button class="btn btn-solid btn-sm" type="button" data-open="' + esc(ex.id) + '">' + esc(t('openTechnique')) + '</button>' +
@@ -974,6 +977,32 @@
     }).join('');
   }
 
+  function renderResultsInsights(items) {
+    var host = $('results-insights');
+    if (!host) return;
+    if (!items || !items.length) {
+      host.hidden = true;
+      host.innerHTML = '';
+      return;
+    }
+    var compounds = items.filter(function (ex) { return exKind(ex) === 'compound'; }).length;
+    var home = items.filter(isHomeFriendly).length;
+    var equipment = {};
+    var zones = {};
+    items.forEach(function (ex) { equipment[ex.equip] = 1; zones[ex.zone] = 1; });
+    var pct = function (n) { return Math.round((n / items.length) * 100); };
+    var labels = S.lang === 'en'
+      ? { compound: 'Compound', home: 'Home-ready', equipment: 'Equipment', zones: 'Body areas', aria: 'Current selection profile' }
+      : { compound: 'Составные', home: 'Для дома', equipment: 'Оборудование', zones: 'Зоны тела', aria: 'Профиль текущей подборки' };
+    host.hidden = false;
+    host.setAttribute('aria-label', labels.aria);
+    host.innerHTML =
+      '<span><b>' + pct(compounds) + '%</b><em>' + esc(labels.compound) + '</em></span>' +
+      '<span><b>' + pct(home) + '%</b><em>' + esc(labels.home) + '</em></span>' +
+      '<span><b>' + Object.keys(equipment).length + '</b><em>' + esc(labels.equipment) + '</em></span>' +
+      '<span><b>' + Object.keys(zones).length + '</b><em>' + esc(labels.zones) + '</em></span>';
+  }
+
   function renderResults() {
     var items = getFiltered();
     S.lastFiltered = items;
@@ -997,6 +1026,7 @@
       found: items.length, total: EX.length, shown: visible.length
     });
     $('active-chips').innerHTML = activeChipsHtml();
+    renderResultsInsights(items);
 
     var more = items.length > visible.length;
     $('load-more').hidden = !more;
@@ -5122,6 +5152,7 @@
     var themes = ['obsidian', 'soft', 'ivory'];
     if (themes.indexOf(S.theme) === -1) S.theme = 'obsidian';
     document.documentElement.setAttribute('data-theme', S.theme);
+    document.documentElement.style.colorScheme = S.theme === 'obsidian' ? 'dark' : 'light';
     store.set(K.theme, S.theme);
     var dark = S.theme === 'obsidian';
     qs('#theme-toggle .ico-dark').hidden = !dark;
@@ -5129,7 +5160,7 @@
     qsa('#theme-switch-m [data-theme]').forEach(function (b) {
       b.setAttribute('aria-pressed', String(b.dataset.theme === S.theme));
     });
-    var colors = { obsidian: '#08090B', soft: '#E8E1D5', ivory: '#F6F4F0' };
+    var colors = { obsidian: '#070A0E', soft: '#EAF0F6', ivory: '#F6F5F1' };
     var labels = {
       obsidian: { ru: 'Тёмная', en: 'Dark' },
       soft: { ru: 'Мягкая', en: 'Soft' },
@@ -5139,6 +5170,7 @@
     if (meta) meta.setAttribute('content', colors[S.theme]);
     var next = themes[(themes.indexOf(S.theme) + 1) % themes.length];
     $('theme-toggle').setAttribute('aria-label', (S.lang === 'en' ? 'Switch to ' : 'Переключить на тему: ') + labels[next][S.lang]);
+    $('theme-toggle').setAttribute('data-current-theme', S.theme);
     $('theme-toggle').title = labels[S.theme][S.lang];
   }
 
