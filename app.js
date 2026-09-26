@@ -6487,9 +6487,48 @@
   function v7DateLabel(){try{return new Intl.DateTimeFormat(S.lang==='en'?'en-GB':'ru-RU',{weekday:'long',day:'numeric',month:'long'}).format(new Date());}catch(e){return todayISO();}}
   function v7PlanSummary(){if(!S.plan||!S.plan.days)return{v:'—',s:v7c('noPlan')};var done=(S.plan.completedDays||[]).length;return{v:done+' / '+S.plan.days.length,s:(S.lang==='en'?'sessions ':'тренировок ')+v7c('completed')};}
   function v7TrendSummary(){if(S.diary.length<2)return{v:'—',s:v7c('noTrend')};var d=diaryDelta('weight',14);if(d===null)return{v:'—',s:v7c('noTrend')};return{v:(d>0?'+':'')+d.toFixed(1)+' '+t('kg'),s:S.lang==='en'?'14-day weight change':'изменение веса за 14 дней'};}
+  function v10WeekStartTime(){var d=new Date(),day=(d.getDay()+6)%7;d.setHours(0,0,0,0);d.setDate(d.getDate()-day);return d.getTime();}
+  function v10RecoverySummary(){
+    var d=S.diary&&S.diary[0];
+    if(!d)return{label:S.lang==='en'?'No check-in':'Нет check-in',state:'none',detail:S.lang==='en'?'Add recovery data':'Добавь данные восстановления'};
+    var score=typeof d.recovery==='number'?d.recovery:null;
+    if(score===null&&typeof d.sleep==='number'){score=d.sleep>=7.5&&Number(d.fatigue||2)<=2?3:(d.sleep<6||Number(d.fatigue||2)>=4?1:2);}
+    if(score===3)return{label:S.lang==='en'?'Good':'Хорошее',state:'ok',detail:S.lang==='en'?'Recovery supports normal training':'Можно тренироваться в обычном режиме'};
+    if(score===1)return{label:S.lang==='en'?'Low':'Низкое',state:'watch',detail:S.lang==='en'?'Keep the session controlled':'Сделай нагрузку управляемой'};
+    return{label:S.lang==='en'?'Normal':'Нормальное',state:'neutral',detail:S.lang==='en'?'No clear recovery warning':'Явных сигналов перегруза нет'};
+  }
+  function renderV10HomePulse(){
+    var host=$('v10-home-pulse');if(!host)return;
+    var wk=v10WeekStartTime();
+    var weekHistory=S.history.filter(function(h){var ts=h&&h.date?Date.parse(h.date+'T12:00:00'):0;return ts>=wk;});
+    var weekSets=weekHistory.reduce(function(sum,h){return sum+totalCompletedHistorySets(h);},0);
+    var recovery=v10RecoverySummary();
+    var trend=v7TrendSummary();
+    var completed=S.plan&&Array.isArray(S.plan.completedDays)?S.plan.completedDays.length:0;
+    var total=S.plan&&Array.isArray(S.plan.days)?S.plan.days.length:0;
+    var next=v7NextPlanDay();
+    var timeline='';
+    if(total){
+      timeline='<div class="v10-week-timeline" aria-label="'+esc(S.lang==='en'?'Programme week':'Неделя программы')+'">'+S.plan.days.map(function(day,i){
+        var done=S.plan.completedDays&&S.plan.completedDays.indexOf(i)!==-1,current=i===next;
+        var label=(S.lang==='en'?'Day ':'День ')+(i+1);
+        return '<button type="button" data-v7-action="planDay" data-v7-day="'+i+'" data-state="'+(done?'done':current?'current':'planned')+'" title="'+esc(label)+'"><i>'+(done?'✓':String(i+1))+'</i><span>'+esc(done?(S.lang==='en'?'Done':'Готово'):(current?(S.lang==='en'?'Next':'Дальше'):(S.lang==='en'?'Plan':'План')))+'</span></button>';
+      }).join('')+'</div>';
+    } else {
+      timeline='<button class="v10-pulse-empty" type="button" data-v7-route="program">'+esc(S.lang==='en'?'Build a programme to see the week here':'Собери программу — здесь появится неделя')+' →</button>';
+    }
+    host.innerHTML='<div class="v10-pulse-head"><div><span class="eyebrow">'+esc(S.lang==='en'?'WEEKLY PULSE':'ПУЛЬС НЕДЕЛИ')+'</span><b>'+esc(S.lang==='en'?'What matters right now':'Что важно прямо сейчас')+'</b></div><span class="signal" data-state="'+esc(recovery.state)+'">'+esc(recovery.label)+'</span></div>'+
+      '<div class="v10-pulse-metrics">'+
+        '<div><span>'+esc(S.lang==='en'?'Programme':'Программа')+'</span><strong>'+(total?completed+' / '+total:'—')+'</strong><small>'+esc(total?(S.lang==='en'?'sessions complete':'тренировок выполнено'):(S.lang==='en'?'not built yet':'ещё не собрана'))+'</small></div>'+
+        '<div><span>'+esc(S.lang==='en'?'Work sets':'Рабочие подходы')+'</span><strong>'+weekSets+'</strong><small>'+esc(S.lang==='en'?'completed this week':'завершено за неделю')+'</small></div>'+
+        '<div><span>'+esc(S.lang==='en'?'14-day trend':'Тренд 14 дней')+'</span><strong>'+esc(trend.v)+'</strong><small>'+esc(trend.s)+'</small></div>'+
+        '<div><span>'+esc(S.lang==='en'?'Recovery':'Восстановление')+'</span><strong>'+esc(recovery.label)+'</strong><small>'+esc(recovery.detail)+'</small></div>'+
+      '</div>'+timeline;
+  }
   function renderV7Home(){var host=$('home');if(!host)return;$('v7-home-kicker').textContent=v7c('home');$('v7-home-sub').textContent=v7c('homeSub');$('v7-home-date').textContent=v7DateLabel();var next=v7NextAction(),title=next.title,why=next.why;var ev=(next.evidence||[]).map(function(x){return'<span class="v7-evidence">'+esc(x)+'</span>';}).join('');var secondary=next.type==='planDay'?'<button class="btn btn-quiet" type="button" data-v7-route="program">'+esc(v7c('program'))+'</button>':'';$('v7-home-next').innerHTML='<span class="v7-next-label">'+esc(v7c('next'))+'</span><h2 class="v7-next-title">'+esc(title)+'</h2><p class="v7-next-copy">'+esc(why)+'</p>'+(ev?'<div class="v7-next-evidence">'+ev+'</div>':'')+'<div class="v7-next-actions"><button class="btn btn-primary" type="button" data-v7-action="'+esc(next.type)+'"'+(next.day!=null?' data-v7-day="'+next.day+'"':'')+'>'+esc(title)+'</button>'+secondary+'</div>';
     var plan=v7PlanSummary(),last=S.history[0],trend=v7TrendSummary();$('v7-home-plan').innerHTML='<span>'+esc(v7c('plan'))+'</span><b>'+(S.plan?esc(S.lang==='en'?'Active programme':'Активная программа'):esc(v7c('noPlan')))+'</b><strong>'+esc(plan.v)+'</strong><small>'+esc(plan.s)+'</small>';$('v7-home-last').innerHTML='<span>'+esc(v7c('last'))+'</span><b>'+esc(last?last.name:v7c('noHistory'))+'</b><strong>'+esc(last?String(last.items.length):'—')+'</strong><small>'+esc(last?(last.date+' · '+totalCompletedHistorySets(last)+' '+v7c('sets')):v7c('noHistory'))+'</small>';$('v7-home-progress').innerHTML='<span>'+esc(v7c('trend'))+'</span><b>'+esc(S.diary.length?(S.lang==='en'?'Feedback is current':'Обратная связь сохранена'):v7c('noTrend'))+'</b><strong>'+esc(trend.v)+'</strong><small>'+esc(trend.s)+'</small>';$('v7-home-nutrition').innerHTML='<span>'+esc(v7c('kcal'))+'</span><b>'+esc(S.kbjuLast?(S.lang==='en'?'Current target':'Текущий ориентир'):v7c('notCalculated'))+'</b><strong>'+esc(S.kbjuLast?String(S.kbjuLast.target):'—')+'</strong><small>'+esc(S.kbjuLast?t('kcal'):v7c('notCalculated'))+'</small>';
     var cmds=[['library','search','quickLibrary','quickLibraryS'],['workout','workout','quickWorkout','quickWorkoutS'],['program','program','quickProgram','quickProgramS'],['progress','progress','quickProgress','quickProgressS']];$('v7-home-quick').innerHTML=cmds.map(function(c){return'<button class="v7-command" type="button" data-v7-route="'+c[0]+'"><i aria-hidden="true">'+premiumIcon(c[1])+'</i><span><b>'+esc(v7c(c[2]))+'</b><small>'+esc(v7c(c[3]))+'</small></span></button>';}).join('');
+    renderV10HomePulse();
   }
   function renderV7More(){
     var host=$('v7-more-grid');if(!host)return;$('v7-more-title').textContent=v7c('more');$('v7-more-sub').textContent=v7c('moreSub');
@@ -6507,11 +6546,35 @@
     ];
     host.innerHTML=groups.map(function(g){return'<section class="v8-more-group"><span class="v8-more-label">'+esc(g[0])+'</span><div class="v8-more-list">'+g[1].map(function(x){return'<button class="v7-more-item" type="button" data-v7-route="'+x[0]+'"><span class="v7-more-icon" aria-hidden="true">'+premiumIcon(x[1])+'</span><span><b>'+esc(v7c(x[0]))+'</b><p>'+esc(x[2])+'</p></span><span aria-hidden="true">→</span></button>';}).join('')+'</div></section>';}).join('');
   }
-  function renderV7Settings(){if(!$('settings'))return;$('v7-settings-sub').textContent=v7c('settingsSub');$('v7-theme-title').textContent=v7c('appearance');$('v7-log-title').textContent=v7c('logging');$('v7-coach-title').textContent=v7c('coach');$('v7-data-title').textContent=v7c('data');$('v7-log-text').textContent=S.lang==='en'?'RIR/RPE stay hidden unless you explicitly enable them.':'RIR/RPE скрыты, пока вы явно их не включите.';$('v7-coach-text').textContent=S.lang==='en'?'Show contextual explanations and guidance.':'Показывать контекстные объяснения и рекомендации.';$('v7-data-text').textContent=v7c('settingsDataText');var themes=[
+  function renderV7Settings(){
+    if(!$('settings'))return;
+    $('v7-settings-sub').textContent=v7c('settingsSub');
+    $('v7-theme-title').textContent=v7c('appearance');
+    $('v7-log-title').textContent=v7c('logging');
+    $('v7-coach-title').textContent=v7c('coach');
+    $('v7-data-title').textContent=v7c('data');
+    if($('v10-reading-title'))$('v10-reading-title').textContent=S.lang==='en'?'Readability':'Читаемость';
+    if($('v10-reading-text'))$('v10-reading-text').textContent=S.lang==='en'?'Choose interface scale without changing the information structure.':'Выбери размер интерфейса без потери структуры и информации.';
+    $('v7-log-text').textContent=S.lang==='en'?'RIR/RPE stay hidden unless you explicitly enable them.':'RIR/RPE скрыты, пока вы явно их не включите.';
+    $('v7-coach-text').textContent=S.lang==='en'?'Show contextual explanations and guidance.':'Показывать контекстные объяснения и рекомендации.';
+    $('v7-data-text').textContent=v7c('settingsDataText');
+    var themes=[
       ['obsidian',S.lang==='en'?'Obsidian':'Обсидиан',S.lang==='en'?'Deep graphite · maximum contrast':'Глубокий графит · максимум контраста'],
       ['soft',S.lang==='en'?'Mist':'Туман',S.lang==='en'?'Cool soft surface · lower visual load':'Холодная мягкая поверхность · меньше визуальной нагрузки'],
       ['ivory',S.lang==='en'?'Ivory':'Слоновая кость',S.lang==='en'?'Clean editorial light · maximum clarity':'Чистая редакционная светлая · максимум ясности']
-    ];$('v7-theme-actions').innerHTML=themes.map(function(x){var active=S.theme===x[0];return'<button class="theme-choice" type="button" data-v7-theme="'+x[0]+'" aria-pressed="'+String(active)+'"><span class="theme-choice-swatch" data-theme-preview="'+x[0]+'" aria-hidden="true"><i></i></span><span class="theme-choice-copy"><b>'+esc(x[1])+'</b><small>'+esc(x[2])+'</small></span><span class="theme-choice-check" aria-hidden="true">'+(active?'✓':'')+'</span></button>';}).join('');$('v7-logging-actions').innerHTML='<button class="v7-setting-toggle" type="button" data-v7-setting="rir" aria-pressed="'+String(!!S.settings.rir)+'"><span>'+esc(v7c('rir'))+'</span><b>'+(S.settings.rir?'ON':'OFF')+'</b></button><button class="v7-setting-toggle" type="button" data-v7-setting="rpe" aria-pressed="'+String(!!S.settings.rpe)+'"><span>'+esc(v7c('rpe'))+'</span><b>'+(S.settings.rpe?'ON':'OFF')+'</b></button>';$('v7-coach-actions').innerHTML='<button class="v7-setting-toggle" type="button" data-v7-coach aria-pressed="'+String(!!S.coachOn)+'"><span>'+esc(v7c('coachOn'))+'</span><b>'+(S.coachOn?'ON':'OFF')+'</b></button>';$('v7-data-actions').innerHTML='<button class="btn btn-solid btn-sm" type="button" data-v7-data="export">'+esc(v7c('export'))+'</button><button class="btn btn-solid btn-sm" type="button" data-v7-data="import">'+esc(v7c('import'))+'</button><button class="btn btn-quiet btn-sm btn-danger" type="button" data-v7-data="clear">'+esc(v7c('clear'))+'</button>';
+    ];
+    $('v7-theme-actions').innerHTML=themes.map(function(x){var active=S.theme===x[0];return'<button class="theme-choice" type="button" data-v7-theme="'+x[0]+'" aria-pressed="'+String(active)+'"><span class="theme-choice-swatch" data-theme-preview="'+x[0]+'" aria-hidden="true"><i></i></span><span class="theme-choice-copy"><b>'+esc(x[1])+'</b><small>'+esc(x[2])+'</small></span><span class="theme-choice-check" aria-hidden="true">'+(active?'✓':'')+'</span></button>';}).join('');
+    if($('v10-reading-actions')){
+      var reading=[
+        ['balanced',S.lang==='en'?'Balanced':'Сбалансировано',S.lang==='en'?'Flagship default':'Оптимальный баланс плотности и чтения'],
+        ['comfortable',S.lang==='en'?'Comfort':'Комфорт',S.lang==='en'?'Slightly larger text and controls':'Крупнее текст и элементы управления'],
+        ['large',S.lang==='en'?'Large':'Крупно',S.lang==='en'?'Maximum readability':'Максимум читаемости']
+      ];
+      $('v10-reading-actions').innerHTML=reading.map(function(x){var active=S.settings.reading===x[0];return'<button class="reading-choice" type="button" data-v10-reading="'+x[0]+'" aria-pressed="'+String(active)+'"><span><b>'+esc(x[1])+'</b><small>'+esc(x[2])+'</small></span><i aria-hidden="true">'+(active?'✓':'')+'</i></button>';}).join('');
+    }
+    $('v7-logging-actions').innerHTML='<button class="v7-setting-toggle" type="button" data-v7-setting="rir" aria-pressed="'+String(!!S.settings.rir)+'"><span>'+esc(v7c('rir'))+'</span><b>'+(S.settings.rir?'ON':'OFF')+'</b></button><button class="v7-setting-toggle" type="button" data-v7-setting="rpe" aria-pressed="'+String(!!S.settings.rpe)+'"><span>'+esc(v7c('rpe'))+'</span><b>'+(S.settings.rpe?'ON':'OFF')+'</b></button>';
+    $('v7-coach-actions').innerHTML='<button class="v7-setting-toggle" type="button" data-v7-coach aria-pressed="'+String(!!S.coachOn)+'"><span>'+esc(v7c('coachOn'))+'</span><b>'+(S.coachOn?'ON':'OFF')+'</b></button>';
+    $('v7-data-actions').innerHTML='<button class="btn btn-solid btn-sm" type="button" data-v7-data="export">'+esc(v7c('export'))+'</button><button class="btn btn-solid btn-sm" type="button" data-v7-data="import">'+esc(v7c('import'))+'</button><button class="btn btn-quiet btn-sm btn-danger" type="button" data-v7-data="clear">'+esc(v7c('clear'))+'</button>';
   }
   function renderV7Nav(){qsa('[data-v7-nav]').forEach(function(el){el.textContent=v7c(el.dataset.v7Nav);});var moreSub={program:S.lang==='en'?'Weekly structure and the next workout':'Структура недели и следующая тренировка',nutrition:S.lang==='en'?'Calories, macros and feedback':'Калории, макросы и обратная связь',knowledge:S.lang==='en'?'Practical contextual guides':'Практические разборы по контексту',method:S.lang==='en'?'Decision framework':'Логика принятия решений',settings:S.lang==='en'?'Interface, logging and data':'Интерфейс, логирование и данные',about:S.lang==='en'?'Author and system boundaries':'Автор и границы системы'};qsa('[data-v7-more]').forEach(function(el){el.textContent=v7c(el.dataset.v7More);});qsa('[data-v7-more-sub]').forEach(function(el){el.textContent=moreSub[el.dataset.v7MoreSub]||'';});var mt=qs('[data-v7-mobile-title]');if(mt)mt.textContent=v7c('moreTitle');}
   function v7FocusRoute(route){var el=$(route==='home'&&!v7Returning()? 'hero-title' : route==='home'?'v7-home-title': route==='more'?'v7-more-title':route==='settings'?'v7-settings-title':route+'-title');if(el){el.setAttribute('tabindex','-1');requestAnimationFrame(function(){try{el.focus({preventScroll:true});}catch(e){}var anchor=el.closest('section')||el;anchor.scrollIntoView({block:'start',behavior:'auto'});});}else window.scrollTo(0,0);}
