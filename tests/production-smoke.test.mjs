@@ -23,11 +23,20 @@ test('bootstrap subscribes before the app can emit ready', async () => {
 test('exercise GIF media uses a fresh revision and cache write failures stay non-fatal', async () => {
   const app = await read('app.js');
   const sw = await read('sw.js');
-  assert.match(app, /MEDIA_REVISION = '20260927-media1'/);
+  assert.match(app, /MEDIA_REVISION = '20260927-media2'/);
   assert.match(app, /\.gif\?v=' \+ MEDIA_REVISION/);
-  assert.match(sw, /2026\.09-r3-media1/);
+  assert.match(sw, /2026\.09-r3-media2/);
   assert.match(sw, /Cache Storage is an optimisation only/);
   assert.match(sw, /ignoreSearch: true/);
+});
+
+test('active exercise views always request GIF animation and service worker leaves videos alone', async () => {
+  const app = await read('app.js');
+  const sw = await read('sw.js');
+  assert.match(app, /img\.src = exMotion\(ex\);/);
+  assert.doesNotMatch(app, /img\.src = REDUCED_MOTION\.matches \? exStill\(ex\) : exMotion\(ex\)/);
+  assert.match(sw, /if \(\/\\\/videos\\\/\//);
+  assert.match(sw, /Exercise GIFs are intentionally not intercepted/);
 });
 
 test('exercise dataset keeps all 1324 compact records', async () => {
