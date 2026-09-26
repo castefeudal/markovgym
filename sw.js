@@ -1,4 +1,4 @@
-const VERSION = '2026.09-r3-media3';
+const VERSION = '2026.09-r3-media4';
 const PREFIX = 'mmg-gym-';
 const SHELL = `${PREFIX}shell-${VERSION}`;
 const MEDIA = `${PREFIX}media-${VERSION}`;
@@ -90,7 +90,13 @@ self.addEventListener('fetch', (event) => {
   }
 
   if (PRECACHE.some((path) => url.pathname.endsWith(path.replace('./', '/')))) {
-    event.respondWith(caches.match(request, { ignoreSearch: true }).then((hit) => hit || fetch(request)));
+    event.respondWith((async () => {
+      try {
+        return await fetch(request, { cache: 'no-store' });
+      } catch {
+        return caches.match(request, { ignoreSearch: true });
+      }
+    })());
   }
 });
 
