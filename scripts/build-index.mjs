@@ -92,17 +92,22 @@ const index = `<!doctype html>
   (function () {
     try {
       var saved = localStorage.getItem('mmg.theme.v2') || localStorage.getItem('mmg_theme_v7');
-      if (['obsidian','soft','ivory'].indexOf(saved) === -1) return;
-      document.documentElement.setAttribute('data-theme', saved);
-      document.documentElement.style.colorScheme = saved === 'obsidian' ? 'dark' : 'light';
+      if (['obsidian','soft','ivory'].indexOf(saved) !== -1) {
+        document.documentElement.setAttribute('data-theme', saved);
+        document.documentElement.style.colorScheme = saved === 'obsidian' ? 'dark' : 'light';
+      }
+      var settings = JSON.parse(localStorage.getItem('mmg.settings.v1') || '{}');
+      if (settings && ['balanced','comfortable','large'].indexOf(settings.reading) !== -1) {
+        document.documentElement.setAttribute('data-reading', settings.reading);
+      }
     } catch (_) {}
   })();
   </script>
-  <link rel="stylesheet" href="./app.css?v=20260927-premium2">
+  <link rel="stylesheet" href="./app.css?v=20260927-flagship1">
   <style>${bootCss}</style>
   <script type="application/ld+json">${JSON.stringify(structuredData)}</script>
 </head>
-<body data-app-version="2026.09-r3">
+<body data-app-version="2026.09-r4">
   <script>
   (function () {
     var marker = 'media4';
@@ -138,7 +143,7 @@ const index = `<!doctype html>
   </div>
 ${body}
   <script src="./bootstrap.js" defer></script>
-  <script src="./app.js?v=20260927-premium2" defer></script>
+  <script src="./app.js?v=20260927-flagship1" defer></script>
   <script type="module" src="./gym-tools.js"></script>
 </body>
 </html>
