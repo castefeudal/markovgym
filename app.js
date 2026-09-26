@@ -781,7 +781,7 @@
   }
   var MEDIA_PLACEHOLDER = 'images/exercise-placeholder.svg';
   var MEDIA_INLINE_FALLBACK = 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 420"><rect width="640" height="420" fill="#101318"/><g fill="none" stroke="#6f7782" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" opacity=".74"><circle cx="320" cy="120" r="34"/><path d="M320 154v92M268 202l52-32 52 32M286 344l34-98 34 98M250 244h140"/></g><path d="M70 360h500" stroke="#d8a431" stroke-width="4" opacity=".55"/><text x="320" y="395" text-anchor="middle" font-family="Arial,sans-serif" font-size="18" letter-spacing="4" fill="#8d949e">MARKOV MADE GYM</text></svg>');
-  var MEDIA_REVISION = '20260927-media2';
+  var MEDIA_REVISION = '20260927-media3';
   function exStill(ex) { return 'images/' + ex.slug + '.jpg'; }
   function exMotion(ex) { return 'videos/' + ex.slug + '.gif?v=' + MEDIA_REVISION; }
   function mediaFallback(img) {
