@@ -85,7 +85,7 @@ const index = `<!doctype html>
   </div>
 ${body}
   <script src="./bootstrap.js" defer></script>
-  <script src="./app.js?v=20260927-media1" defer></script>
+  <script src="./app.js?v=20260927-media2" defer></script>
   <script type="module" src="./gym-tools.js"></script>
 </body>
 </html>
