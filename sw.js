@@ -84,7 +84,7 @@ self.addEventListener('fetch', (event) => {
   }
 
   if (PRECACHE.some((path) => url.pathname.endsWith(path.replace('./', '/')))) {
-    event.respondWith(caches.match(request).then((hit) => hit || fetch(request)));
+    event.respondWith(caches.match(request, { ignoreSearch: true }).then((hit) => hit || fetch(request)));
   }
 });
 
