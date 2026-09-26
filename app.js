@@ -1419,7 +1419,8 @@
     var frame = $('modal-media');
     if (!frame) return;
     if (document.fullscreenElement === frame && document.exitFullscreen) {
-      document.exitFullscreen().catch(function () {});
+      var exitRequest = document.exitFullscreen();
+      if (exitRequest && exitRequest.catch) exitRequest.catch(function () {});
       return;
     }
     if (frame.dataset.expanded === 'true') {
@@ -1515,7 +1516,10 @@
   function closeModal() {
     var frame = $('modal-media');
     if (frame) frame.dataset.expanded = 'false';
-    if (document.fullscreenElement === frame && document.exitFullscreen) document.exitFullscreen().catch(function () {});
+    if (document.fullscreenElement === frame && document.exitFullscreen) {
+      var exitRequest = document.exitFullscreen();
+      if (exitRequest && exitRequest.catch) exitRequest.catch(function () {});
+    }
     closeOverlay($('modal'), modalReturnFocus);
     modalReturnFocus = null;
     S.activeId = null;
