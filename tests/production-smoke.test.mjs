@@ -78,8 +78,8 @@ test('exercise detail view keeps full-frame media and structured guidance', asyn
 
 test('detail assets use a cache-busting revision', async () => {
   const index = await read('index.html');
-  assert.match(index, /app\.css\?v=20260927-detail2/);
-  assert.match(index, /app\.js\?v=20260927-detail2/);
+  assert.match(index, /app\.css\?v=20260927-cool1/);
+  assert.match(index, /app\.js\?v=20260927-cool1/);
 });
 
 test('detail media box itself stays inside the visual frame and step counter increments once', async () => {
@@ -88,6 +88,18 @@ test('detail media box itself stays inside the visual frame and step counter inc
   const detail = css.slice(css.lastIndexOf('/* 19. EXERCISE DETAIL V2'));
   const pseudo = detail.match(/#modal \.modal-steps-detailed li::before\{[\s\S]*?\}/)?.[0] || '';
   assert.doesNotMatch(pseudo, /counter-increment/);
+});
+
+test('obsidian readability pass uses cool accent and collision-proof library filters', async () => {
+  const css = await read('app.css');
+  const block = css.slice(css.lastIndexOf('/* 20. READABILITY / COOL TITANIUM'));
+  assert.match(block, /--v8-signal:#8fb8f7/);
+  assert.match(block, /--v8-brass:#8c98a8/);
+  assert.match(block, /\.library-layout\{[\s\S]*?grid-template-columns:286px minmax\(0,1fr\)/);
+  assert.match(block, /\.filter-list\{[\s\S]*?max-height:none;[\s\S]*?overflow:visible/);
+  assert.match(block, /\.filter-btn\{[\s\S]*?grid-template-columns:10px minmax\(0,1fr\) 36px;[\s\S]*?min-height:38px/);
+  assert.match(block, /\.filter-btn span\{[\s\S]*?text-overflow:ellipsis;[\s\S]*?white-space:nowrap/);
+  assert.match(block, /\.card-target\{[\s\S]*?color:var\(--v8-text-3\)/);
 });
 
 test('exercise dataset keeps all 1324 compact records', async () => {

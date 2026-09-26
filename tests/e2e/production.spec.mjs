@@ -94,3 +94,51 @@ test('exercise detail has no horizontal overflow on a 390px viewport', async ({ 
   expect(overflow).toBeLessThanOrEqual(1);
   await expect(page.locator('#modal-tabs')).toBeVisible();
 });
+
+
+test('desktop library filters do not overlap and the warm gold accent is gone', async ({ page }) => {
+  await page.setViewportSize({ width: 1830, height: 900 });
+  await page.goto('/index.html#library');
+  await expect(page.locator('#mmg-boot')).toHaveCount(0);
+
+  const audit = await page.evaluate(() => {
+    const root = getComputedStyle(document.documentElement);
+    const accent = root.getPropertyValue('--v8-signal').trim();
+    const brass = root.getPropertyValue('--v8-brass').trim();
+    const list = document.querySelector('#filter-mu');
+    const buttons = [...list.querySelectorAll('.filter-btn')].slice(0, 18);
+    const rects = buttons.map((button) => {
+      const r = button.getBoundingClientRect();
+      const label = button.querySelector('span').getBoundingClientRect();
+      const count = button.querySelector('b').getBoundingClientRect();
+      return {
+        top: r.top,
+        bottom: r.bottom,
+        height: r.height,
+        labelRight: label.right,
+        countLeft: count.left,
+      };
+    });
+    const overlaps = rects.slice(1).filter((r, i) => r.top < rects[i].bottom - 0.5).length;
+    const labelCountCollisions = rects.filter((r) => r.labelRight > r.countLeft + 0.5).length;
+    return {
+      accent,
+      brass,
+      listOverflow: getComputedStyle(list).overflowY,
+      minHeight: Math.min(...rects.map((r) => r.height)),
+      overlaps,
+      labelCountCollisions,
+      sidebarWidth: document.querySelector('#filters').getBoundingClientRect().width,
+      pageOverflow: document.documentElement.scrollWidth - innerWidth,
+    };
+  });
+
+  expect(audit.accent.toLowerCase()).toBe('#8fb8f7');
+  expect(audit.brass.toLowerCase()).toBe('#8c98a8');
+  expect(audit.listOverflow).toBe('visible');
+  expect(audit.minHeight).toBeGreaterThanOrEqual(37);
+  expect(audit.overlaps).toBe(0);
+  expect(audit.labelCountCollisions).toBe(0);
+  expect(audit.sidebarWidth).toBeGreaterThanOrEqual(280);
+  expect(audit.pageOverflow).toBeLessThanOrEqual(1);
+});
