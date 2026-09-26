@@ -151,7 +151,7 @@ test('all three themes resolve coherent tokens, persist and keep library informa
 
   const expected = [
     { theme: 'obsidian', canvas: '#070a0e', signal: '#86b6ff', scheme: 'dark' },
-    { theme: 'soft', canvas: '#eaf0f6', signal: '#3f72b5', scheme: 'light' },
+    { theme: 'soft', canvas: '#eaf0f6', signal: '#386aa9', scheme: 'light' },
     { theme: 'ivory', canvas: '#f6f5f1', signal: '#4f7197', scheme: 'light' },
   ];
 
