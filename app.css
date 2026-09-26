@@ -4125,6 +4125,88 @@ body::before{
 .modal-cue-card::before{background:var(--v8-signal)}
 .run-tech-cues span,.modal-section-kicker,.modal-progression-grid span{color:var(--v8-signal)}
 
+/* Theme settings use previews instead of ambiguous generic buttons. */
+#v7-theme-actions{
+  display:grid;
+  gap:8px;
+}
+.theme-choice{
+  width:100%;
+  min-height:68px;
+  display:grid;
+  grid-template-columns:54px minmax(0,1fr) 24px;
+  gap:11px;
+  align-items:center;
+  padding:9px 10px;
+  border:1px solid var(--v8-line);
+  border-radius:12px;
+  background:color-mix(in srgb,var(--v8-surface) 78%,transparent);
+  color:var(--v8-text);
+  font:inherit;
+  text-align:left;
+  cursor:pointer;
+  transition:background var(--premium-transition),border-color var(--premium-transition),transform var(--premium-transition);
+}
+.theme-choice:hover{
+  border-color:color-mix(in srgb,var(--v8-signal) 28%,var(--v8-line));
+  background:var(--premium-panel-raised);
+}
+.theme-choice[aria-pressed="true"]{
+  border-color:color-mix(in srgb,var(--v8-signal) 45%,var(--v8-line));
+  background:var(--v8-signal-soft);
+}
+.theme-choice-swatch{
+  position:relative;
+  display:block;
+  width:54px;
+  height:44px;
+  overflow:hidden;
+  border:1px solid rgba(127,142,160,.22);
+  border-radius:9px;
+  box-shadow:inset 0 1px rgba(255,255,255,.16);
+}
+.theme-choice-swatch::before,
+.theme-choice-swatch::after,
+.theme-choice-swatch i{
+  content:"";
+  position:absolute;
+  display:block;
+}
+.theme-choice-swatch::before{inset:0;background:var(--preview-canvas)}
+.theme-choice-swatch::after{
+  left:7px;right:7px;top:8px;height:8px;
+  border-radius:3px;
+  background:var(--preview-surface);
+  box-shadow:0 13px 0 var(--preview-surface);
+}
+.theme-choice-swatch i{
+  width:5px;height:5px;right:9px;top:9px;border-radius:50%;background:var(--preview-accent);z-index:2;
+}
+.theme-choice-swatch[data-theme-preview="obsidian"]{--preview-canvas:#070a0e;--preview-surface:#18212c;--preview-accent:#86b6ff}
+.theme-choice-swatch[data-theme-preview="soft"]{--preview-canvas:#eaf0f6;--preview-surface:#ffffff;--preview-accent:#3f72b5}
+.theme-choice-swatch[data-theme-preview="ivory"]{--preview-canvas:#f6f5f1;--preview-surface:#ffffff;--preview-accent:#4f7197}
+.theme-choice-copy{
+  min-width:0;
+  display:grid;
+  gap:3px;
+}
+.theme-choice-copy b{
+  color:var(--v8-text);
+  font-size:.76rem;
+  font-weight:780;
+}
+.theme-choice-copy small{
+  color:var(--v8-text-3);
+  font-size:.62rem;
+  line-height:1.38;
+}
+.theme-choice-check{
+  color:var(--v8-signal);
+  font-size:.82rem;
+  font-weight:900;
+  text-align:center;
+}
+
 /* Tables / metrics: clearer hierarchy, less decorative framing. */
 .workout-kpis,.intel-metrics,.prog-deltas{
   border-color:var(--v8-line);
