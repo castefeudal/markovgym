@@ -23,9 +23,9 @@ test('bootstrap subscribes before the app can emit ready', async () => {
 test('exercise GIF media uses a fresh revision and cache write failures stay non-fatal', async () => {
   const app = await read('app.js');
   const sw = await read('sw.js');
-  assert.match(app, /MEDIA_REVISION = '20260927-media3'/);
+  assert.match(app, /MEDIA_REVISION = '20260927-media4'/);
   assert.match(app, /\.gif\?v=' \+ MEDIA_REVISION/);
-  assert.match(sw, /2026\.09-r3-media3/);
+  assert.match(sw, /2026\.09-r3-media4/);
   assert.match(sw, /Cache Storage is an optimisation only/);
   assert.match(sw, /ignoreSearch: true/);
 });
@@ -43,6 +43,15 @@ test('GIF previews are not gated by fine-pointer detection', async () => {
   const app = await read('app.js');
   assert.doesNotMatch(app, /if \(FINE_POINTER\.matches\) \{\s*\$\('grid'\)\.addEventListener\('pointerover'/);
   assert.match(app, /GIF-превью работают на мыши, стилусе и гибридных\/сенсорных устройствах/);
+});
+
+test('stale markovgym service workers are reset once and shell assets are network-first', async () => {
+  const index = await read('index.html');
+  const sw = await read('sw.js');
+  assert.match(index, /var marker = 'media4'/);
+  assert.match(index, /getRegistration\('\.\/'\)/);
+  assert.match(index, /registration\.unregister\(\)/);
+  assert.match(sw, /fetch\(request, \{ cache: 'no-store' \}\)/);
 });
 
 test('exercise dataset keeps all 1324 compact records', async () => {
