@@ -15,9 +15,19 @@ test('canonical shell does not use payload bootstrap or document.write', async (
 test('bootstrap subscribes before the app can emit ready', async () => {
   const index = await read('index.html');
   const bootstrap = index.indexOf('src="./bootstrap.js"');
-  const app = index.indexOf('src="./app.js"');
+  const app = index.indexOf('src="./app.js');
   assert.ok(bootstrap >= 0 && app >= 0, 'bootstrap.js and app.js must be present');
   assert.ok(bootstrap < app, 'bootstrap.js must load before app.js so mmg:ready cannot be missed');
+});
+
+test('exercise GIF media uses a fresh revision and cache write failures stay non-fatal', async () => {
+  const app = await read('app.js');
+  const sw = await read('sw.js');
+  assert.match(app, /MEDIA_REVISION = '20260927-media1'/);
+  assert.match(app, /\.gif\?v=' \+ MEDIA_REVISION/);
+  assert.match(sw, /2026\.09-r3-media1/);
+  assert.match(sw, /Cache Storage is an optimisation only/);
+  assert.match(sw, /ignoreSearch: true/);
 });
 
 test('exercise dataset keeps all 1324 compact records', async () => {
