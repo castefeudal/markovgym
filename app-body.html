@@ -1260,42 +1260,103 @@
 
 <div class="modal" id="modal" data-open="false">
   <div class="modal-backdrop" data-close-modal></div>
-  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="modal-title">
-    <div class="modal-head">
-      <div>
+  <div class="modal-box modal-box-exercise" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal-head modal-head-exercise">
+      <div class="modal-head-copy">
         <p class="modal-kicker" id="modal-kicker">—</p>
         <h2 id="modal-title">—</h2>
+        <p class="modal-head-sub" id="modal-head-sub">Полный разбор техники, контроля и прогрессии</p>
       </div>
       <button class="icon-btn" id="modal-close" type="button" aria-label="Закрыть" data-i18n-aria="aria.close">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
       </button>
     </div>
-    <div class="modal-scroll">
-      <div class="modal-media"><img id="modal-img" alt="" width="640" height="480" decoding="async"></div>
-      <div class="modal-info">
-        <div class="modal-facts" id="modal-facts"></div>
-        <div>
-          <h3 class="v8-modal-section-title" data-i18n="modal.steps">Техника выполнения</h3>
-          <ol class="modal-steps" id="modal-steps"></ol>
-        </div>
-        <div id="modal-coach"></div>
 
-        <div>
-          <h3 class="v8-modal-section-title" data-i18n="modal.dose">Дозировка и прогрессия</h3>
-          <div class="modal-facts" id="modal-dose"></div>
+    <div class="modal-scroll modal-scroll-exercise" id="modal-scroll">
+      <aside class="modal-visual" aria-label="Демонстрация упражнения">
+        <div class="modal-media" id="modal-media">
+          <img id="modal-img" alt="" width="640" height="480" decoding="async">
+          <div class="modal-media-chrome">
+            <span class="modal-media-status" id="modal-media-status">GIF · полный кадр</span>
+            <button class="modal-media-expand" id="modal-media-expand" type="button" aria-label="Развернуть демонстрацию упражнения">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5"/></svg>
+              <span id="modal-media-expand-label">Развернуть</span>
+            </button>
+          </div>
         </div>
+        <div class="modal-quick" id="modal-quick" aria-label="Краткий профиль упражнения"></div>
+      </aside>
 
-        <div>
-          <h3 class="v8-modal-section-title" data-i18n="modal.swapT">Нужна замена</h3>
+      <article class="modal-info">
+        <nav class="modal-tabs" id="modal-tabs" aria-label="Навигация по разбору упражнения">
+          <button type="button" data-modal-jump="modal-technique" aria-current="true">Техника</button>
+          <button type="button" data-modal-jump="modal-cues-section">Подсказки</button>
+          <button type="button" data-modal-jump="modal-errors-section">Ошибки</button>
+          <button type="button" data-modal-jump="modal-dose-section">Прогрессия</button>
+          <button type="button" data-modal-jump="modal-swap-section">Замены</button>
+        </nav>
+
+        <section class="modal-section modal-overview" id="modal-overview">
+          <div class="modal-section-head">
+            <p class="modal-section-kicker" id="modal-overview-kicker">Профиль движения</p>
+            <h3 id="modal-overview-title">Что важно знать до первого повтора</h3>
+          </div>
+          <div class="modal-facts modal-facts-grid" id="modal-facts"></div>
+        </section>
+
+        <section class="modal-section modal-technique-section" id="modal-technique">
+          <div class="modal-section-head">
+            <p class="modal-section-kicker" id="modal-technique-kicker">Пошагово</p>
+            <h3 id="modal-technique-title">Техника выполнения</h3>
+            <p class="modal-section-lede" id="modal-technique-lede">Сначала посмотри полный цикл на GIF, затем пройди шаги сверху вниз.</p>
+          </div>
+          <ol class="modal-steps modal-steps-detailed" id="modal-steps"></ol>
+        </section>
+
+        <section class="modal-section" id="modal-cues-section">
+          <div class="modal-section-head">
+            <p class="modal-section-kicker" id="modal-cues-kicker">Контроль движения</p>
+            <h3 id="modal-cues-title">Ключевые подсказки</h3>
+          </div>
+          <div class="modal-cue-grid" id="modal-cues"></div>
+        </section>
+
+        <section class="modal-section modal-coach-section" id="modal-coach-section">
+          <div id="modal-coach"></div>
+        </section>
+
+        <section class="modal-section modal-errors-section" id="modal-errors-section">
+          <div class="modal-section-head">
+            <p class="modal-section-kicker" id="modal-errors-kicker">Самопроверка</p>
+            <h3 id="modal-errors-title">Частые ошибки и когда остановиться</h3>
+          </div>
+          <div class="modal-alert-grid" id="modal-errors"></div>
+        </section>
+
+        <section class="modal-section" id="modal-dose-section">
+          <div class="modal-section-head">
+            <p class="modal-section-kicker" id="modal-dose-kicker">Нагрузка</p>
+            <h3 id="modal-dose-title">Дозировка и прогрессия</h3>
+          </div>
+          <div id="modal-dose"></div>
+        </section>
+
+        <section class="modal-section" id="modal-swap-section">
+          <div class="modal-section-head">
+            <p class="modal-section-kicker" id="modal-swap-kicker">Альтернатива</p>
+            <h3 id="modal-swap-title">Нужна замена</h3>
+            <p class="modal-section-lede" id="modal-swap-lede">Выбери причину — покажем ближайшие варианты по целевой мышце и доступному оборудованию.</p>
+          </div>
           <div class="swap-reasons" id="swap-reasons" role="group" aria-label="Причина замены" data-i18n-aria="aria.swapWhy"></div>
           <p class="swap-hint" id="swap-hint" data-i18n="modal.swapHint">Выбери причину — покажем ближайшие альтернативы по целевой мышце и доступному оборудованию.</p>
           <div class="swap-list" id="swap-list"></div>
-        </div>
+        </section>
 
-        <div class="note note-warn" data-i18n="modal.warning">Боль, онемение или резкий дискомфорт — сигнал остановиться и заменить движение, а не терпеть. При травмах и ограничениях упражнение нужно адаптировать.</div>
-      </div>
+        <div class="note note-warn modal-safety-note" data-i18n="modal.warning">Боль, онемение или резкий дискомфорт — сигнал остановиться и заменить движение, а не терпеть. При травмах и ограничениях упражнение нужно адаптировать.</div>
+      </article>
     </div>
-    <div class="modal-foot">
+
+    <div class="modal-foot modal-foot-exercise">
       <button class="btn btn-primary" id="modal-add" type="button" data-i18n="modal.add">Добавить в тренировку</button>
       <button class="btn btn-solid" id="modal-fav" type="button" aria-pressed="false">Сохранить</button>
       <button class="btn btn-quiet" id="modal-copy" type="button" data-i18n="modal.copy">Скопировать</button>
