@@ -3224,3 +3224,389 @@ img,svg,video{max-width:100%}
   #modal .modal-media::before{animation:none}
   #modal .modal-media img{transition:none}
 }
+
+
+/* 20. READABILITY / COOL TITANIUM -------------------------------------------
+   Replaces the warm brass-heavy visual language with a cooler, higher-contrast
+   graphite / titanium system. The accent is reserved for state and action.
+   Library filters get one scroll owner and collision-proof row geometry. */
+html[data-theme="obsidian"]{
+  --v8-canvas:#07090c;
+  --v8-workspace:#0a0d11;
+  --v8-surface:#10151b;
+  --v8-raised:#151b23;
+  --v8-overlay:#19212a;
+  --v8-line:rgba(222,231,242,.095);
+  --v8-line-strong:rgba(222,231,242,.18);
+  --v8-brass:#8c98a8;
+  --v8-signal:#8fb8f7;
+  --v8-signal-hi:#b8d2fb;
+  --v8-signal-soft:rgba(143,184,247,.105);
+  --v8-text:#f5f7fa;
+  --v8-text-2:#b5beca;
+  --v8-text-3:#818c9a;
+
+  --color-bg-primary:var(--v8-canvas);
+  --color-bg-secondary:var(--v8-workspace);
+  --color-surface-primary:var(--v8-surface);
+  --color-surface-elevated:var(--v8-raised);
+  --color-surface-sunken:#090c10;
+  --color-text-primary:var(--v8-text);
+  --color-text-secondary:var(--v8-text-2);
+  --color-text-muted:var(--v8-text-3);
+  --color-border-subtle:var(--v8-line);
+  --color-border-strong:var(--v8-line-strong);
+  --color-accent:var(--v8-signal);
+  --color-accent-hover:var(--v8-signal-hi);
+  --color-accent-ink:#07111f;
+  --color-accent-soft:var(--v8-signal-soft);
+  --media-bg:#080b0f;
+}
+
+/* Remove the warm cast from the main canvas. */
+html[data-theme="obsidian"] body{
+  background:
+    radial-gradient(1000px 500px at 88% -14%,rgba(118,164,225,.055),transparent 70%),
+    var(--v8-canvas);
+}
+html[data-theme="obsidian"] body::before{
+  opacity:.18;
+  background-image:
+    linear-gradient(rgba(210,224,242,.028) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(210,224,242,.022) 1px,transparent 1px);
+}
+
+/* Accent is informational, not decorative. */
+html[data-theme="obsidian"] .eyebrow,
+html[data-theme="obsidian"] .modal-kicker,
+html[data-theme="obsidian"] .modal-section-kicker,
+html[data-theme="obsidian"] .run-tech-cues span,
+html[data-theme="obsidian"] .modal-progression-grid span,
+html[data-theme="obsidian"] .gym-tool-card .tool-mark{
+  color:var(--v8-signal);
+}
+html[data-theme="obsidian"] .card-target{
+  color:var(--v8-text-3);
+}
+
+/* Library: give the left rail enough space and a real panel boundary. */
+@media(min-width:1025px){
+  .library-layout{
+    grid-template-columns:286px minmax(0,1fr);
+    gap:28px;
+  }
+  .filters{
+    position:sticky;
+    top:calc(var(--v8-header-h) + var(--v8-context-h) + 16px);
+    max-height:calc(100dvh - var(--v8-header-h) - var(--v8-context-h) - 32px);
+    min-height:0;
+    padding:0;
+    overflow:hidden;
+    border:1px solid var(--v8-line);
+    border-radius:14px;
+    background:color-mix(in srgb,var(--v8-workspace) 94%,transparent);
+    box-shadow:0 14px 36px -32px rgba(0,0,0,.9);
+  }
+  .filters-body{
+    min-height:0;
+    padding:14px 12px 16px;
+    gap:16px;
+    overflow-y:auto;
+    overflow-x:hidden;
+    overscroll-behavior:contain;
+    scrollbar-gutter:stable;
+    scrollbar-width:thin;
+    scrollbar-color:rgba(181,190,202,.32) transparent;
+  }
+  .filters-body::-webkit-scrollbar{width:7px}
+  .filters-body::-webkit-scrollbar-track{background:transparent}
+  .filters-body::-webkit-scrollbar-thumb{
+    border-radius:999px;
+    background:rgba(181,190,202,.26);
+  }
+}
+
+/* Filter sections: no nested scrolling, no sticky labels fighting each other. */
+.filter-fav{
+  gap:8px;
+  padding:0 2px 14px;
+  border-bottom:1px solid var(--v8-line);
+}
+.filter-fav .chip{
+  width:100%;
+  min-height:40px;
+  justify-content:space-between;
+  border-color:var(--v8-line);
+  background:var(--v8-surface);
+}
+.filter-fav .tiny{
+  margin:0;
+  color:var(--v8-text-3);
+  line-height:1.45;
+}
+.filter-group{
+  min-width:0;
+  padding:0 2px 14px;
+  border:0;
+  border-bottom:1px solid var(--v8-line);
+}
+.filter-group:last-child{border-bottom:0;padding-bottom:2px}
+.filter-group + .filter-group{
+  padding-top:0;
+  border-top:0;
+}
+.filter-group summary{
+  position:static;
+  min-height:34px;
+  margin:0;
+  padding:4px 4px 7px;
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  align-items:center;
+  gap:10px;
+  background:transparent;
+  color:var(--v8-text-3);
+  font-size:.59rem;
+  font-weight:800;
+  letter-spacing:.13em;
+  line-height:1.2;
+  text-transform:uppercase;
+}
+.filter-group summary span{
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.filter-group summary b{
+  min-width:28px;
+  padding:3px 6px;
+  border:1px solid var(--v8-line);
+  border-radius:999px;
+  background:var(--v8-surface);
+  color:var(--v8-text-2);
+  font-size:.57rem;
+  font-weight:760;
+  line-height:1.2;
+  text-align:center;
+}
+.filter-mini-search{
+  position:relative;
+  z-index:0;
+  margin:2px 0 7px;
+}
+.filter-mini-search input{
+  width:100%;
+  height:40px;
+  min-height:40px;
+  padding:8px 10px 8px 34px;
+  border:1px solid var(--v8-line-strong);
+  border-radius:9px;
+  background:var(--v8-canvas);
+  color:var(--v8-text);
+  font-size:.73rem;
+  line-height:1.2;
+}
+.filter-mini-search input::placeholder{color:var(--v8-text-3)}
+.filter-list{
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+  max-height:none;
+  margin-top:2px;
+  overflow:visible;
+  overscroll-behavior:auto;
+}
+
+/* Collision-proof rows: indicator | label | count. */
+.filter-btn{
+  position:relative;
+  display:grid;
+  grid-template-columns:10px minmax(0,1fr) 36px;
+  align-items:center;
+  gap:8px;
+  width:100%;
+  min-width:0;
+  min-height:38px;
+  padding:6px 6px 6px 8px;
+  border:1px solid transparent;
+  border-radius:8px;
+  background:transparent;
+  color:var(--v8-text-2);
+  font-size:.75rem;
+  font-weight:620;
+  line-height:1.25;
+  text-align:left;
+  cursor:pointer;
+}
+.filter-btn::before{
+  content:"";
+  display:block;
+  width:5px;
+  height:5px;
+  margin:0 auto;
+  border:0;
+  border-radius:50%;
+  background:rgba(181,190,202,.28);
+  box-shadow:none;
+}
+.filter-btn span{
+  display:block;
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  line-height:1.3;
+}
+.filter-btn b{
+  display:block;
+  min-width:0;
+  width:36px;
+  justify-self:end;
+  color:var(--v8-text-3);
+  font-size:.68rem;
+  font-weight:720;
+  font-variant-numeric:tabular-nums;
+  line-height:1;
+  text-align:right;
+}
+.filter-btn:hover{
+  background:rgba(181,190,202,.055);
+  color:var(--v8-text);
+}
+.filter-btn[aria-pressed="true"]{
+  border-color:rgba(143,184,247,.18);
+  background:rgba(143,184,247,.075);
+  color:var(--v8-text);
+  box-shadow:none;
+}
+.filter-btn[aria-pressed="true"]::before{
+  width:6px;
+  height:6px;
+  border:0;
+  background:var(--v8-signal);
+  box-shadow:0 0 0 3px rgba(143,184,247,.10);
+}
+.filter-btn[aria-pressed="true"] b{color:var(--v8-signal-hi)}
+
+/* Search/result bar is visually quieter and easier to scan. */
+.results-head{
+  background:color-mix(in srgb,var(--v8-canvas) 96%,transparent);
+  border-bottom-color:var(--v8-line);
+}
+.search-box .input,
+.sort-select{
+  color:var(--v8-text);
+  background:var(--v8-workspace);
+  border-color:var(--v8-line-strong);
+}
+.search-box .input:focus,
+.sort-select:focus{
+  border-color:rgba(143,184,247,.55);
+  box-shadow:0 0 0 3px rgba(143,184,247,.09);
+}
+
+/* Cards: stronger hierarchy, neutral category labels, less dead visual space. */
+.card{
+  border-color:var(--v8-line);
+  background:color-mix(in srgb,var(--v8-surface) 90%,transparent);
+}
+.card:hover,.card:focus-within{
+  border-color:rgba(143,184,247,.24);
+  background:var(--v8-raised);
+}
+.card-media{
+  background:
+    radial-gradient(circle at 50% 42%,rgba(143,184,247,.05),transparent 44%),
+    var(--media-bg);
+}
+.card-body{
+  gap:8px;
+  padding:15px 15px 14px;
+}
+.card-target{
+  margin:0;
+  color:var(--v8-text-3);
+  font-size:.61rem;
+  font-weight:760;
+  letter-spacing:.09em;
+  line-height:1.25;
+}
+.card-title{
+  color:var(--v8-text);
+  font-size:.98rem;
+  font-weight:760;
+  line-height:1.32;
+}
+.card-meta{
+  margin-top:4px;
+  gap:5px;
+}
+.card-meta .meta-tag{
+  border-color:var(--v8-line);
+  background:rgba(181,190,202,.04);
+  color:var(--v8-text-3);
+}
+.card-actions{
+  margin-top:8px;
+  padding-top:10px;
+  border-top:1px solid var(--v8-line);
+}
+.card-actions .btn:first-child{
+  color:var(--v8-text-2);
+}
+.card-actions .btn:first-child:hover{
+  color:var(--v8-text);
+}
+
+/* Media surfaces no longer carry a warm gold halo. */
+#modal .modal-media{
+  background:
+    radial-gradient(circle at 50% 35%,rgba(143,184,247,.06),transparent 40%),
+    linear-gradient(155deg,#10151b 0%,#090c10 64%,#07090c 100%);
+}
+#run .run-media-frame{
+  background:
+    radial-gradient(circle at 50% 38%,rgba(143,184,247,.05),transparent 44%),
+    var(--media-bg);
+}
+.modal-cue-card::before{background:var(--v8-signal)}
+.modal-alert-card::before{
+  background:rgba(143,184,247,.10);
+  color:var(--v8-signal);
+}
+
+/* Keep the mobile list readable while preserving its compact layout. */
+@media(max-width:1024px){
+  .filters{
+    background:var(--v8-overlay);
+    border-color:var(--v8-line-strong);
+  }
+  .filters-body{
+    padding:16px 16px calc(18px + var(--safe-bottom));
+    gap:16px;
+    overflow-y:auto;
+    overflow-x:hidden;
+  }
+  .filter-list{max-height:none;overflow:visible}
+  .filter-btn{
+    min-height:42px;
+    grid-template-columns:12px minmax(0,1fr) 40px;
+    padding:7px 8px;
+    font-size:.78rem;
+  }
+}
+@media(max-width:840px){
+  .card{
+    background:transparent;
+    border-color:transparent;
+  }
+  .card:hover,.card:focus-within{
+    background:transparent;
+    border-color:var(--v8-line);
+  }
+  .card-actions{border-top:0;padding-top:0;margin-top:auto}
+}
+@media(min-width:1800px){
+  .library-layout{grid-template-columns:300px minmax(0,1fr)}
+}
