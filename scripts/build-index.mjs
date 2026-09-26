@@ -25,15 +25,15 @@ const bootCss = `
   html[data-theme="soft"] {
     --mmg-boot-bg:#eaf0f6;
     --mmg-boot-text:#172330;
-    --mmg-boot-muted:#718091;
+    --mmg-boot-muted:#5d6d7e;
     --mmg-boot-line:rgba(24,40,58,.14);
-    --mmg-boot-accent:#3f72b5;
+    --mmg-boot-accent:#386aa9;
     color-scheme:light;
   }
   html[data-theme="ivory"] {
     --mmg-boot-bg:#f6f5f1;
     --mmg-boot-text:#1a1e23;
-    --mmg-boot-muted:#777f88;
+    --mmg-boot-muted:#68717b;
     --mmg-boot-line:rgba(28,33,39,.13);
     --mmg-boot-accent:#4f7197;
     color-scheme:light;
@@ -98,7 +98,7 @@ const index = `<!doctype html>
     } catch (_) {}
   })();
   </script>
-  <link rel="stylesheet" href="./app.css?v=20260927-premium1">
+  <link rel="stylesheet" href="./app.css?v=20260927-premium2">
   <style>${bootCss}</style>
   <script type="application/ld+json">${JSON.stringify(structuredData)}</script>
 </head>
@@ -138,7 +138,7 @@ const index = `<!doctype html>
   </div>
 ${body}
   <script src="./bootstrap.js" defer></script>
-  <script src="./app.js?v=20260927-premium1" defer></script>
+  <script src="./app.js?v=20260927-premium2" defer></script>
   <script type="module" src="./gym-tools.js"></script>
 </body>
 </html>
