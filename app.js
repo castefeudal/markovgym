@@ -781,7 +781,7 @@
   }
   var MEDIA_PLACEHOLDER = 'images/exercise-placeholder.svg';
   var MEDIA_INLINE_FALLBACK = 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 420"><rect width="640" height="420" fill="#101318"/><g fill="none" stroke="#6f7782" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" opacity=".74"><circle cx="320" cy="120" r="34"/><path d="M320 154v92M268 202l52-32 52 32M286 344l34-98 34 98M250 244h140"/></g><path d="M70 360h500" stroke="#d8a431" stroke-width="4" opacity=".55"/><text x="320" y="395" text-anchor="middle" font-family="Arial,sans-serif" font-size="18" letter-spacing="4" fill="#8d949e">MARKOV MADE GYM</text></svg>');
-  var MEDIA_REVISION = '20260927-media1';
+  var MEDIA_REVISION = '20260927-media2';
   function exStill(ex) { return 'images/' + ex.slug + '.jpg'; }
   function exMotion(ex) { return 'videos/' + ex.slug + '.gif?v=' + MEDIA_REVISION; }
   function mediaFallback(img) {
@@ -1184,7 +1184,7 @@
     img.dataset.still = exStill(ex);
     img.setAttribute('data-ex-media', '');
     img.dataset.mediaFailed = '';
-    img.src = REDUCED_MOTION.matches ? exStill(ex) : exMotion(ex);
+    img.src = exMotion(ex);
 
     var facts = factRow(t('zoneLabel'), labelZone(ex.zone)) +
       factRow(t('muscleLabel'), labelMu(ex.target)) +
@@ -3029,7 +3029,7 @@
     var setStrip=currentLog.map(function(row,idx){var state=row.completed?'done':(idx===runState.set-1?'current':'pending');return '<button class="run-set-chip" type="button" data-state="'+state+'" data-run-set="'+(idx+1)+'" aria-pressed="'+String(state==='current')+'" aria-label="'+esc(t('runJumpSet',{i:idx+1}))+'">'+(idx+1)+'</button>';}).join('');
     var usePrev=prev&&(prev.reps||prev.weight)?'<button class="run-use-prev" type="button" data-run-copy-prev><span>'+premiumIcon('progress')+esc(t('runUsePrevious'))+'</span><b>'+esc(t('runUsePreviousValue',{v:prevText}))+'</b></button>':'';
     stage.innerHTML = '<div class="run-shell">' +
-      '<div class="run-media-frame"><img class="run-media" src="' + esc(REDUCED_MOTION.matches ? exStill(ex) : exMotion(ex)) + '" data-still="' + esc(exStill(ex)) + '" data-ex-media alt="" decoding="async"><span class="run-media-badge">' + esc(labelZone(ex.zone)) + '</span></div>' +
+      '<div class="run-media-frame"><img class="run-media" src="' + esc(exMotion(ex)) + '" data-still="' + esc(exStill(ex)) + '" data-ex-media alt="" decoding="async"><span class="run-media-badge">' + esc(labelZone(ex.zone)) + '</span></div>' +
       '<div class="run-context"><div><div class="run-submeta"><span class="meta-tag">' + esc(labelMu(ex.target)) + '</span><span class="meta-tag">' + premiumIcon('equipment') + esc(labelEq(ex.equip)) + '</span></div>' +
       '<h3 class="run-name">' + esc(exName(ex)) + '</h3></div>' +
       '<div class="run-current"><div class="run-setline"><b>' + esc(t('runSetLabel', { i: runState.set, n: item.sets })) + '</b><span>' + esc(t('runElapsed')) + ' · ' + elapsed + '</span></div>' +
@@ -5048,7 +5048,6 @@
     // Анимация только по наведению и только на устройствах с мышью
     if (FINE_POINTER.matches) {
       $('grid').addEventListener('pointerover', function (e) {
-        if (REDUCED_MOTION.matches) return;
         var card = e.target.closest('.card');
         if (!card || card.contains(e.relatedTarget)) return;
         var ex = BY_ID[card.dataset.id];
