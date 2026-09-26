@@ -23,9 +23,9 @@ test('bootstrap subscribes before the app can emit ready', async () => {
 test('exercise GIF media uses a fresh revision and cache write failures stay non-fatal', async () => {
   const app = await read('app.js');
   const sw = await read('sw.js');
-  assert.match(app, /MEDIA_REVISION = '20260927-media2'/);
+  assert.match(app, /MEDIA_REVISION = '20260927-media3'/);
   assert.match(app, /\.gif\?v=' \+ MEDIA_REVISION/);
-  assert.match(sw, /2026\.09-r3-media2/);
+  assert.match(sw, /2026\.09-r3-media3/);
   assert.match(sw, /Cache Storage is an optimisation only/);
   assert.match(sw, /ignoreSearch: true/);
 });
@@ -37,6 +37,12 @@ test('active exercise views always request GIF animation and service worker leav
   assert.doesNotMatch(app, /img\.src = REDUCED_MOTION\.matches \? exStill\(ex\) : exMotion\(ex\)/);
   assert.match(sw, /if \(\/\\\/videos\\\/\//);
   assert.match(sw, /Exercise GIFs are intentionally not intercepted/);
+});
+
+test('GIF previews are not gated by fine-pointer detection', async () => {
+  const app = await read('app.js');
+  assert.doesNotMatch(app, /if \(FINE_POINTER\.matches\) \{\s*\$\('grid'\)\.addEventListener\('pointerover'/);
+  assert.match(app, /GIF-превью работают на мыши, стилусе и гибридных\/сенсорных устройствах/);
 });
 
 test('exercise dataset keeps all 1324 compact records', async () => {
