@@ -2602,12 +2602,13 @@ img,svg,video{max-width:100%}
 #modal .modal-media.is-ready::before{opacity:0;animation:none}
 @keyframes exercise-media-skeleton{to{transform:translateX(100%)}}
 #modal .modal-media img{
-  position:relative;
+  position:absolute;
   z-index:1;
-  width:100%;
-  height:100%;
-  max-width:100%;
-  max-height:100%;
+  inset:18px;
+  width:calc(100% - 36px);
+  height:calc(100% - 36px);
+  max-width:none;
+  max-height:none;
   object-fit:contain;
   object-position:center;
   padding:6px;
@@ -2681,8 +2682,12 @@ img,svg,video{max-width:100%}
 }
 #modal .modal-media[data-expanded="true"] img,
 #modal .modal-media:fullscreen img{
-  width:100%!important;
-  height:100%!important;
+  position:absolute!important;
+  inset:54px 22px 22px!important;
+  width:calc(100% - 44px)!important;
+  height:calc(100% - 76px)!important;
+  max-width:none!important;
+  max-height:none!important;
   object-fit:contain!important;
   padding:0!important;
 }
@@ -2846,7 +2851,6 @@ img,svg,video{max-width:100%}
 }
 #modal .modal-steps-detailed li::before{
   content:counter(s,decimal-leading-zero);
-  counter-increment:s;
   display:grid;
   place-items:center;
   width:38px;
@@ -3135,7 +3139,7 @@ img,svg,video{max-width:100%}
     padding:8px;
     border-radius:14px;
   }
-  #modal .modal-media img{padding:2px}
+  #modal .modal-media img{inset:8px;width:calc(100% - 16px);height:calc(100% - 16px);padding:2px}
   .modal-media-chrome{left:8px;right:8px;bottom:8px}
   .modal-media-status{min-height:28px;font-size:.55rem}
   .modal-media-expand{min-height:34px;padding-inline:10px}

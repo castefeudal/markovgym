@@ -78,8 +78,16 @@ test('exercise detail view keeps full-frame media and structured guidance', asyn
 
 test('detail assets use a cache-busting revision', async () => {
   const index = await read('index.html');
-  assert.match(index, /app\.css\?v=20260927-detail1/);
-  assert.match(index, /app\.js\?v=20260927-detail1/);
+  assert.match(index, /app\.css\?v=20260927-detail2/);
+  assert.match(index, /app\.js\?v=20260927-detail2/);
+});
+
+test('detail media box itself stays inside the visual frame and step counter increments once', async () => {
+  const css = await read('app.css');
+  assert.match(css, /#modal \.modal-media img\{[\s\S]*?position:absolute;[\s\S]*?inset:18px;[\s\S]*?width:calc\(100% - 36px\);[\s\S]*?height:calc\(100% - 36px\)/);
+  const detail = css.slice(css.lastIndexOf('/* 19. EXERCISE DETAIL V2'));
+  const pseudo = detail.match(/#modal \.modal-steps-detailed li::before\{[\s\S]*?\}/)?.[0] || '';
+  assert.doesNotMatch(pseudo, /counter-increment/);
 });
 
 test('exercise dataset keeps all 1324 compact records', async () => {

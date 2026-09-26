@@ -55,6 +55,20 @@ test('exercise detail shows complete GIF and structured technique guidance', asy
   expect(media.src).toContain('.gif?v=');
   expect(media.naturalWidth).toBeGreaterThan(0);
   expect(media.naturalHeight).toBeGreaterThan(0);
+
+  const geometry = await page.locator('#modal-media').evaluate((frame) => {
+    const img = frame.querySelector('#modal-img');
+    const f = frame.getBoundingClientRect();
+    const i = img.getBoundingClientRect();
+    return {
+      contained: i.left >= f.left - 1 && i.top >= f.top - 1 && i.right <= f.right + 1 && i.bottom <= f.bottom + 1,
+      numbers: [...document.querySelectorAll('#modal-steps li')].slice(0, 3).map((node) =>
+        getComputedStyle(node, '::before').content.replaceAll('"', '')
+      ),
+    };
+  });
+  expect(geometry.contained).toBe(true);
+  expect(geometry.numbers).toEqual(['01', '02', '03']);
   expect(errors).toEqual([]);
 });
 

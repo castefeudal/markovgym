@@ -65,7 +65,7 @@ const index = `<!doctype html>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230B0C0E'/%3E%3Cpath d='M14 46V18h6.5l11.5 17 11.5-17H50v28h-6.6V29.4L32.6 45.6h-1.2L20.6 29.4V46z' fill='%23E0A82E'/%3E%3C/svg%3E">
   <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230B0C0E'/%3E%3Cpath d='M14 46V18h6.5l11.5 17 11.5-17H50v28h-6.6V29.4L32.6 45.6h-1.2L20.6 29.4V46z' fill='%23E0A82E'/%3E%3C/svg%3E">
   <link rel="manifest" href="./manifest.webmanifest">
-  <link rel="stylesheet" href="./app.css?v=20260927-detail1">
+  <link rel="stylesheet" href="./app.css?v=20260927-detail2">
   <style>${bootCss}</style>
   <script type="application/ld+json">${JSON.stringify(structuredData)}</script>
 </head>
@@ -105,7 +105,7 @@ const index = `<!doctype html>
   </div>
 ${body}
   <script src="./bootstrap.js" defer></script>
-  <script src="./app.js?v=20260927-detail1" defer></script>
+  <script src="./app.js?v=20260927-detail2" defer></script>
   <script type="module" src="./gym-tools.js"></script>
 </body>
 </html>
