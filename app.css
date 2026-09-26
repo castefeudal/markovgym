@@ -4023,6 +4023,13 @@ body::before{
 }
 
 /* Filter panel inherits each theme correctly. */
+@media(min-width:1025px){
+  .library-layout{
+    grid-template-columns:286px minmax(0,1fr);
+    gap:28px;
+    align-items:start;
+  }
+}
 .filters{
   border-color:var(--v8-line);
   background:var(--premium-panel);
@@ -4036,7 +4043,33 @@ body::before{
   background:color-mix(in srgb,var(--v8-surface) 80%,transparent);
   color:var(--v8-text-2);
 }
-.filter-btn{color:var(--v8-text-2)}
+.filter-list{
+  max-height:none;
+  overflow:visible;
+  overscroll-behavior:auto;
+}
+.filter-btn{
+  display:grid;
+  grid-template-columns:10px minmax(0,1fr) 36px;
+  align-items:center;
+  gap:8px;
+  min-width:0;
+  min-height:38px;
+  color:var(--v8-text-2);
+}
+.filter-btn span{
+  display:block;
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.filter-btn b{
+  width:36px;
+  justify-self:end;
+  text-align:right;
+  font-variant-numeric:tabular-nums;
+}
 .filter-btn::before{background:color-mix(in srgb,var(--v8-text-3) 34%,transparent)}
 .filter-btn:hover{
   background:color-mix(in srgb,var(--v8-signal) 5%,transparent);
