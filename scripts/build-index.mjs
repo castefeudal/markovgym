@@ -86,7 +86,7 @@ const index = `<!doctype html>
   <meta name="twitter:title" content="MARKOV MADE GYM">
   <meta name="twitter:description" content="Библиотека упражнений, Run Mode, прогресс и инструменты зала без регистрации.">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230B0C0E'/%3E%3Cpath d='M14 46V18h6.5l11.5 17 11.5-17H50v28h-6.6V29.4L32.6 45.6h-1.2L20.6 29.4V46z' fill='%2386B6FF'/%3E%3C/svg%3E">
-  <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230B0C0E'/%3E%3Cpath d='M14 46V18h6.5l11.5 17 11.5-17H50v28h-6.6V29.4L32.6 45.6h-1.2L20.6 29.4V46z' fill='%23E0A82E'/%3E%3C/svg%3E">
+  <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230B0C0E'/%3E%3Cpath d='M14 46V18h6.5l11.5 17 11.5-17H50v28h-6.6V29.4L32.6 45.6h-1.2L20.6 29.4V46z' fill='%2386B6FF'/%3E%3C/svg%3E">
   <link rel="manifest" href="./manifest.webmanifest">
   <script>
   (function () {
