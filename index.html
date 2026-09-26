@@ -51,6 +51,26 @@
   <script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"MARKOV MADE GYM","applicationCategory":"HealthApplication","operatingSystem":"Web","isAccessibleForFree":true,"inLanguage":["ru","en"],"description":"Локальный тренировочный журнал с библиотекой упражнений, Run Mode, прогрессом, программой и инструментами расчёта нагрузки.","featureList":["Библиотека упражнений","Конструктор тренировки","Run Mode и таймер отдыха","КБЖУ","Прогресс","Инструменты зала"]}</script>
 </head>
 <body data-app-version="2026.09-r3">
+  <script>
+  (function () {
+    var marker = 'media4';
+    var url = new URL(location.href);
+    if (url.searchParams.get('_mmgsw') === marker) {
+      url.searchParams.delete('_mmgsw');
+      history.replaceState(null, '', url.pathname + (url.search || '') + url.hash);
+      return;
+    }
+    if (!('serviceWorker' in navigator) || !navigator.serviceWorker.controller) return;
+    navigator.serviceWorker.getRegistration('./').then(function (registration) {
+      if (!registration) return;
+      return registration.unregister().then(function (removed) {
+        if (!removed) return;
+        url.searchParams.set('_mmgsw', marker);
+        location.replace(url.href);
+      });
+    }).catch(function () {});
+  })();
+  </script>
   <div id="mmg-boot" role="status" aria-live="polite" aria-label="Загрузка MARKOV MADE GYM">
     <div class="mmg-boot-card">
       <div class="mmg-boot-mark"><svg viewBox="0 0 40 40" aria-hidden="true"><rect x="1" y="1" width="38" height="38" rx="9" fill="none" stroke="#f3f1ed" stroke-opacity=".24"/><path d="M9 29V11h4.4l6.6 10.2L26.6 11H31v18h-4.3V18.9l-5.9 9.1h-1.6l-5.9-9.1V29z" fill="#e0a82e"/><path d="M9 33h22" stroke="#e0a82e" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="1.6 3.4"/></svg><div class="mmg-boot-brand">MARKOV MADE<span>GYM</span></div></div>
@@ -1443,7 +1463,7 @@
 <!-- ДАННЫЕ: 1324 упражнения (RU + EN). Отделены от UI-логики и разбираются один раз при старте. -->
 
   <script src="./bootstrap.js" defer></script>
-  <script src="./app.js?v=20260927-media3" defer></script>
+  <script src="./app.js?v=20260927-media4" defer></script>
   <script type="module" src="./gym-tools.js"></script>
 </body>
 </html>
