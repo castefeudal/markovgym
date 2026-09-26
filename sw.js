@@ -1,4 +1,4 @@
-const VERSION = '2026.09-r3-media2';
+const VERSION = '2026.09-r3-media3';
 const PREFIX = 'mmg-gym-';
 const SHELL = `${PREFIX}shell-${VERSION}`;
 const MEDIA = `${PREFIX}media-${VERSION}`;
