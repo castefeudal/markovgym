@@ -6604,10 +6604,31 @@
     else if(route==='program'&&S.plan&&S.plan.days){meta=(S.plan.completedDays||[]).length+' / '+S.plan.days.length+' '+(S.lang==='en'?'sessions this week':'тренировок на этой неделе');}
     return{k:base[0],t:v7c(route)||route,m:meta};
   }
+  function renderV10ContextAction(route){
+    var host=$('v10-context-actions');if(!host)return;
+    var html='';
+    if(route==='home'){
+      var next=v7NextAction();html='<button class="btn btn-primary btn-sm" type="button" data-v7-action="'+esc(next.type)+'"'+(next.day!=null?' data-v7-day="'+next.day+'"':'')+'>'+esc(next.title)+'</button>';
+    }else if(route==='library'){
+      html=S.workout.length?'<button class="btn btn-primary btn-sm" type="button" data-v7-route="workout">'+esc((S.lang==='en'?'Workout':'Тренировка')+' · '+S.workout.length)+'</button>':'<button class="btn btn-primary btn-sm" type="button" data-v10-focus="search">'+esc(S.lang==='en'?'Search exercises':'Найти упражнение')+'</button>';
+    }else if(route==='workout'){
+      var total=S.workout.reduce(function(a,w){return a+(Number(w.sets)||0);},0),done=S.workout.reduce(function(a,w){return a+completedSetCount(w);},0);
+      html=S.workout.length?'<button class="btn btn-primary btn-sm" type="button" data-v7-action="'+(done&&done<total?'resume':'run')+'">'+esc(done&&done<total?(S.lang==='en'?'Resume':'Продолжить'):(S.lang==='en'?'Start Run Mode':'Начать Run Mode'))+'</button>':'<button class="btn btn-primary btn-sm" type="button" data-v7-route="library">'+esc(S.lang==='en'?'Build workout':'Собрать тренировку')+'</button>';
+    }else if(route==='program'){
+      var p=v7NextPlanDay();html=S.plan&&p>=0?'<button class="btn btn-primary btn-sm" type="button" data-v7-action="planDay" data-v7-day="'+p+'">'+esc(S.lang==='en'?'Start next day':'Начать следующий день')+'</button>':'<button class="btn btn-primary btn-sm" type="button" data-v10-focus="p-goal">'+esc(S.lang==='en'?'Build programme':'Собрать программу')+'</button>';
+    }else if(route==='progress'){
+      html='<button class="btn btn-primary btn-sm" type="button" data-v10-focus="g-weight">'+esc(S.lang==='en'?'Add check-in':'Добавить check-in')+'</button>';
+    }else if(route==='nutrition'){
+      html='<button class="btn btn-primary btn-sm" type="button" data-v10-focus="k-weight">'+esc(S.lang==='en'?'Calculate target':'Рассчитать ориентир')+'</button>';
+    }
+    host.innerHTML=html;
+    host.hidden=!html;
+  }
   function renderV8Shell(route,animate){
     route=route||v7RouteFromHash();var returning=v7Returning();document.body.dataset.v8Returning=returning?'true':'false';document.body.dataset.v8Ready='true';
     var meta=v8RouteMeta(route),k=$('v8-context-kicker'),t8=$('v8-context-title'),m8=$('v8-context-meta'),lt=$('v8-context-local-text');
     if(k)k.textContent=meta.k;if(t8)t8.textContent=meta.t;if(m8)m8.textContent=meta.m;if(lt)lt.textContent=S.lang==='en'?'Saved on this device':'Сохранено на устройстве';
+    renderV10ContextAction(route);
     qsa('[data-v8-rail]').forEach(function(a){var on=a.dataset.v8Rail===route||(route!=='home'&&route!=='library'&&route!=='workout'&&route!=='progress'&&a.dataset.v8Rail==='more');if(on)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');});
     if(animate&&!REDUCED_MOTION.matches){var target=route==='home'&&returning?$('home'):(route==='home'?qs('.hero'):$(route));if(target){target.classList.remove('v8-route-enter');requestAnimationFrame(function(){target.classList.add('v8-route-enter');setTimeout(function(){target.classList.remove('v8-route-enter');},280);});}}
   }
@@ -6624,16 +6645,36 @@
     ensureMobileAppNav();renderV7All();initV8Keyboard();
     window.addEventListener('hashchange',function(){applyV7Route(true);track('home_action',{route:v7RouteFromHash()});});
     window.addEventListener('hashchange',function(){var route=v7RouteFromHash();if(dataRouteNeedsLibrary(route))ensureData().then(refreshDataDependentUI);});
-    document.addEventListener('click',function(e){var startRun=e.target.closest('[data-v8-start-run]');if(startRun){e.preventDefault();openRun();return;}var r=e.target.closest('a[data-v7-route],button[data-v7-route]');if(r){e.preventDefault();navigateV7(r.dataset.v7Route,true);return;}var a=e.target.closest('[data-v7-action]');if(a){var type=a.dataset.v7Action;if(type==='resume'||type==='run')openRun();else if(type==='planDay')startPlanDayV7(Number(a.dataset.v7Day)||0,true);else if(type==='profile'){navigateV7('home',false);var panel=qs('.hero-panel');if(panel){panel.scrollIntoView({block:'start'});var first=qs('.console-opt',panel);if(first)first.focus();}}else if(type==='checkin'){navigateV7('progress',true);setTimeout(function(){if($('g-weight'))$('g-weight').focus();},80);}else navigateV7(V7_ROUTE_IDS[type]?type:(type==='program'?'program':'library'),true);track('home_action',{action:type});return;}var th=e.target.closest('[data-v7-theme]');if(th){S.theme=th.dataset.v7Theme;applyTheme();renderV7Settings();return;}var st=e.target.closest('[data-v7-setting]');if(st){var key=st.dataset.v7Setting;S.settings[key]=!S.settings[key];saveSettings();renderV7Settings();if(runOpen())renderRun();return;}if(e.target.closest('[data-v7-coach]')){$('coach-switch').click();renderV7Settings();return;}var data=e.target.closest('[data-v7-data]');if(data){var map={export:'data-export',import:'data-import',clear:'data-clear'};var target=$(map[data.dataset.v7Data]);if(target)target.click();return;}},true);
+    document.addEventListener('click',function(e){var startRun=e.target.closest('[data-v8-start-run]');if(startRun){e.preventDefault();openRun();return;}var r=e.target.closest('a[data-v7-route],button[data-v7-route]');if(r){e.preventDefault();navigateV7(r.dataset.v7Route,true);return;}var a=e.target.closest('[data-v7-action]');if(a){var type=a.dataset.v7Action;if(type==='resume'||type==='run')openRun();else if(type==='planDay')startPlanDayV7(Number(a.dataset.v7Day)||0,true);else if(type==='profile'){navigateV7('home',false);var panel=qs('.hero-panel');if(panel){panel.scrollIntoView({block:'start'});var first=qs('.console-opt',panel);if(first)first.focus();}}else if(type==='checkin'){navigateV7('progress',true);setTimeout(function(){if($('g-weight'))$('g-weight').focus();},80);}else navigateV7(V7_ROUTE_IDS[type]?type:(type==='program'?'program':'library'),true);track('home_action',{action:type});return;}var th=e.target.closest('[data-v7-theme]');if(th){S.theme=th.dataset.v7Theme;applyTheme();renderV7Settings();return;}var reading=e.target.closest('[data-v10-reading]');if(reading){S.settings.reading=reading.dataset.v10Reading;saveSettings();applyReadability();renderV7Settings();return;}var st=e.target.closest('[data-v7-setting]');if(st){var key=st.dataset.v7Setting;S.settings[key]=!S.settings[key];saveSettings();renderV7Settings();if(runOpen())renderRun();return;}if(e.target.closest('[data-v7-coach]')){$('coach-switch').click();renderV7Settings();return;}var focus=e.target.closest('[data-v10-focus]');if(focus){var node=$(focus.dataset.v10Focus);if(node){node.scrollIntoView({block:'center',behavior:REDUCED_MOTION.matches?'auto':'smooth'});setTimeout(function(){try{node.focus({preventScroll:true});}catch(_e){node.focus();}},REDUCED_MOTION.matches?0:220);}return;}var data=e.target.closest('[data-v7-data]');if(data){var map={export:'data-export',import:'data-import',clear:'data-clear'};var target=$(map[data.dataset.v7Data]);if(target)target.click();return;}},true);
     if(window.MutationObserver){var mo=new MutationObserver(function(){renderV7Home();syncV7Floating();});['workout-list','hist','prog-out','plan-out'].forEach(function(id){var el=$(id);if(el)mo.observe(el,{childList:true,subtree:false,attributes:true,attributeFilter:['data-filled']});});}
     applyV7Route(false);window.mmgV7={navigate:navigateV7,get route(){return v7RouteFromHash();},render:renderV7All};window.mmgV8=window.mmgV7;
   }
 
+  function renderV10WorkoutBalance(){
+    var host=$('v10-workout-balance');if(!host)return;
+    var rows=S.workout.map(function(w){return{w:w,ex:BY_ID[w.id]};}).filter(function(r){return !!r.ex;});
+    if(!rows.length){host.hidden=true;host.innerHTML='';return;}
+    var totalSets=rows.reduce(function(a,r){return a+(Number(r.w.sets)||0);},0);
+    var zoneSets=Object.create(null),compound=0;
+    rows.forEach(function(r){zoneSets[r.ex.zone]=(zoneSets[r.ex.zone]||0)+(Number(r.w.sets)||0);if(exKind(r.ex)==='compound')compound++;});
+    var ordered=Object.keys(zoneSets).sort(function(a,b){return zoneSets[b]-zoneSets[a];});
+    var top=ordered[0],topSets=top?zoneSets[top]:0;
+    var high=topSets>14;
+    var focused=ordered.length===1&&rows.length>=4;
+    var status=high?(S.lang==='en'?'Volume concentrated':'Объём сильно сконцентрирован'):(focused?(S.lang==='en'?'Focused session':'Фокусная сессия'):(S.lang==='en'?'Balanced structure':'Сбалансированная структура'));
+    var state=high?'watch':'ok';
+    host.hidden=false;
+    host.innerHTML='<div class="v10-balance-head"><div><span class="eyebrow">'+esc(S.lang==='en'?'SESSION STRUCTURE':'СТРУКТУРА СЕССИИ')+'</span><b>'+esc(status)+'</b></div><span class="signal" data-state="'+state+'">'+esc(totalSets+' '+v7c('sets'))+'</span></div>'+
+      '<div class="v10-balance-metrics"><div><span>'+esc(S.lang==='en'?'Compound':'Составные')+'</span><strong>'+Math.round(compound/rows.length*100)+'%</strong></div><div><span>'+esc(S.lang==='en'?'Body areas':'Зоны тела')+'</span><strong>'+ordered.length+'</strong></div><div><span>'+esc(S.lang==='en'?'Estimated time':'Оценка времени')+'</span><strong>'+Math.max(10,round(totalSets*2.6+rows.length*2))+' '+esc(S.lang==='en'?'min':'мин')+'</strong></div></div>'+
+      '<div class="v10-zone-load">'+ordered.slice(0,4).map(function(z){var pct=Math.round(zoneSets[z]/Math.max(1,totalSets)*100);return'<span><b>'+esc(labelZone(z))+'</b><i><u style="width:'+pct+'%"></u></i><em>'+zoneSets[z]+'</em></span>';}).join('')+'</div>'+
+      (high?'<p class="small">'+esc(S.lang==='en'?'One body area carries more than 14 planned sets. Check whether every exercise is necessary before adding more volume.':'На одну зону приходится больше 14 запланированных подходов. Проверь, действительно ли нужны все упражнения, прежде чем добавлять объём.')+'</p>':'');
+  }
+
   /* Wrap proven renderers instead of duplicating business logic. */
   var _renderSystemV7=renderSystem;renderSystem=function(){_renderSystemV7();if(document.body&&document.body.dataset.v7Ready==='true')applyV7Route(false);};
-  var _renderWorkoutV7=renderWorkout;renderWorkout=function(){_renderWorkoutV7();addProgressionAdviceV7();renderV7Home();};
+  var _renderWorkoutV7=renderWorkout;renderWorkout=function(){_renderWorkoutV7();addProgressionAdviceV7();renderV10WorkoutBalance();renderV7Home();if(document.body&&document.body.dataset.v8Ready==='true')renderV8Shell(v7RouteFromHash(),false);};
   var _renderHistoryV7=renderHistory;renderHistory=function(){_renderHistoryV7();renderV7Home();};
-  var _renderProgressV7=renderProgress;renderProgress=function(){_renderProgressV7();renderV7Home();};
+  var _renderProgressV7=renderProgress;renderProgress=function(){_renderProgressV7();renderV7Home();if(document.body&&document.body.dataset.v8Ready==='true')renderV8Shell(v7RouteFromHash(),false);};
   var _renderRunV7=renderRun;renderRun=function(){_renderRunV7();renderV7RunAdvanced();};
   var _openExerciseProductOSV7=openExercise;openExercise=function(id,trigger,silent){var result=_openExerciseProductOSV7(id,trigger,silent);renderV7ExerciseHistory(id);return result;};
   var _decorateKbjuProductOSV7=decorateKbju;decorateKbju=function(ctx){var result=_decorateKbjuProductOSV7(ctx);renderV7NutritionContext(ctx);renderV7Home();return result;};
@@ -6645,7 +6686,8 @@
 
   async function init() {
     var initialRoute = (location.hash || '#home').slice(1).split('?')[0];
-    var needsData = dataRouteNeedsLibrary(initialRoute);
+    var hasPersistedExerciseState = !!(store.get(K.fav) || store.get(K.workout) || store.get(K.plan));
+    var needsData = dataRouteNeedsLibrary(initialRoute) || hasPersistedExerciseState;
     if (needsData) window.dispatchEvent(new CustomEvent('mmg:stage', { detail: { key: 'data' } }));
     var contentLoaded = await loadContent();
     var dataLoaded = needsData ? await ensureData() : true;
