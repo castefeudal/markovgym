@@ -187,3 +187,50 @@ test('all three themes resolve coherent tokens, persist and keep library informa
     expect(resolved.cardText).not.toBe('');
   }
 });
+
+
+test('flagship restores saved programme on home and exposes the weekly pulse', async ({ page }) => {
+  await page.goto('/index.html#home');
+  await page.evaluate(() => {
+    localStorage.setItem('mmg.plan.v1', JSON.stringify({
+      v: 2,
+      createdAt: Date.now(),
+      weekKey: '',
+      completedDays: [],
+      ctx: { goal: 'muscle', level: 'middle', days: 2, time: 60, place: 'gym', focus: 'balanced', cardio: 'light', steps: 'mid' },
+      days: [
+        { key: 'fullA', index: 0, items: [{ id: '0001', sets: 3, reps: '10–12', rest: 90 }] },
+        { key: 'fullB', index: 1, items: [{ id: '0002', sets: 3, reps: '10–12', rest: 90 }] },
+      ],
+    }));
+  });
+  await page.reload();
+  await expect(page.locator('#mmg-boot')).toHaveCount(0);
+  await expect(page.locator('#v10-home-pulse')).toBeVisible();
+  await expect(page.locator('#v10-home-pulse')).toContainText(/0\s*\/\s*2/);
+  await page.goto('/index.html#program');
+  await expect(page.locator('#plan-out')).toHaveAttribute('data-filled', 'true');
+  await expect(page.locator('#plan-out .v10-plan-day')).toHaveCount(2);
+});
+
+test('readability choice persists and progress supports multiple chart signals', async ({ page }) => {
+  await page.goto('/index.html#settings');
+  await expect(page.locator('#mmg-boot')).toHaveCount(0);
+  await page.locator('[data-v10-reading="comfortable"]').click();
+  await expect(page.locator('html')).toHaveAttribute('data-reading', 'comfortable');
+  await page.reload();
+  await expect(page.locator('html')).toHaveAttribute('data-reading', 'comfortable');
+
+  await page.evaluate(() => {
+    localStorage.setItem('mmg.diary.v1', JSON.stringify([
+      { date: '2026-09-26', weight: 108.2, waist: 85.0, sleep: 7.5, recovery: 3, mood: 3, hunger: 2, fatigue: 2 },
+      { date: '2026-09-20', weight: 109.0, waist: 85.8, sleep: 6.8, recovery: 2, mood: 3, hunger: 2, fatigue: 3 },
+    ]));
+  });
+  await page.goto('/index.html#progress');
+  await expect(page.locator('[data-progress-metric="weight"]')).toHaveAttribute('aria-pressed', 'true');
+  await page.locator('[data-progress-metric="waist"]').click();
+  await expect(page.locator('[data-progress-metric="waist"]')).toHaveAttribute('aria-pressed', 'true');
+  await page.locator('[data-progress-metric="sleep"]').click();
+  await expect(page.locator('[data-progress-metric="sleep"]')).toHaveAttribute('aria-pressed', 'true');
+});
