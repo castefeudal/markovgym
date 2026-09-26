@@ -3891,51 +3891,68 @@
     return vals.reduce(function (a, b) { return a + b; }, 0) / vals.length;
   }
 
+  var progressMetric = 'weight';
+
+  function progressChartTabsV10() {
+    var tabs = [
+      ['weight', S.lang === 'en' ? 'Weight' : 'Вес'],
+      ['waist', S.lang === 'en' ? 'Waist' : 'Талия'],
+      ['sleep', S.lang === 'en' ? 'Sleep' : 'Сон']
+    ];
+    return '<div class="v10-progress-tabs" role="group" aria-label="' + esc(S.lang === 'en' ? 'Chart metric' : 'Показатель графика') + '">' + tabs.map(function(x){
+      return '<button type="button" data-progress-metric="'+x[0]+'" aria-pressed="'+String(progressMetric===x[0])+'">'+esc(x[1])+'</button>';
+    }).join('') + '</div>';
+  }
+
+  function progressCoachNoteV10() {
+    if (progressMetric === 'waist') return coachNote({
+      t:{ru:'Талия полезна как второй сигнал',en:'Waist is useful as a second signal'},
+      d:{ru:'Измеряй её в одинаковых условиях. Она помогает отделить реальное изменение композиции тела от колебаний массы из-за воды.',en:'Measure it under the same conditions. It helps separate body-composition change from water-driven scale fluctuations.'},
+      a:{ru:'Оценивай направление за несколько недель вместе с весом, а не отдельную точку.',en:'Read the multi-week direction together with weight, not a single point.'}
+    },{compact:true});
+    if (progressMetric === 'sleep') return coachNote({
+      t:{ru:'Сон — контекст, а не оценка тренировки',en:'Sleep is context, not a workout score'},
+      d:{ru:'Несколько плохих ночей подряд могут объяснить падение работоспособности, аппетит и ощущение восстановления.',en:'Several poor nights in a row can explain lower performance, appetite changes and worse recovery.'},
+      a:{ru:'Ищи повторяющийся паттерн. Один короткий сон сам по себе не требует менять программу.',en:'Look for a repeated pattern. One short night alone is not a reason to change the programme.'}
+    },{compact:true});
+    return coachNote({
+      t:{ru:'Не меняй план по одному измерению',en:'Never change a plan on a single measurement'},
+      d:{ru:'Одна точка на графике почти всегда объясняется водой, солью или содержимым кишечника. Решение принимается по направлению линии за две-три недели.',en:'One point on the chart is almost always water, salt or gut content. Decisions come from the direction of the line over two or three weeks.'},
+      a:{ru:'Смотри на среднюю линию — пунктир на графике. Отдельные точки нужны только для того, чтобы её построить.',en:'Watch the dashed average line. Individual points exist only to build it.'}
+    },{compact:true});
+  }
+
   function progressChart() {
-    var pts = S.diary.filter(function (d) { return typeof d.weight === 'number'; })
-      .slice(0, 60).reverse();
-    if (pts.length < 2) return '<p class="tiny">' + esc(t('chartNeedMore')) + '</p>';
+    var cfg = {
+      weight:{unit:t('kg'), digits:1, label:S.lang==='en'?'Weight':'Вес'},
+      waist:{unit:t('cm'), digits:1, label:S.lang==='en'?'Waist':'Талия'},
+      sleep:{unit:t('hrs'), digits:1, label:S.lang==='en'?'Sleep':'Сон'}
+    }[progressMetric] || {unit:t('kg'),digits:1,label:S.lang==='en'?'Weight':'Вес'};
+    var field = progressMetric;
+    var pts = S.diary.filter(function(d){return typeof d[field] === 'number' && isFinite(d[field]);}).slice(0,60).reverse();
+    if (pts.length < 2) return '<div class="v10-chart-empty"><b>'+esc(cfg.label)+'</b><p class="tiny">'+esc(S.lang==='en'?'Add at least two entries to see a trend.':'Добавь минимум две записи, чтобы увидеть динамику.')+'</p></div>';
 
-    var W = 560, H = 200, PADL = 38, PADR = 10, PADT = 14, PADB = 24;
-    var values = pts.map(function (p) { return p.weight; });
-    var min = Math.min.apply(null, values), max = Math.max.apply(null, values);
-    if (max - min < 1) { max = max + 0.5; min = min - 0.5; }
-    var pad = (max - min) * 0.12;
-    min -= pad; max += pad;
-
-    var x = function (i) { return PADL + (i / (pts.length - 1)) * (W - PADL - PADR); };
-    var y = function (v) { return PADT + (1 - (v - min) / (max - min)) * (H - PADT - PADB); };
-
-    var line = pts.map(function (p, i) { return (i ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(p.weight).toFixed(1); }).join(' ');
-
-    // скользящее среднее за 7 точек
-    var avg = pts.map(function (_, i) {
-      var from = Math.max(0, i - 6);
-      var slice = values.slice(from, i + 1);
-      return slice.reduce(function (a, b) { return a + b; }, 0) / slice.length;
-    });
-    var avgLine = avg.map(function (v, i) { return (i ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(v).toFixed(1); }).join(' ');
-
-    var grid = '', labels = '';
-    for (var g = 0; g <= 3; g++) {
-      var val = min + ((max - min) * g) / 3;
-      var yy = y(val).toFixed(1);
-      grid += '<line class="prog-grid" x1="' + PADL + '" y1="' + yy + '" x2="' + (W - PADR) + '" y2="' + yy + '"/>';
-      labels += '<text class="prog-axis" x="4" y="' + (Number(yy) + 3.5).toFixed(1) + '">' + val.toFixed(1) + '</text>';
+    var W=560,H=200,PADL=42,PADR=10,PADT=14,PADB=24;
+    var values=pts.map(function(p){return p[field];});
+    var min=Math.min.apply(null,values),max=Math.max.apply(null,values);
+    var floor = field==='sleep' ? .5 : 1;
+    if(max-min<floor){max=max+floor/2;min=min-floor/2;}
+    var pad=(max-min)*.12;min-=pad;max+=pad;
+    var x=function(i){return PADL+(i/(pts.length-1))*(W-PADL-PADR);};
+    var y=function(v){return PADT+(1-(v-min)/(max-min))*(H-PADT-PADB);};
+    var line=pts.map(function(p,i){return(i?'L':'M')+x(i).toFixed(1)+' '+y(p[field]).toFixed(1);}).join(' ');
+    var avg=pts.map(function(_,i){var from=Math.max(0,i-6),slice=values.slice(from,i+1);return slice.reduce(function(a,b){return a+b;},0)/slice.length;});
+    var avgLine=avg.map(function(v,i){return(i?'L':'M')+x(i).toFixed(1)+' '+y(v).toFixed(1);}).join(' ');
+    var grid='',labels='';
+    for(var g=0;g<=3;g++){
+      var val=min+((max-min)*g)/3,yy=y(val).toFixed(1);
+      grid+='<line class="prog-grid" x1="'+PADL+'" y1="'+yy+'" x2="'+(W-PADR)+'" y2="'+yy+'"/>';
+      labels+='<text class="prog-axis" x="4" y="'+(Number(yy)+3.5).toFixed(1)+'">'+val.toFixed(cfg.digits)+'</text>';
     }
-    var first = pts[0].date.slice(5), last = pts[pts.length - 1].date.slice(5);
-    labels += '<text class="prog-axis" x="' + PADL + '" y="' + (H - 6) + '">' + esc(first) + '</text>' +
-      '<text class="prog-axis" x="' + (W - PADR) + '" y="' + (H - 6) + '" text-anchor="end">' + esc(last) + '</text>';
-
-    var dots = pts.map(function (p, i) {
-      return '<circle class="prog-dot" cx="' + x(i).toFixed(1) + '" cy="' + y(p.weight).toFixed(1) + '" r="3"><title>' + esc(p.date + ' · ' + p.weight.toFixed(1) + ' ' + t('kg')) + '</title></circle>';
-    }).join('');
-
-    return '<div class="prog-chart"><svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' +
-      esc(t('chartAria', { n: pts.length })) + '">' + grid + labels +
-      '<path class="prog-avg" d="' + avgLine + '"/>' +
-      '<path class="prog-line" d="' + line + '"/>' + dots + '</svg>' +
-      '<p class="tiny v8-chart-legend">' + esc(t('chartLegend')) + '</p></div>';
+    var first=pts[0].date.slice(5),last=pts[pts.length-1].date.slice(5);
+    labels+='<text class="prog-axis" x="'+PADL+'" y="'+(H-6)+'">'+esc(first)+'</text><text class="prog-axis" x="'+(W-PADR)+'" y="'+(H-6)+'" text-anchor="end">'+esc(last)+'</text>';
+    var dots=pts.map(function(p,i){return'<circle class="prog-dot" cx="'+x(i).toFixed(1)+'" cy="'+y(p[field]).toFixed(1)+'" r="3"><title>'+esc(p.date+' · '+p[field].toFixed(cfg.digits)+' '+cfg.unit)+'</title></circle>';}).join('');
+    return '<div class="prog-chart"><svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(cfg.label+' · '+pts.length)+'">'+grid+labels+'<path class="prog-avg" d="'+avgLine+'"/><path class="prog-line" d="'+line+'"/>'+dots+'</svg><p class="tiny v8-chart-legend">'+esc(cfg.label+' · '+(S.lang==='en'?'solid = entries, dashed = rolling average':'сплошная = записи, пунктир = скользящее среднее'))+'</p></div>';
   }
 
   function renderProgress() {
@@ -3959,7 +3976,7 @@
     var html = '<div class="v8-diary-head">' +
         '<p class="eyebrow v8-m0">' + esc(t('diaryTitle')) + '</p>' + signal(st.state, st.label) +
       '</div>' +
-      progressChart() +
+      progressChartTabsV10() + progressChart() +
       '<div class="prog-deltas">' +
         '<div class="kpi kpi-accent"><span>' + esc(t('diaryAvg7')) + '</span><b>' +
           (avg7 === null ? '—' : avg7.toFixed(1) + ' ' + t('kg')) + '</b></div>' +
@@ -3969,13 +3986,7 @@
         '<div class="kpi"><span>' + esc(t('diaryWaist')) + '</span><b>' + esc(fmtD(waist30, t('cm'))) + '</b></div>' +
       '</div>' +
       '<p class="v8-muted-copy">' + esc(diaryVerdict(d14, waist30)) + '</p>' +
-      coachNote({
-        t: { ru: 'Не меняй план по одному измерению', en: 'Never change a plan on a single measurement' },
-        d: { ru: 'Одна точка на графике почти всегда объясняется водой, солью или содержимым кишечника. Решение принимается по направлению линии за две-три недели.',
-             en: 'One point on the chart is almost always water, salt or gut content. Decisions come from the direction of the line over two or three weeks.' },
-        a: { ru: 'Смотри на среднюю линию — пунктир на графике. Отдельные точки нужны только для того, чтобы её построить.',
-             en: 'Watch the dashed average line. Individual points exist only to build it.' }
-      }, { compact: true }) +
+      progressCoachNoteV10() +
       '<div class="prog-log">' + S.diary.slice(0, 30).map(function (d) {
         var bits = [];
         if (typeof d.weight === 'number') bits.push(d.weight.toFixed(1) + ' ' + t('kg'));
@@ -5051,6 +5062,12 @@
       saveDiary(); renderProgress(); renderDashIfVisible();
     });
     $('prog-out').addEventListener('click', function (e) {
+      var metric = e.target.closest('[data-progress-metric]');
+      if (metric) {
+        progressMetric = metric.dataset.progressMetric;
+        renderProgress();
+        return;
+      }
       var del = e.target.closest('[data-diary-del]');
       if (!del) return;
       S.diary = S.diary.filter(function (d) { return d.date !== del.dataset.diaryDel; });
