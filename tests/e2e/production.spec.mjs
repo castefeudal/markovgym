@@ -133,12 +133,57 @@ test('desktop library filters do not overlap and the warm gold accent is gone', 
     };
   });
 
-  expect(audit.accent.toLowerCase()).toBe('#8fb8f7');
-  expect(audit.brass.toLowerCase()).toBe('#8c98a8');
+  expect(audit.accent.toLowerCase()).toBe('#86b6ff');
+  expect(audit.brass.toLowerCase()).toBe('#8f9bad');
   expect(audit.listOverflow).toBe('visible');
   expect(audit.minHeight).toBeGreaterThanOrEqual(37);
   expect(audit.overlaps).toBe(0);
   expect(audit.labelCountCollisions).toBe(0);
   expect(audit.sidebarWidth).toBeGreaterThanOrEqual(280);
   expect(audit.pageOverflow).toBeLessThanOrEqual(1);
+});
+
+
+test('all three themes resolve coherent tokens, persist and keep library information readable', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/index.html#library');
+  await expect(page.locator('#mmg-boot')).toHaveCount(0);
+
+  const expected = [
+    { theme: 'obsidian', canvas: '#070a0e', signal: '#86b6ff', scheme: 'dark' },
+    { theme: 'soft', canvas: '#eaf0f6', signal: '#3f72b5', scheme: 'light' },
+    { theme: 'ivory', canvas: '#f6f5f1', signal: '#4f7197', scheme: 'light' },
+  ];
+
+  for (const spec of expected) {
+    await page.evaluate((theme) => localStorage.setItem('mmg.theme.v2', theme), spec.theme);
+    await page.reload();
+    await page.waitForLoadState('domcontentloaded');
+    await expect(page.locator('#mmg-boot')).toHaveCount(0);
+    await expect(page.locator('html')).toHaveAttribute('data-theme', spec.theme);
+
+    const resolved = await page.evaluate(() => {
+      const root = getComputedStyle(document.documentElement);
+      const card = getComputedStyle(document.querySelector('#grid .card'));
+      return {
+        canvas: root.getPropertyValue('--v8-canvas').trim().toLowerCase(),
+        signal: root.getPropertyValue('--v8-signal').trim().toLowerCase(),
+        scheme: root.colorScheme,
+        cardBackground: card.backgroundImage + ' ' + card.backgroundColor,
+        cardText: getComputedStyle(document.querySelector('#grid .card-title')).color,
+        insightCount: document.querySelectorAll('#results-insights > span').length,
+        cardSpecs: document.querySelectorAll('#grid .card-specs span').length,
+        stored: localStorage.getItem('mmg.theme.v2'),
+      };
+    });
+
+    expect(resolved.canvas).toBe(spec.canvas);
+    expect(resolved.signal).toBe(spec.signal);
+    expect(resolved.scheme).toContain(spec.scheme);
+    expect(resolved.stored).toBe(spec.theme);
+    expect(resolved.insightCount).toBe(4);
+    expect(resolved.cardSpecs).toBeGreaterThanOrEqual(2);
+    expect(resolved.cardBackground).not.toBe('');
+    expect(resolved.cardText).not.toBe('');
+  }
 });

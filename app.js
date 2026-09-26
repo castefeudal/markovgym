@@ -932,6 +932,8 @@
     var fav = isFav(ex.id);
     var added = inWorkout(ex.id);
     var name = exName(ex);
+    var kind = detailKindLabel(ex);
+    var level = detailLevelLabel(ex);
     var meta = ex.secondary.slice(0, 2).map(function (m) {
       return '<span class="meta-tag">+ ' + esc(labelMu(m)) + '</span>';
     }).join('');
@@ -946,6 +948,7 @@
       '<div class="card-body">' +
         '<p class="card-target">' + esc(labelMu(ex.target)) + '</p>' +
         '<h3 class="card-title">' + esc(name) + '</h3>' +
+        '<div class="card-specs"><span>' + esc(kind) + '</span><span>' + esc(level) + '</span></div>' +
         '<div class="card-meta"><span class="meta-tag">' + premiumIcon('equipment') + esc(labelEq(ex.equip)) + '</span>' + meta + '</div>' +
         '<div class="card-actions">' +
           '<button class="btn btn-solid btn-sm" type="button" data-open="' + esc(ex.id) + '">' + esc(t('openTechnique')) + '</button>' +
@@ -974,6 +977,32 @@
     }).join('');
   }
 
+  function renderResultsInsights(items) {
+    var host = $('results-insights');
+    if (!host) return;
+    if (!items || !items.length) {
+      host.hidden = true;
+      host.innerHTML = '';
+      return;
+    }
+    var compounds = items.filter(function (ex) { return exKind(ex) === 'compound'; }).length;
+    var home = items.filter(isHomeFriendly).length;
+    var equipment = {};
+    var zones = {};
+    items.forEach(function (ex) { equipment[ex.equip] = 1; zones[ex.zone] = 1; });
+    var pct = function (n) { return Math.round((n / items.length) * 100); };
+    var labels = S.lang === 'en'
+      ? { compound: 'Compound', home: 'Home-ready', equipment: 'Equipment', zones: 'Body areas', aria: 'Current selection profile' }
+      : { compound: 'Составные', home: 'Для дома', equipment: 'Оборудование', zones: 'Зоны тела', aria: 'Профиль текущей подборки' };
+    host.hidden = false;
+    host.setAttribute('aria-label', labels.aria);
+    host.innerHTML =
+      '<span><b>' + pct(compounds) + '%</b><em>' + esc(labels.compound) + '</em></span>' +
+      '<span><b>' + pct(home) + '%</b><em>' + esc(labels.home) + '</em></span>' +
+      '<span><b>' + Object.keys(equipment).length + '</b><em>' + esc(labels.equipment) + '</em></span>' +
+      '<span><b>' + Object.keys(zones).length + '</b><em>' + esc(labels.zones) + '</em></span>';
+  }
+
   function renderResults() {
     var items = getFiltered();
     S.lastFiltered = items;
@@ -997,6 +1026,7 @@
       found: items.length, total: EX.length, shown: visible.length
     });
     $('active-chips').innerHTML = activeChipsHtml();
+    renderResultsInsights(items);
 
     var more = items.length > visible.length;
     $('load-more').hidden = !more;
@@ -5122,6 +5152,7 @@
     var themes = ['obsidian', 'soft', 'ivory'];
     if (themes.indexOf(S.theme) === -1) S.theme = 'obsidian';
     document.documentElement.setAttribute('data-theme', S.theme);
+    document.documentElement.style.colorScheme = S.theme === 'obsidian' ? 'dark' : 'light';
     store.set(K.theme, S.theme);
     var dark = S.theme === 'obsidian';
     qs('#theme-toggle .ico-dark').hidden = !dark;
@@ -5129,7 +5160,7 @@
     qsa('#theme-switch-m [data-theme]').forEach(function (b) {
       b.setAttribute('aria-pressed', String(b.dataset.theme === S.theme));
     });
-    var colors = { obsidian: '#08090B', soft: '#E8E1D5', ivory: '#F6F4F0' };
+    var colors = { obsidian: '#070A0E', soft: '#EAF0F6', ivory: '#F6F5F1' };
     var labels = {
       obsidian: { ru: 'Тёмная', en: 'Dark' },
       soft: { ru: 'Мягкая', en: 'Soft' },
@@ -5139,6 +5170,7 @@
     if (meta) meta.setAttribute('content', colors[S.theme]);
     var next = themes[(themes.indexOf(S.theme) + 1) % themes.length];
     $('theme-toggle').setAttribute('aria-label', (S.lang === 'en' ? 'Switch to ' : 'Переключить на тему: ') + labels[next][S.lang]);
+    $('theme-toggle').setAttribute('data-current-theme', S.theme);
     $('theme-toggle').title = labels[S.theme][S.lang];
   }
 
@@ -6389,7 +6421,11 @@
     ];
     host.innerHTML=groups.map(function(g){return'<section class="v8-more-group"><span class="v8-more-label">'+esc(g[0])+'</span><div class="v8-more-list">'+g[1].map(function(x){return'<button class="v7-more-item" type="button" data-v7-route="'+x[0]+'"><span class="v7-more-icon" aria-hidden="true">'+premiumIcon(x[1])+'</span><span><b>'+esc(v7c(x[0]))+'</b><p>'+esc(x[2])+'</p></span><span aria-hidden="true">→</span></button>';}).join('')+'</div></section>';}).join('');
   }
-  function renderV7Settings(){if(!$('settings'))return;$('v7-settings-sub').textContent=v7c('settingsSub');$('v7-theme-title').textContent=v7c('appearance');$('v7-log-title').textContent=v7c('logging');$('v7-coach-title').textContent=v7c('coach');$('v7-data-title').textContent=v7c('data');$('v7-log-text').textContent=S.lang==='en'?'RIR/RPE stay hidden unless you explicitly enable them.':'RIR/RPE скрыты, пока вы явно их не включите.';$('v7-coach-text').textContent=S.lang==='en'?'Show contextual explanations and guidance.':'Показывать контекстные объяснения и рекомендации.';$('v7-data-text').textContent=v7c('settingsDataText');var themes=[['obsidian',S.lang==='en'?'Dark':'Тёмная'],['soft',S.lang==='en'?'Soft':'Мягкая'],['ivory',S.lang==='en'?'Light':'Светлая']];$('v7-theme-actions').innerHTML=themes.map(function(x){return'<button class="btn '+(S.theme===x[0]?'btn-primary':'btn-solid')+' btn-sm" type="button" data-v7-theme="'+x[0]+'">'+esc(x[1])+'</button>';}).join('');$('v7-logging-actions').innerHTML='<button class="v7-setting-toggle" type="button" data-v7-setting="rir" aria-pressed="'+String(!!S.settings.rir)+'"><span>'+esc(v7c('rir'))+'</span><b>'+(S.settings.rir?'ON':'OFF')+'</b></button><button class="v7-setting-toggle" type="button" data-v7-setting="rpe" aria-pressed="'+String(!!S.settings.rpe)+'"><span>'+esc(v7c('rpe'))+'</span><b>'+(S.settings.rpe?'ON':'OFF')+'</b></button>';$('v7-coach-actions').innerHTML='<button class="v7-setting-toggle" type="button" data-v7-coach aria-pressed="'+String(!!S.coachOn)+'"><span>'+esc(v7c('coachOn'))+'</span><b>'+(S.coachOn?'ON':'OFF')+'</b></button>';$('v7-data-actions').innerHTML='<button class="btn btn-solid btn-sm" type="button" data-v7-data="export">'+esc(v7c('export'))+'</button><button class="btn btn-solid btn-sm" type="button" data-v7-data="import">'+esc(v7c('import'))+'</button><button class="btn btn-quiet btn-sm btn-danger" type="button" data-v7-data="clear">'+esc(v7c('clear'))+'</button>';
+  function renderV7Settings(){if(!$('settings'))return;$('v7-settings-sub').textContent=v7c('settingsSub');$('v7-theme-title').textContent=v7c('appearance');$('v7-log-title').textContent=v7c('logging');$('v7-coach-title').textContent=v7c('coach');$('v7-data-title').textContent=v7c('data');$('v7-log-text').textContent=S.lang==='en'?'RIR/RPE stay hidden unless you explicitly enable them.':'RIR/RPE скрыты, пока вы явно их не включите.';$('v7-coach-text').textContent=S.lang==='en'?'Show contextual explanations and guidance.':'Показывать контекстные объяснения и рекомендации.';$('v7-data-text').textContent=v7c('settingsDataText');var themes=[
+      ['obsidian',S.lang==='en'?'Obsidian':'Обсидиан',S.lang==='en'?'Deep graphite · maximum contrast':'Глубокий графит · максимум контраста'],
+      ['soft',S.lang==='en'?'Mist':'Туман',S.lang==='en'?'Cool soft surface · lower visual load':'Холодная мягкая поверхность · меньше визуальной нагрузки'],
+      ['ivory',S.lang==='en'?'Ivory':'Слоновая кость',S.lang==='en'?'Clean editorial light · maximum clarity':'Чистая редакционная светлая · максимум ясности']
+    ];$('v7-theme-actions').innerHTML=themes.map(function(x){var active=S.theme===x[0];return'<button class="theme-choice" type="button" data-v7-theme="'+x[0]+'" aria-pressed="'+String(active)+'"><span class="theme-choice-swatch" data-theme-preview="'+x[0]+'" aria-hidden="true"><i></i></span><span class="theme-choice-copy"><b>'+esc(x[1])+'</b><small>'+esc(x[2])+'</small></span><span class="theme-choice-check" aria-hidden="true">'+(active?'✓':'')+'</span></button>';}).join('');$('v7-logging-actions').innerHTML='<button class="v7-setting-toggle" type="button" data-v7-setting="rir" aria-pressed="'+String(!!S.settings.rir)+'"><span>'+esc(v7c('rir'))+'</span><b>'+(S.settings.rir?'ON':'OFF')+'</b></button><button class="v7-setting-toggle" type="button" data-v7-setting="rpe" aria-pressed="'+String(!!S.settings.rpe)+'"><span>'+esc(v7c('rpe'))+'</span><b>'+(S.settings.rpe?'ON':'OFF')+'</b></button>';$('v7-coach-actions').innerHTML='<button class="v7-setting-toggle" type="button" data-v7-coach aria-pressed="'+String(!!S.coachOn)+'"><span>'+esc(v7c('coachOn'))+'</span><b>'+(S.coachOn?'ON':'OFF')+'</b></button>';$('v7-data-actions').innerHTML='<button class="btn btn-solid btn-sm" type="button" data-v7-data="export">'+esc(v7c('export'))+'</button><button class="btn btn-solid btn-sm" type="button" data-v7-data="import">'+esc(v7c('import'))+'</button><button class="btn btn-quiet btn-sm btn-danger" type="button" data-v7-data="clear">'+esc(v7c('clear'))+'</button>';
   }
   function renderV7Nav(){qsa('[data-v7-nav]').forEach(function(el){el.textContent=v7c(el.dataset.v7Nav);});var moreSub={program:S.lang==='en'?'Weekly structure and the next workout':'Структура недели и следующая тренировка',nutrition:S.lang==='en'?'Calories, macros and feedback':'Калории, макросы и обратная связь',knowledge:S.lang==='en'?'Practical contextual guides':'Практические разборы по контексту',method:S.lang==='en'?'Decision framework':'Логика принятия решений',settings:S.lang==='en'?'Interface, logging and data':'Интерфейс, логирование и данные',about:S.lang==='en'?'Author and system boundaries':'Автор и границы системы'};qsa('[data-v7-more]').forEach(function(el){el.textContent=v7c(el.dataset.v7More);});qsa('[data-v7-more-sub]').forEach(function(el){el.textContent=moreSub[el.dataset.v7MoreSub]||'';});var mt=qs('[data-v7-mobile-title]');if(mt)mt.textContent=v7c('moreTitle');}
   function v7FocusRoute(route){var el=$(route==='home'&&!v7Returning()? 'hero-title' : route==='home'?'v7-home-title': route==='more'?'v7-more-title':route==='settings'?'v7-settings-title':route+'-title');if(el){el.setAttribute('tabindex','-1');requestAnimationFrame(function(){try{el.focus({preventScroll:true});}catch(e){}var anchor=el.closest('section')||el;anchor.scrollIntoView({block:'start',behavior:'auto'});});}else window.scrollTo(0,0);}

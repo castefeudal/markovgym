@@ -78,8 +78,8 @@ test('exercise detail view keeps full-frame media and structured guidance', asyn
 
 test('detail assets use a cache-busting revision', async () => {
   const index = await read('index.html');
-  assert.match(index, /app\.css\?v=20260927-cool1/);
-  assert.match(index, /app\.js\?v=20260927-cool1/);
+  assert.match(index, /app\.css\?v=20260927-premium1/);
+  assert.match(index, /app\.js\?v=20260927-premium1/);
 });
 
 test('detail media box itself stays inside the visual frame and step counter increments once', async () => {
@@ -90,16 +90,40 @@ test('detail media box itself stays inside the visual frame and step counter inc
   assert.doesNotMatch(pseudo, /counter-increment/);
 });
 
-test('obsidian readability pass uses cool accent and collision-proof library filters', async () => {
+test('canonical premium theme system defines complete tokens for all themes', async () => {
   const css = await read('app.css');
-  const block = css.slice(css.lastIndexOf('/* 20. READABILITY / COOL TITANIUM'));
-  assert.match(block, /--v8-signal:#8fb8f7/);
-  assert.match(block, /--v8-brass:#8c98a8/);
+  const block = css.slice(css.lastIndexOf('/* 21. PREMIUM THEME SYSTEM'));
+  assert.match(block, /html\[data-theme="obsidian"\]\{[\s\S]*?--v8-signal:#86b6ff/);
+  assert.match(block, /html\[data-theme="soft"\]\{[\s\S]*?--v8-signal:#3f72b5/);
+  assert.match(block, /html\[data-theme="ivory"\]\{[\s\S]*?--v8-signal:#4f7197/);
+  assert.match(block, /--premium-panel:/);
+  assert.match(block, /--premium-control:/);
+  assert.match(block, /--premium-media:/);
   assert.match(block, /\.library-layout\{[\s\S]*?grid-template-columns:286px minmax\(0,1fr\)/);
-  assert.match(block, /\.filter-list\{[\s\S]*?max-height:none;[\s\S]*?overflow:visible/);
-  assert.match(block, /\.filter-btn\{[\s\S]*?grid-template-columns:10px minmax\(0,1fr\) 36px;[\s\S]*?min-height:38px/);
-  assert.match(block, /\.filter-btn span\{[\s\S]*?text-overflow:ellipsis;[\s\S]*?white-space:nowrap/);
-  assert.match(block, /\.card-target\{[\s\S]*?color:var\(--v8-text-3\)/);
+  assert.match(block, /\.filter-btn\{[\s\S]*?grid-template-columns:10px minmax\(0,1fr\) 36px/);
+  assert.match(block, /\.card-specs\{/);
+  assert.match(block, /\.results-insights\{/);
+});
+
+test('saved theme is hydrated before stylesheet and runtime keeps theme metadata in sync', async () => {
+  const index = await read('index.html');
+  const app = await read('app.js');
+  const hydrate = index.indexOf("localStorage.getItem('mmg.theme.v2')");
+  const stylesheet = index.indexOf('app.css?v=20260927-premium1');
+  assert.ok(hydrate >= 0 && stylesheet > hydrate, 'saved theme must resolve before stylesheet paint');
+  assert.match(app, /document\.documentElement\.style\.colorScheme = S\.theme === 'obsidian' \? 'dark' : 'light'/);
+  assert.match(app, /obsidian: '#070A0E', soft: '#EAF0F6', ivory: '#F6F5F1'/);
+});
+
+test('library cards expose useful type and level context plus live selection insights', async () => {
+  const body = await read('app-body.html');
+  const index = await read('index.html');
+  const app = await read('app.js');
+  for (const html of [body, index]) assert.match(html, /id="results-insights"/);
+  assert.match(app, /class="card-specs"/);
+  assert.match(app, /function renderResultsInsights\(items\)/);
+  assert.match(app, /labels\.compound/);
+  assert.match(app, /labels\.equipment/);
 });
 
 test('exercise dataset keeps all 1324 compact records', async () => {
