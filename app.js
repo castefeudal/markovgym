@@ -1170,6 +1170,292 @@
     return '<div class="modal-fact"><span>' + esc(label) + '</span><span>' + esc(value) + '</span></div>';
   }
 
+  function detailText(ru, en) { return S.lang === 'en' ? en : ru; }
+
+  function detailValue(source, key, fallback) {
+    if (!source || typeof source !== 'object') return fallback;
+    var suffix = S.lang === 'en' ? 'En' : 'Ru';
+    var value = source[key + suffix];
+    if (value == null) value = source[key];
+    if (value && typeof value === 'object' && !Array.isArray(value) && (value.ru != null || value.en != null)) {
+      value = S.lang === 'en' && value.en != null ? value.en : value.ru;
+    }
+    return value == null || value === '' ? fallback : value;
+  }
+
+  function detailArray(source, key, fallback) {
+    var value = detailValue(source, key, null);
+    if (Array.isArray(value)) return value.filter(function (item) { return item != null && String(item).trim(); }).map(String);
+    if (typeof value === 'string' && value.trim()) return [value.trim()];
+    return (fallback || []).slice();
+  }
+
+  function enhancedTechnique(ex) {
+    var enhanced = C && C.card && C.card.enhanced;
+    if (!enhanced || typeof enhanced !== 'object') return null;
+    return enhanced[ex.id] || enhanced[ex.slug] || enhanced[norm(ex.nameEn)] || null;
+  }
+
+  function detailKindLabel(ex) {
+    return { compound: t('kindCompound'), accessory: t('kindAccessory'), isolation: t('kindIsolation') }[exKind(ex)];
+  }
+
+  function detailLevelLabel(ex) {
+    return { beginner: t('lvlEasy'), medium: t('lvlMid'), advanced: t('lvlHard') }[exLevel(ex)];
+  }
+
+  function detailStepLabel(index, total) {
+    if (index === 0) return detailText('Старт', 'Set-up');
+    if (index === total - 1) return detailText('Завершение', 'Finish');
+    if (index === 1) return detailText('Позиция', 'Position');
+    if (index >= total - 2) return detailText('Контроль', 'Control');
+    return detailText('Движение', 'Movement');
+  }
+
+  function defaultBreathingCue(ex) {
+    if (ex.zone === 'cardio') {
+      return detailText('Дыши ритмично и без задержек. Темп должен позволять сохранять технику до конца интервала.', 'Breathe rhythmically without holding your breath. The pace should let you keep your form through the interval.');
+    }
+    if (ex.zone === 'waist') {
+      return detailText('Выдыхай на усилии, вдыхай при контролируемом возврате. Не задерживай дыхание настолько, чтобы терять положение корпуса.', 'Exhale through the effort and inhale on the controlled return. Do not hold your breath long enough to lose trunk position.');
+    }
+    if (exKind(ex) === 'compound') {
+      return detailText('Перед повтором вдохни и создай жёсткость корпуса. Сохрани давление в сложной части движения и выдыхай после её прохождения или в устойчивой верхней точке.', 'Take a breath and brace before the rep. Keep trunk pressure through the hardest part and exhale after the sticking point or at a stable top position.');
+    }
+    return detailText('Выдыхай в рабочей фазе, вдыхай при возврате. Дыхание не должно ломать темп и положение корпуса.', 'Exhale through the working phase and inhale on the return. Breathing should not disturb your tempo or body position.');
+  }
+
+  function defaultRangeCue(ex) {
+    var cues = {
+      chest: {
+        ru: 'Опускай вес только до глубины, где лопатки остаются стабильными и передняя часть плеча не уходит вперёд. Не добирай амплитуду за счёт сустава.',
+        en: 'Lower only as far as the shoulder blades stay stable and the front of the shoulder does not roll forward. Do not buy extra range from the joint.'
+      },
+      back: {
+        ru: 'Начни с контролируемого вытяжения, затем веди локоть назад. Конечная точка — там, где лопатка завершает движение без раскачки и переразгибания корпуса.',
+        en: 'Start from a controlled stretch, then drive the elbow back. Finish where the shoulder blade completes the motion without torso swing or overextension.'
+      },
+      shoulders: {
+        ru: 'Работай только в диапазоне без подъёма плеча к уху и без боли. Если выше уровня плеча начинается компенсация — это и есть текущая граница амплитуды.',
+        en: 'Use the range where the shoulder does not shrug toward the ear and there is no pain. If compensation starts above shoulder height, that is your current range limit.'
+      },
+      'upper arms': {
+        ru: 'Сохраняй плечо и локоть в заданной позиции, двигай предплечьем через комфортную полную амплитуду без отдыха в крайних точках.',
+        en: 'Keep the upper arm and elbow in position and move the forearm through a comfortable full range without resting at the ends.'
+      },
+      'lower arms': {
+        ru: 'Амплитуда небольшая: двигай кистью только до точки, где предплечье остаётся неподвижным, без рывка в крайних положениях.',
+        en: 'The range is small: move only as far as the forearm stays still, without jerking at either end.'
+      },
+      waist: {
+        ru: 'Заканчивай повтор до того, как движение начинает добираться прогибом поясницы, рывком ног или тягой руками за голову.',
+        en: 'End the rep before extra range comes from lumbar arching, leg swing or pulling on the head.'
+      },
+      'upper legs': {
+        ru: 'Глубина — максимальная, на которой стопа полностью опирается, колени идут по направлению носков, а корпус остаётся контролируемым.',
+        en: 'Depth is the deepest position where the whole foot stays planted, knees track with the toes and the torso remains controlled.'
+      },
+      'lower legs': {
+        ru: 'Используй полный контролируемый ход: растяжение внизу, короткая пауза, подъём без пружины и полное сокращение наверху.',
+        en: 'Use the full controlled travel: stretch at the bottom, brief pause, rise without bouncing and finish fully shortened at the top.'
+      },
+      neck: {
+        ru: 'Только комфортная амплитуда без натяжения, боли и резких крайних положений. Здесь больше амплитуда не означает лучше.',
+        en: 'Use only a comfortable range with no pulling, pain or abrupt end positions. More range is not better here.'
+      },
+      cardio: {
+        ru: 'Двигайся в естественной амплитуде без ударных крайних положений. Если техника разваливается, сначала снизь темп, а не увеличивай усилие.',
+        en: 'Move through a natural range without slamming into end positions. If form breaks down, lower the pace before adding effort.'
+      }
+    };
+    var cue = cues[ex.zone];
+    return cue ? detailText(cue.ru, cue.en) : detailText('Работай только в амплитуде, которую можешь повторять одинаково без боли, рывка и потери положения корпуса.', 'Use only a range you can repeat consistently without pain, jerking or losing body position.');
+  }
+
+  function defaultControlCue(ex) {
+    if (exKind(ex) === 'compound') {
+      return detailText('Каждый повтор начинай из одинаковой устойчивой позиции. Возврат выполняй под контролем, не бросай вес и не ускоряйся ценой траектории.', 'Start every rep from the same stable position. Control the return, never drop the load or trade the path for speed.');
+    }
+    if (exKind(ex) === 'isolation') {
+      return detailText('Убери инерцию и держи целевой сустав стабильным. Вес подходит, если последние повторы выглядят почти так же, как первые.', 'Remove momentum and keep the target joint stable. The load is appropriate when the final reps still look close to the first ones.');
+    }
+    return detailText('Сохраняй одинаковую траекторию и темп. Если для следующего повтора приходится менять положение корпуса — подход технически закончен.', 'Keep the same path and tempo. If the next rep requires changing body position, the set is technically over.');
+  }
+
+  function exerciseTechniqueModel(ex) {
+    var enhanced = enhancedTechnique(ex);
+    var zone = C && C.card ? exCardZone(ex) : null;
+    var baseSteps = exSteps(ex);
+    var steps = detailArray(enhanced, 'steps', baseSteps);
+    var cues = detailArray(enhanced, 'cues', zone && zone.key ? [L(zone.key)] : []);
+    var mistakes = detailArray(enhanced, 'mistakes', zone && zone.err ? [L(zone.err)] : []);
+    var contra = detailArray(enhanced, 'contra', zone && zone.swap ? [L(zone.swap)] : []);
+    var tips = detailArray(enhanced, 'tips', []);
+    return {
+      enhanced: !!enhanced,
+      steps: steps,
+      setup: String(detailValue(enhanced, 'setup', steps[0] || detailText('Настрой исходное положение до начала движения.', 'Set the starting position before you move.'))),
+      cues: cues,
+      mistakes: mistakes,
+      contra: contra,
+      breathing: String(detailValue(enhanced, 'breathing', defaultBreathingCue(ex))),
+      range: String(detailValue(enhanced, 'range', defaultRangeCue(ex))),
+      control: String(detailValue(enhanced, 'control', tips[0] || defaultControlCue(ex))),
+      tips: tips
+    };
+  }
+
+  function detailCueCard(label, value, state) {
+    return '<article class="modal-cue-card" data-state="' + esc(state || 'neutral') + '">' +
+      '<span class="modal-cue-label">' + esc(label) + '</span><p>' + esc(value) + '</p></article>';
+  }
+
+  function detailAlertCard(label, value, state) {
+    return '<article class="modal-alert-card" data-state="' + esc(state || 'watch') + '">' +
+      '<span class="modal-alert-label">' + esc(label) + '</span><p>' + esc(value) + '</p></article>';
+  }
+
+  function detailMetric(label, value) {
+    return '<div class="modal-dose-metric"><span>' + esc(label) + '</span><b>' + esc(value) + '</b></div>';
+  }
+
+  function setModalTabActive(id) {
+    qsa('[data-modal-jump]', $('modal-tabs')).forEach(function (button) {
+      var active = button.dataset.modalJump === id;
+      button.setAttribute('aria-current', active ? 'true' : 'false');
+    });
+  }
+
+  function renderExerciseTechnique(ex) {
+    var model = exerciseTechniqueModel(ex);
+    var zone = C && C.card ? exCardZone(ex) : null;
+    var kindLabel = detailKindLabel(ex);
+    var levelLabel = detailLevelLabel(ex);
+    var secondary = ex.secondary.length ? ex.secondary.map(labelMu).join(', ') : detailText('нет выраженных вторичных', 'no major secondary muscles');
+
+    $('modal-head-sub').textContent = detailText('Полный разбор техники, контроля и прогрессии', 'Complete technique, control and progression breakdown');
+    $('modal-media-status').textContent = detailText('GIF · полный кадр', 'GIF · full frame');
+    $('modal-media-expand-label').textContent = detailText('Развернуть', 'Expand');
+    $('modal-media-expand').setAttribute('aria-label', detailText('Развернуть демонстрацию упражнения', 'Expand exercise demonstration'));
+
+    var tabLabels = {
+      'modal-technique': detailText('Техника', 'Technique'),
+      'modal-cues-section': detailText('Подсказки', 'Cues'),
+      'modal-errors-section': detailText('Ошибки', 'Errors'),
+      'modal-dose-section': detailText('Прогрессия', 'Progression'),
+      'modal-swap-section': detailText('Замены', 'Substitutes')
+    };
+    qsa('[data-modal-jump]', $('modal-tabs')).forEach(function (button) {
+      button.textContent = tabLabels[button.dataset.modalJump] || button.textContent;
+    });
+
+    $('modal-overview-kicker').textContent = detailText('Профиль движения', 'Movement profile');
+    $('modal-overview-title').textContent = detailText('Что важно знать до первого повтора', 'What to know before the first rep');
+    $('modal-technique-kicker').textContent = detailText('Пошагово', 'Step by step');
+    $('modal-technique-title').textContent = detailText('Техника выполнения', 'Execution technique');
+    $('modal-technique-lede').textContent = detailText('Сначала посмотри полный цикл на GIF, затем пройди шаги сверху вниз. Повторяй только ту амплитуду, которую можешь контролировать.', 'Watch the full GIF cycle first, then work through the steps from top to bottom. Repeat only the range you can control.');
+    $('modal-cues-kicker').textContent = detailText('Контроль движения', 'Movement control');
+    $('modal-cues-title').textContent = detailText('Ключевые подсказки', 'Key cues');
+    $('modal-errors-kicker').textContent = detailText('Самопроверка', 'Self-check');
+    $('modal-errors-title').textContent = detailText('Частые ошибки и когда остановиться', 'Common errors and when to stop');
+    $('modal-dose-kicker').textContent = detailText('Нагрузка', 'Loading');
+    $('modal-dose-title').textContent = detailText('Дозировка и прогрессия', 'Dosing and progression');
+    $('modal-swap-kicker').textContent = detailText('Альтернатива', 'Alternative');
+    $('modal-swap-title').textContent = detailText('Нужна замена', 'Need a substitute');
+    $('modal-swap-lede').textContent = detailText('Выбери причину — покажем ближайшие варианты по целевой мышце и доступному оборудованию.', 'Pick a reason and we will show the closest options for the same target and available equipment.');
+
+    $('modal-quick').innerHTML =
+      '<div><span>' + esc(detailText('Уровень', 'Level')) + '</span><b>' + esc(levelLabel) + '</b></div>' +
+      '<div><span>' + esc(detailText('Тип', 'Type')) + '</span><b>' + esc(kindLabel) + '</b></div>' +
+      '<div><span>' + esc(detailText('Цель', 'Target')) + '</span><b>' + esc(labelMu(ex.target)) + '</b></div>';
+
+    var facts = factRow(t('zoneLabel'), labelZone(ex.zone)) +
+      factRow(t('muscleLabel'), labelMu(ex.target)) +
+      factRow(t('equipmentLabel'), labelEq(ex.equip)) +
+      factRow(t('kindLabel'), kindLabel) +
+      factRow(t('levelLabel'), levelLabel) +
+      factRow(t('secondaryLabel'), secondary);
+    $('modal-facts').innerHTML = facts;
+
+    $('modal-steps').innerHTML = model.steps.map(function (step, index) {
+      return '<li><div class="modal-step-copy"><span class="modal-step-stage">' +
+        esc(detailStepLabel(index, model.steps.length)) + '</span><p>' + esc(step) + '</p></div></li>';
+    }).join('');
+
+    var cueCards = [
+      detailCueCard(detailText('Исходное положение', 'Set-up'), model.setup, 'setup'),
+      detailCueCard(detailText('Главный ориентир', 'Primary cue'), model.cues[0] || (zone && zone.key ? L(zone.key) : model.control), 'key'),
+      detailCueCard(detailText('Дыхание и брейс', 'Breathing & brace'), model.breathing, 'breath'),
+      detailCueCard(detailText('Амплитуда', 'Range'), model.range, 'range'),
+      detailCueCard(detailText('Темп и контроль', 'Tempo & control'), model.control, 'control')
+    ];
+    if (model.tips.length > 1) cueCards.push(detailCueCard(detailText('Дополнительный ориентир', 'Extra cue'), model.tips.slice(1).join(' '), 'tip'));
+    $('modal-cues').innerHTML = cueCards.join('');
+
+    var errors = [];
+    model.mistakes.forEach(function (item) {
+      errors.push(detailAlertCard(detailText('Частая ошибка', 'Common error'), item, 'warning'));
+    });
+    model.contra.forEach(function (item) {
+      errors.push(detailAlertCard(detailText('Когда остановиться / заменить', 'When to stop / substitute'), item, 'safety'));
+    });
+    if (!errors.length) {
+      errors.push(detailAlertCard(detailText('Самопроверка', 'Self-check'), detailText('Если траектория, положение корпуса или амплитуда заметно меняются от повтора к повтору — снизь нагрузку и верни контроль.', 'If path, body position or range changes noticeably from rep to rep, reduce the load and regain control.'), 'warning'));
+    }
+    $('modal-errors').innerHTML = errors.join('');
+    setModalTabActive('modal-technique');
+  }
+
+  function syncModalMediaExpandLabel() {
+    var frame = $('modal-media'), button = $('modal-media-expand'), label = $('modal-media-expand-label');
+    if (!frame || !button || !label) return;
+    var expanded = document.fullscreenElement === frame || frame.dataset.expanded === 'true';
+    label.textContent = expanded ? detailText('Свернуть', 'Collapse') : detailText('Развернуть', 'Expand');
+    button.setAttribute('aria-label', expanded ? detailText('Свернуть демонстрацию упражнения', 'Collapse exercise demonstration') : detailText('Развернуть демонстрацию упражнения', 'Expand exercise demonstration'));
+    button.setAttribute('aria-pressed', String(expanded));
+  }
+
+  function toggleModalMedia() {
+    var frame = $('modal-media');
+    if (!frame) return;
+    if (document.fullscreenElement === frame && document.exitFullscreen) {
+      document.exitFullscreen().catch(function () {});
+      return;
+    }
+    if (frame.dataset.expanded === 'true') {
+      frame.dataset.expanded = 'false';
+      syncModalMediaExpandLabel();
+      return;
+    }
+    if (frame.requestFullscreen) {
+      var request = frame.requestFullscreen();
+      if (request && request.catch) {
+        request.catch(function () {
+          frame.dataset.expanded = 'true';
+          syncModalMediaExpandLabel();
+        });
+      }
+    } else {
+      frame.dataset.expanded = 'true';
+      syncModalMediaExpandLabel();
+    }
+  }
+
+  function updateModalTabFromScroll() {
+    var scroll = $('modal-scroll');
+    if (!scroll) return;
+    var ids = ['modal-technique', 'modal-cues-section', 'modal-errors-section', 'modal-dose-section', 'modal-swap-section'];
+    var top = scroll.getBoundingClientRect().top + 92;
+    var best = ids[0], bestDistance = Infinity;
+    ids.forEach(function (id) {
+      var section = $(id);
+      if (!section) return;
+      var distance = Math.abs(section.getBoundingClientRect().top - top);
+      if (distance < bestDistance) { bestDistance = distance; best = id; }
+    });
+    setModalTabActive(best);
+  }
+
   function openExercise(id, trigger, silent) {
     var ex = BY_ID[id];
     if (!ex) return;
@@ -1179,35 +1465,35 @@
     $('modal-kicker').textContent = labelZone(ex.zone) + ' · ' + labelMu(ex.target);
     $('modal-title').textContent = exName(ex);
 
+    var frame = $('modal-media');
     var img = $('modal-img');
-    img.alt = exName(ex);
+    if (frame) {
+      frame.dataset.expanded = 'false';
+      frame.classList.remove('is-ready');
+    }
+    img.alt = detailText('Техника: ', 'Technique: ') + exName(ex);
     img.dataset.still = exStill(ex);
     img.setAttribute('data-ex-media', '');
     img.dataset.mediaFailed = '';
+    img.classList.remove('is-ready');
+    img.addEventListener('load', function () {
+      img.classList.add('is-ready');
+      if (frame) frame.classList.add('is-ready');
+    }, { once: true });
     img.src = exMotion(ex);
 
-    var facts = factRow(t('zoneLabel'), labelZone(ex.zone)) +
-      factRow(t('muscleLabel'), labelMu(ex.target)) +
-      factRow(t('groupLabel'), labelMu(ex.group)) +
-      factRow(t('equipmentLabel'), labelEq(ex.equip));
-    if (ex.secondary.length) {
-      facts += factRow(t('secondaryLabel'), ex.secondary.map(labelMu).join(', '));
-    }
-    $('modal-facts').innerHTML = facts;
-
-    var steps = exSteps(ex);
-    $('modal-steps').innerHTML = steps.map(function (step) {
-      return '<li><span>' + esc(step) + '</span></li>';
-    }).join('');
-
+    renderExerciseTechnique(ex);
     renderExerciseCoach(ex);
     renderExerciseDose(ex);
     if (!silent) S.swapReason = '';
     renderSwapReasons();
     renderSwapList();
-
     syncModalButtons();
+    syncModalMediaExpandLabel();
+
     if (!silent) {
+      var scroll = $('modal-scroll');
+      if (scroll) scroll.scrollTop = 0;
       openOverlay($('modal'), $('modal-close'));
       track('exercise_open', { id: ex.id });
     }
@@ -1227,10 +1513,14 @@
   }
 
   function closeModal() {
+    var frame = $('modal-media');
+    if (frame) frame.dataset.expanded = 'false';
+    if (document.fullscreenElement === frame && document.exitFullscreen) document.exitFullscreen().catch(function () {});
     closeOverlay($('modal'), modalReturnFocus);
     modalReturnFocus = null;
     S.activeId = null;
     $('modal-img').removeAttribute('src');
+    syncModalMediaExpandLabel();
   }
 
   /* ---------- 9. ТЕКУЩАЯ ТРЕНИРОВКА --------------------------------------- */
@@ -2762,24 +3052,22 @@
     if (!host || !C) return;
     var kind = exKind(ex);
     var dose = C.card.dose[kind];
-    var zone = exCardZone(ex);
     var scale = exScale(ex);
-    var levelLabel = { beginner: t('lvlEasy'), medium: t('lvlMid'), advanced: t('lvlHard') }[exLevel(ex)];
-    var kindLabel = { compound: t('kindCompound'), accessory: t('kindAccessory'), isolation: t('kindIsolation') }[kind];
+    var levelLabel = detailLevelLabel(ex);
+    var kindLabel = detailKindLabel(ex);
 
-    var html = factRow(t('kindLabel'), kindLabel) +
-      factRow(t('levelLabel'), levelLabel) +
-      factRow(t('repsLabel'), L(dose.reps)) +
-      factRow(t('restLabel'), L(dose.rest)) +
-      factRow(t('rirLabel'), L(dose.rir));
-    if (zone) {
-      html += factRow(t('keyLabel'), L(zone.key)) +
-        factRow(t('errLabel'), L(zone.err)) +
-        factRow(t('whenSwapLabel'), L(zone.swap));
-    }
-    html += factRow(t('easierLabel'), L(scale.easy)) +
-      factRow(t('harderLabel'), L(scale.hard));
-    host.innerHTML = html;
+    host.innerHTML =
+      '<div class="modal-dose-metrics">' +
+        detailMetric(detailText('Тип', 'Type'), kindLabel) +
+        detailMetric(detailText('Уровень', 'Level'), levelLabel) +
+        detailMetric(t('repsLabel'), L(dose.reps)) +
+        detailMetric(t('restLabel'), L(dose.rest)) +
+        detailMetric(t('rirLabel'), L(dose.rir)) +
+      '</div>' +
+      '<div class="modal-progression-grid">' +
+        '<article><span>' + esc(t('easierLabel')) + '</span><p>' + esc(L(scale.easy)) + '</p></article>' +
+        '<article><span>' + esc(t('harderLabel')) + '</span><p>' + esc(L(scale.hard)) + '</p></article>' +
+      '</div>';
   }
 
   /* ---------- 15.13 УМНАЯ ЗАМЕНА ----------------------------------------- */
@@ -3028,10 +3316,13 @@
     var prevText=prev&&(prev.reps||prev.weight)?((prev.weight?prev.weight+' × ':'')+(prev.reps||'—')):t('runNoPrev');
     var setStrip=currentLog.map(function(row,idx){var state=row.completed?'done':(idx===runState.set-1?'current':'pending');return '<button class="run-set-chip" type="button" data-state="'+state+'" data-run-set="'+(idx+1)+'" aria-pressed="'+String(state==='current')+'" aria-label="'+esc(t('runJumpSet',{i:idx+1}))+'">'+(idx+1)+'</button>';}).join('');
     var usePrev=prev&&(prev.reps||prev.weight)?'<button class="run-use-prev" type="button" data-run-copy-prev><span>'+premiumIcon('progress')+esc(t('runUsePrevious'))+'</span><b>'+esc(t('runUsePreviousValue',{v:prevText}))+'</b></button>':'';
+    var runTechnique=exerciseTechniqueModel(ex);
+    var runPrimary=runTechnique.cues[0]||runTechnique.control;
     stage.innerHTML = '<div class="run-shell">' +
       '<div class="run-media-frame"><img class="run-media" src="' + esc(exMotion(ex)) + '" data-still="' + esc(exStill(ex)) + '" data-ex-media alt="" decoding="async"><span class="run-media-badge">' + esc(labelZone(ex.zone)) + '</span></div>' +
       '<div class="run-context"><div><div class="run-submeta"><span class="meta-tag">' + esc(labelMu(ex.target)) + '</span><span class="meta-tag">' + premiumIcon('equipment') + esc(labelEq(ex.equip)) + '</span></div>' +
       '<h3 class="run-name">' + esc(exName(ex)) + '</h3></div>' +
+      '<div class="run-tech-cues"><div><span>'+esc(detailText('Ключ','Key cue'))+'</span><p>'+esc(runPrimary)+'</p></div><div><span>'+esc(detailText('Дыхание','Breathing'))+'</span><p>'+esc(runTechnique.breathing)+'</p></div></div>' +
       '<div class="run-current"><div class="run-setline"><b>' + esc(t('runSetLabel', { i: runState.set, n: item.sets })) + '</b><span>' + esc(t('runElapsed')) + ' · ' + elapsed + '</span></div>' +
       '<div class="run-current-inputs"><label>' + esc(ex.zone==='cardio'?t('runVolume'):t('wReps')) + '<input type="text" inputmode="' + (ex.zone==='cardio'?'text':'numeric') + '" data-run-field="reps" value="' + esc(currentSet.reps || item.reps || '') + '"></label>' +
       '<label>' + esc(t('wWeight')) + '<input type="text" inputmode="decimal" data-run-field="weight" value="' + esc(currentSet.weight || item.weight || '') + '"></label></div>' +
@@ -5107,11 +5398,47 @@
     $('modal-copy').addEventListener('click', function () {
       var ex = BY_ID[S.activeId];
       if (!ex) return;
+      var model = exerciseTechniqueModel(ex);
       var lines = [exName(ex), labelZone(ex.zone) + ' · ' + labelMu(ex.target) + ' · ' + labelEq(ex.equip), ''];
-      exSteps(ex).forEach(function (step, i) { lines.push((i + 1) + '. ' + step); });
+      model.steps.forEach(function (step, i) { lines.push((i + 1) + '. ' + step); });
+      lines.push('', detailText('Ключевой ориентир: ', 'Primary cue: ') + (model.cues[0] || model.control));
+      lines.push(detailText('Дыхание: ', 'Breathing: ') + model.breathing);
+      lines.push(detailText('Амплитуда: ', 'Range: ') + model.range);
       lines.push('', 'markovmade.com/gym');
       copyText(lines.join('\n'));
     });
+
+    $('modal-media-expand').addEventListener('click', toggleModalMedia);
+    $('modal-tabs').addEventListener('click', function (e) {
+      var button = e.target.closest('[data-modal-jump]');
+      if (!button) return;
+      var target = $(button.dataset.modalJump);
+      if (!target) return;
+      setModalTabActive(button.dataset.modalJump);
+      target.scrollIntoView({ behavior: REDUCED_MOTION.matches ? 'auto' : 'smooth', block: 'start' });
+    });
+
+    var scroll = $('modal-scroll'), tabRaf = 0;
+    if (scroll) {
+      scroll.addEventListener('scroll', function () {
+        if (tabRaf) return;
+        tabRaf = requestAnimationFrame(function () {
+          tabRaf = 0;
+          updateModalTabFromScroll();
+        });
+      }, { passive: true });
+    }
+
+    document.addEventListener('fullscreenchange', syncModalMediaExpandLabel);
+    document.addEventListener('keydown', function (e) {
+      var frame = $('modal-media');
+      if (e.key === 'Escape' && frame && frame.dataset.expanded === 'true') {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        frame.dataset.expanded = 'false';
+        syncModalMediaExpandLabel();
+      }
+    }, true);
   }
 
   function bindWorkout() {
