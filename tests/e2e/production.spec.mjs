@@ -156,10 +156,8 @@ test('all three themes resolve coherent tokens, persist and keep library informa
   ];
 
   for (const spec of expected) {
-    await page.evaluate((theme) => {
-      localStorage.setItem('mmg.theme.v2', theme);
-      location.reload();
-    }, spec.theme);
+    await page.evaluate((theme) => localStorage.setItem('mmg.theme.v2', theme), spec.theme);
+    await page.reload();
     await page.waitForLoadState('domcontentloaded');
     await expect(page.locator('#mmg-boot')).toHaveCount(0);
     await expect(page.locator('html')).toHaveAttribute('data-theme', spec.theme);
