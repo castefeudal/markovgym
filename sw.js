@@ -1,4 +1,4 @@
-const VERSION = '2026.09-r3';
+const VERSION = '2026.09-r3-media1';
 const PREFIX = 'mmg-gym-';
 const SHELL = `${PREFIX}shell-${VERSION}`;
 const MEDIA = `${PREFIX}media-${VERSION}`;
@@ -67,8 +67,13 @@ self.addEventListener('fetch', (event) => {
       try {
         const response = await fetch(request);
         if (response.ok) {
-          await cache.put(request, response.clone());
-          await trimMedia(cache);
+          try {
+            await cache.put(request, response.clone());
+            await trimMedia(cache);
+          } catch {
+            // Cache Storage is an optimisation only. Never replace a valid
+            // media response just because quota/private-mode cache writes fail.
+          }
         }
         return response;
       } catch {
