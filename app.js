@@ -3681,113 +3681,151 @@
     return 'mixed';
   }
 
-  function decoratePlan(week, ctx) {
-    var out = $('plan-out');
-    if (!out || !C) return;
+  function planCardioTextV10(ctx) {
+    ctx = ctx || {};
+    if (ctx.cardio === 'none') return S.lang === 'en' ? 'No dedicated cardio block selected.' : 'Отдельный кардио-блок не выбран.';
+    var lowSteps = ctx.steps === 'low', highSteps = ctx.steps === 'high';
+    if (ctx.cardio === 'mixed') {
+      if (ctx.goal === 'fatloss' && lowSteps) return S.lang === 'en' ? '2–3 easy sessions of 20–30 minutes plus no more than one short interval block. First raise daily movement before adding more intervals.' : '2–3 спокойных сессии по 20–30 минут и не больше одного короткого интервального блока. Сначала подними ежедневную активность, а не количество интервалов.';
+      return S.lang === 'en' ? '1–2 easy sessions of 20–30 minutes plus one short interval block if recovery stays normal.' : '1–2 спокойных сессии по 20–30 минут и один короткий интервальный блок, если восстановление остаётся нормальным.';
+    }
+    if (ctx.goal === 'fatloss') {
+      if (lowSteps) return S.lang === 'en' ? 'Start with 2–3 easy sessions of 20–30 minutes and move daily steps toward a sustainable baseline.' : 'Начни с 2–3 спокойных сессий по 20–30 минут и постепенно подними ежедневные шаги до устойчивого уровня.';
+      if (highSteps) return S.lang === 'en' ? 'Daily movement is already high; 1–2 easy sessions of 20–25 minutes are enough as a starting point.' : 'Ежедневная активность уже высокая; для старта достаточно 1–2 спокойных сессий по 20–25 минут.';
+      return S.lang === 'en' ? 'Use 2 easy sessions of 20–30 minutes and adjust only after the weight/waist trend is clear.' : 'Используй 2 спокойные сессии по 20–30 минут и меняй объём только после понятного тренда веса и талии.';
+    }
+    return S.lang === 'en' ? '1–2 easy sessions of 20–30 minutes are enough for general conditioning without competing with strength work.' : '1–2 спокойные сессии по 20–30 минут достаточно для общей выносливости без лишней конкуренции с силовой работой.';
+  }
 
+  function renderStoredPlanV10() {
+    var out = $('plan-out');
+    if (!out || !S.plan || !Array.isArray(S.plan.days) || !S.plan.days.length) return;
+    v7EnsurePlanWeek();
+    var week = S.plan.days;
+    var ctx = S.plan.ctx || {};
+    var days = Number(ctx.days) || week.length;
+    var time = Number(ctx.time) || Number(S.profile.typicalSessionMinutes) || 60;
+    var goal = ctx.goal || (S.profile.goal === 'fat' ? 'fatloss' : S.profile.goal) || 'muscle';
+    var level = ctx.level || (S.profile.level === 'medium' ? 'middle' : S.profile.level) || 'middle';
+    var place = ctx.place || S.profile.place || 'gym';
+    var completed = Array.isArray(S.plan.completedDays) ? S.plan.completedDays : [];
+    var nextDay = v7NextPlanDay();
+    lastPlan = { week:week, goal:goal, level:level, days:days, time:time, place:place, focus:ctx.focus||S.profile.focus||'balanced', ctx:ctx };
+
+    var goalLabel = ctx.goalLabel || (S.lang === 'en' ? ({muscle:'Muscle',strength:'Strength',fatloss:'Fat loss',health:'Health'}[goal] || goal) : ({muscle:'Мышцы',strength:'Сила',fatloss:'Снижение жира',health:'Здоровье'}[goal] || goal));
+    var levelLabel = ctx.levelLabel || (S.lang === 'en' ? ({beginner:'Beginner',middle:'Intermediate',advanced:'Advanced'}[level] || level) : ({beginner:'Начальный',middle:'Средний',advanced:'Продвинутый'}[level] || level));
+    var placeLabel = ctx.placeLabel || (S.lang === 'en' ? ({gym:'Gym',home:'Home',minimal:'Minimal equipment'}[place] || place) : ({gym:'Зал',home:'Дом',minimal:'Минимум оборудования'}[place] || place));
+    var created = S.plan.createdAt ? new Date(S.plan.createdAt) : null;
+    var createdLabel = created && !isNaN(created.getTime()) ? new Intl.DateTimeFormat(S.lang === 'en' ? 'en-GB' : 'ru-RU',{day:'numeric',month:'short'}).format(created) : '';
+
+    var weekHtml = week.map(function(day, dayIndex){
+      var name = DAY_NAMES[day.key] ? (DAY_NAMES[day.key][S.lang] || DAY_NAMES[day.key].ru) : (S.lang === 'en' ? 'Session' : 'Тренировка');
+      var done = completed.indexOf(dayIndex) !== -1;
+      var current = dayIndex === nextDay;
+      var status = done ? (S.lang === 'en' ? 'Completed' : 'Выполнено') : current ? (S.lang === 'en' ? 'Next' : 'Следующая') : (S.lang === 'en' ? 'Planned' : 'Запланировано');
+      var rest = day.items[0] ? day.items[0].rest : 90;
+      return '<section class="plan-day v10-plan-day" data-plan-day="'+dayIndex+'" data-state="'+(done?'done':current?'current':'planned')+'">' +
+        '<div class="plan-day-head"><div><span class="v10-plan-status">'+esc(status)+'</span><b>'+esc(t('planDay',{n:dayIndex+1}))+' · '+esc(name)+'</b></div><span>'+esc(t('planRest'))+' '+rest+' '+esc(t('planSec'))+'</span></div>' +
+        '<div class="v10-plan-exercises">' + day.items.map(function(it,itemIndex){
+          return '<div class="plan-ex" data-plan-day="'+dayIndex+'" data-plan-item="'+itemIndex+'">' +
+            '<button class="plan-ex-name" type="button" data-open="'+esc(it.ex.id)+'">'+esc(exName(it.ex))+'</button>' +
+            '<span class="meta-tag">'+esc(labelEq(it.ex.equip))+'</span>' +
+            '<span class="plan-ex-dose">'+it.sets+' × '+esc(it.reps)+'</span>' +
+            '<div class="plan-ex-tools">' +
+              '<button class="btn btn-quiet btn-sm" type="button" data-plan-swap="'+esc(it.ex.id)+'">'+esc(t('planSwapBtn'))+'</button>' +
+              '<button class="btn btn-quiet btn-sm" type="button" data-plan-add="'+esc(it.ex.id)+'">'+esc(t('planAddOne'))+'</button>' +
+              '<button class="btn btn-quiet btn-sm btn-danger" type="button" data-plan-del="1">'+esc(t('planDrop'))+'</button>' +
+            '</div></div>';
+        }).join('') + '</div>' +
+        '<div class="plan-day-actions"><button class="btn '+(current?'btn-primary':'btn-solid')+' btn-sm" type="button" data-plan-day-add="'+dayIndex+'">'+esc(done?(S.lang==='en'?'Repeat session':'Повторить тренировку'):(current?(S.lang==='en'?'Start next session':'Начать следующую') : t('planAddDay')))+'</button></div>' +
+      '</section>';
+    }).join('');
+
+    var coachWhy = C && C.coach && C.coach.plan && C.coach.plan.why ? C.coach.plan.why[planSplitKind(days)] : null;
+    var warm = C && C.coach && C.coach.plan ? C.coach.plan.warmup : null;
+    var progress = C && C.coach && C.coach.plan ? C.coach.plan.progress : null;
+    var progressText = progress ? L(progress) : (PROGRESS_TEXT[level] ? (PROGRESS_TEXT[level][S.lang] || PROGRESS_TEXT[level].ru) : '');
+    var completedText = completed.length + ' / ' + week.length;
+    var allDone = completed.length >= week.length;
+
+    out.innerHTML = '<div class="v10-plan-hero">' +
+        '<div><p class="eyebrow v8-eyebrow-tight">'+esc(goalLabel+' · '+levelLabel+' · '+placeLabel)+'</p>' +
+        '<h3 class="v8-output-title">'+esc(allDone?(S.lang==='en'?'Week complete':'Неделя выполнена'):(S.lang==='en'?'Active programme':'Активная программа'))+'</h3>' +
+        '<p class="small v8-mt-2">'+esc(t('planWeekly',{days:days,time:time,ex:week[0]&&week[0].items?week[0].items.length:0}))+(createdLabel?' · '+esc(createdLabel):'')+'</p></div>' +
+        '<div class="v10-plan-progress"><strong>'+esc(completedText)+'</strong><span>'+(S.lang==='en'?'sessions this week':'тренировок на неделе')+'</span><i style="--v10-plan-progress:'+Math.round(completed.length/Math.max(1,week.length)*100)+'%"></i></div>' +
+      '</div>' +
+      '<div class="plan-week">'+weekHtml+'</div>' +
+      '<div class="v10-plan-guidance">' +
+        (coachWhy?'<div class="note"><b>'+esc(t('planWhyT'))+'</b> '+esc(L(coachWhy))+'</div>':'') +
+        (warm?'<div class="note"><b>'+esc(t('planWarmT'))+'</b> '+esc(L(warm))+'</div>':'') +
+        '<div class="note"><b>'+esc(t('planCardio'))+'.</b> '+esc(planCardioTextV10(ctx))+'</div>' +
+        '<div class="note"><b>'+esc(t('planProgress'))+'.</b> '+esc(progressText)+'</div>' +
+        (ctx.recovery==='low'?'<div class="note note-warn">'+esc(t('planRecoveryWarn'))+'</div>':'') +
+      '</div>' +
+      '<div class="plan-actions v10-plan-actions">' +
+        '<button class="btn btn-primary btn-sm" type="button" id="plan-copy">'+esc(t('planCopy'))+'</button>' +
+        (nextDay>=0?'<button class="btn btn-solid btn-sm" type="button" data-plan-day-add="'+nextDay+'">'+esc(S.lang==='en'?'Load next session':'Загрузить следующую тренировку')+'</button>':'') +
+        '<button class="btn btn-solid btn-sm" type="button" id="plan-export">'+esc(t('planExport'))+'</button>' +
+        '<button class="btn btn-quiet btn-sm" type="button" id="plan-print">'+esc(t('workout.print'))+'</button>' +
+      '</div>';
+    out.setAttribute('data-filled','true');
+    var copy=$('plan-copy'); if(copy)copy.addEventListener('click',function(){copyText(planText());});
+    var exp=$('plan-export'); if(exp)exp.addEventListener('click',function(){copyText(JSON.stringify(serialisePlanV7(S.plan),null,2),t('planExported'));});
+    var print=$('plan-print'); if(print)print.addEventListener('click',function(){window.print();});
+  }
+
+  function decoratePlan(week, ctx) {
+    if (!$('plan-out')) return;
     S.plan={days:week,ctx:ctx,createdAt:Date.now(),weekKey:v7CurrentWeekKey(),completedDays:[]};
     S.profile.goal=ctx.goal==='fatloss'?'fat':ctx.goal;
-    S.profile.level=ctx.level;S.profile.place=ctx.place;S.profile.days=String(ctx.days);S.profile.typicalSessionMinutes=String(ctx.time);
-    S.profile.focus=ctx.focus||'balanced';S.profile.recoveryBaseline=$('p-recovery')?$('p-recovery').value:'mid';S.profile.limitations=S.planLimits.slice();S.profile.done=true;S.profile.skipped=false;
+    S.profile.level=ctx.level==='middle'?'medium':ctx.level;
+    S.profile.place=ctx.place;
+    S.profile.days=String(ctx.days);
+    S.profile.typicalSessionMinutes=String(ctx.time);
+    S.profile.focus=ctx.focus||'balanced';
+    S.profile.recoveryBaseline=ctx.recovery||'mid';
+    S.profile.limitations=S.planLimits.slice();
+    S.profile.done=true;S.profile.skipped=false;
     saveProfile();savePlanV7();
-
-    var kind = planSplitKind(ctx.days);
-    var why = [
-      t('whyPlanDays', { n: ctx.days }),
-      t('whyPlanTime', { n: ctx.time }),
-      t('whyPlanPlace', { v: ctx.placeLabel }),
-      t('whyPlanLevel', { v: ctx.levelLabel })
-    ];
-    if (S.planLimits.length) why.push(t('whyPlanLimits', { v: S.planLimits.map(labelZone).join(', ') }));
-
-    var recovery = $('p-recovery') ? $('p-recovery').value : 'mid';
-    var cardio = $('p-cardio') ? $('p-cardio').value : 'light';
-
-    var block = document.createElement('div');
-    block.style.display = 'grid';
-    block.style.gap = 'var(--space-4)';
-    block.innerHTML =
-      '<div class="note"><b>' + esc(t('planWhyT')) + '</b> ' + esc(L(C.coach.plan.why[kind])) + '</div>' +
-      '<div class="note"><b>' + esc(t('planWarmT')) + '</b> ' + esc(L(C.coach.plan.warmup)) + '</div>' +
-      (recovery === 'low' ? '<div class="note note-warn">' + esc(t('planRecoveryWarn')) + '</div>' : '') +
-      (cardio === 'none' ? '' : '<div class="note"><b>' + esc(t('planCardio')) + '.</b> ' +
-        esc(cardio === 'mixed' ? t('planCardioMixed') : t('planCardioLight')) + '</div>') +
-      '<div class="note"><b>' + esc(t('planProgress')) + '.</b> ' + esc(L(C.coach.plan.progress)) + '</div>' +
-      '<div class="note"><b>' + esc(t('planSkipT')) + '</b> ' + esc(L(C.coach.plan.skip)) + '</div>' +
-      '<div class="note"><b>' + esc(t('planSwapT')) + '</b> ' + esc(L(C.coach.plan.swap)) + '</div>' +
-      '<div class="note"><b>' + esc(t('planDurationT')) + '</b> ' + esc(L(C.coach.plan.duration)) + '</div>' +
-      coachNote({ t: null, d: C.coach.plan.note, a: null, w: null }, { why: why }) +
-      '<div class="plan-actions">' +
-        '<button class="btn btn-solid btn-sm" type="button" id="plan-export">' + esc(t('planExport')) + '</button>' +
-        '<button class="btn btn-quiet btn-sm" type="button" id="plan-print">' + esc(t('workout.print')) + '</button>' +
-      '</div>';
-    out.appendChild(block);
-
-    qsa('.plan-day', out).forEach(function (dayNode, dayIndex) {
-      var actions = document.createElement('div');
-      actions.className = 'plan-day-actions';
-      actions.innerHTML = '<button class="btn btn-solid btn-sm" type="button" data-plan-day-add="' + dayIndex + '">' + esc(t('planAddDay')) + '</button>';
-      dayNode.appendChild(actions);
-    });
-
-    // Инструменты редактирования на каждом упражнении плана
-    qsa('.plan-ex', out).forEach(function (row, i) {
-      var btn = qs('.plan-ex-name', row);
-      if (!btn) return;
-      var tools = document.createElement('div');
-      tools.className = 'plan-ex-tools';
-      tools.innerHTML =
-        '<button class="btn btn-quiet btn-sm" type="button" data-plan-swap="' + esc(btn.dataset.open) + '" data-plan-i="' + i + '">' + esc(t('planSwapBtn')) + '</button>' +
-        '<button class="btn btn-quiet btn-sm" type="button" data-plan-add="' + esc(btn.dataset.open) + '">' + esc(t('planAddOne')) + '</button>' +
-        '<button class="btn btn-quiet btn-sm btn-danger" type="button" data-plan-del="' + i + '">' + esc(t('planDrop')) + '</button>';
-      row.appendChild(tools);
-    });
-
-    $('plan-export').addEventListener('click', function () {
-      copyText(JSON.stringify({ v: 3, kind: 'plan', ctx: ctx, days: week.map(function (d) {
-        return { key: d.key, items: d.items.map(function (it) {
-          return { id: it.ex.id, name: exName(it.ex), sets: it.sets, reps: it.reps, rest: it.rest };
-        }) };
-      }) }, null, 2), t('planExported'));
-    });
-    $('plan-print').addEventListener('click', function () { window.print(); });
-
+    renderStoredPlanV10();
     renderDashIfVisible();
-    track('program_complete', { days: ctx.days, goal: ctx.goal });
+    track('program_complete',{days:ctx.days,goal:ctx.goal});
   }
 
   function planRowAction(e) {
     var dayAdd=e.target.closest('[data-plan-day-add]');
     if(dayAdd&&S.plan&&S.plan.days){startPlanDayV7(Number(dayAdd.dataset.planDayAdd),false);return;}
-    var swapBtn = e.target.closest('[data-plan-swap]');
-    if (swapBtn) {
-      var ex = BY_ID[swapBtn.dataset.planSwap];
-      if (!ex) return;
-      var alt = swapCandidates(ex, 'same')[0];
-      if (!alt) { showToast(t('swapNone')); return; }
-      var row = swapBtn.closest('.plan-ex');
-      var nameBtn = qs('.plan-ex-name', row);
-      nameBtn.textContent = exName(alt);
-      nameBtn.dataset.open = alt.id;
-      swapBtn.dataset.planSwap = alt.id;
-      var tag = qs('.meta-tag', row);
-      if (tag) tag.textContent = labelEq(alt.equip);
-      var addBtn = qs('[data-plan-add]', row);
-      if (addBtn) addBtn.dataset.planAdd = alt.id;
+    var row=e.target.closest('.plan-ex');
+    var dayIndex=row?Number(row.dataset.planDay):-1;
+    var itemIndex=row?Number(row.dataset.planItem):-1;
+    var day=S.plan&&S.plan.days&&S.plan.days[dayIndex];
+    var item=day&&day.items?day.items[itemIndex]:null;
+
+    var swapBtn=e.target.closest('[data-plan-swap]');
+    if(swapBtn){
+      var ex=item&&item.ex?item.ex:BY_ID[swapBtn.dataset.planSwap];
+      if(!ex||!day)return;
+      var used=day.items.map(function(it){return it.ex.id;});
+      var alt=swapCandidates(ex,'same').filter(function(candidate){return used.indexOf(candidate.id)===-1;})[0];
+      if(!alt){showToast(t('swapNone'));return;}
+      item.ex=alt;
+      savePlanV7();
+      renderStoredPlanV10();
       showToast(t('planSwapped'));
       return;
     }
-    var addBtn2 = e.target.closest('[data-plan-add]');
-    if (addBtn2) {
-      var id = addBtn2.dataset.planAdd;
-      if (inWorkout(id)) { showToast(t('inWorkout')); return; }
-      addToWorkout(id);
-      return;
+    var addBtn=e.target.closest('[data-plan-add]');
+    if(addBtn){
+      var id=addBtn.dataset.planAdd;
+      if(inWorkout(id)){showToast(t('inWorkout'));return;}
+      addToWorkout(id);return;
     }
-    var delBtn = e.target.closest('[data-plan-del]');
-    if (delBtn) {
-      var r = delBtn.closest('.plan-ex');
-      if (r) r.remove();
+    var delBtn=e.target.closest('[data-plan-del]');
+    if(delBtn&&day&&item){
+      if(day.items.length<=1){showToast(S.lang==='en'?'Keep at least one exercise in the session':'Оставь хотя бы одно упражнение в тренировке');return;}
+      day.items.splice(itemIndex,1);
+      savePlanV7();
+      renderStoredPlanV10();
       showToast(t('planDropped'));
     }
   }
