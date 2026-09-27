@@ -1,179 +1,271 @@
 import {
+  bmrMifflinStJeor,
+  bodyCompositionFromFat,
   calculatePlates,
+  calorieTargetRange,
+  convertRepMax,
+  convertUnits,
+  cooperVo2FromDistance,
   estimateOneRepMax,
+  heartRateReserveZones,
+  loadFromOneRepMax,
+  macroPlan,
+  metCalories,
+  paceFromDistanceTime,
+  proteinRange,
+  riegelPrediction,
+  rockportVo2,
   sessionVolume,
+  targetWeightAtBodyFat,
+  tdeeEstimate,
+  waistToHeight,
   warmupRamp,
 } from './tools/gym-calculators.mjs';
 
 const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
-const isEnglish = () => document.documentElement.lang === 'en';
-const text = (ru, en) => isEnglish() ? en : ru;
-const number = (value) => Number(value).toLocaleString(isEnglish() ? 'en-US' : 'ru-RU', { maximumFractionDigits: 2 });
+const en = () => document.documentElement.lang === 'en';
+const t = (ru, english) => en() ? english : ru;
+const num = (value, digits = 2) => Number(value).toLocaleString(en() ? 'en-US' : 'ru-RU', { maximumFractionDigits: digits });
+const evidence = (ids) => `<div class="lab-evidence">${ids.map((id) => `<span>${esc(id)}</span>`).join('')}</div>`;
+const resultBox = (main, sub, body = '', meta = '') => `<div class="lab-result"><div class="lab-result-main"><strong>${main}</strong><span>${sub}</span></div>${body}${meta ? `<div class="lab-meta">${meta}</div>` : ''}</div>`;
 
 const defaultPairs = { 25: 2, 20: 2, 15: 2, 10: 4, 5: 4, 2.5: 4, 1.25: 4 };
 let section;
 let lastLanguage = document.documentElement.lang;
+let activeCategory = 'strength';
+
+function addStylesheet() {
+  if (document.querySelector('link[data-mmg-lab]')) return;
+  const link = document.createElement('link');
+  link.rel = 'stylesheet';
+  link.href = './lab.css?v=20260928-lab1';
+  link.dataset.mmgLab = 'true';
+  document.head.appendChild(link);
+}
 
 function field(id, label, value, attrs = '') {
-  return `<label class="field" for="${id}"><span>${label}</span><input class="input" id="${id}" name="${id}" value="${value}" ${attrs}></label>`;
+  return `<label class="field" for="${id}"><span>${label}</span><input class="input" id="${id}" value="${value}" ${attrs}></label>`;
+}
+function select(id, label, options) {
+  return `<label class="field" for="${id}"><span>${label}</span><select class="select" id="${id}">${options.map(([v, label]) => `<option value="${v}">${label}</option>`).join('')}</select></label>`;
+}
+function card(category, id, kicker, title, description, form) {
+  return `<article class="card lab-card" data-lab-category="${category}" id="${id}">
+    <div class="card-head"><div><p class="eyebrow">${kicker}</p><h2>${title}</h2></div></div>
+    <p class="tiny">${description}</p>
+    ${form}
+  </article>`;
 }
 
 function renderShell() {
   if (!section) return;
-  const en = isEnglish();
+  const categories = [
+    ['strength', t('Сила', 'Strength')],
+    ['training', t('Тренировка', 'Training')],
+    ['nutrition', t('Питание', 'Nutrition')],
+    ['body', t('Состав тела', 'Body')],
+    ['cardio', t('Кардио', 'Cardio')],
+    ['convert', t('Конвертеры', 'Converters')],
+  ];
+
   section.innerHTML = `
     <div class="container gym-tools-shell">
-      <div class="v7-page-head">
-        <div><p class="eyebrow">${en ? 'LOAD MANAGEMENT' : 'УПРАВЛЕНИЕ НАГРУЗКОЙ'}</p><h1 id="gym-tools-title">${en ? 'Gym tools' : 'Инструменты зала'}</h1><p class="lede">${en ? 'Small, transparent calculations that turn the next set into a practical decision.' : 'Небольшие прозрачные расчёты, которые превращают следующий подход в практичное решение.'}</p></div>
+      <div class="lab-hero">
+        <div class="v7-page-head">
+          <div>
+            <p class="eyebrow">MARKOV MADE LAB</p>
+            <h1 id="gym-tools-title">${t('Лаборатория расчётов', 'Calculation laboratory')}</h1>
+            <p class="lede">${t('Не набор цифр, а прозрачные расчёты с диапазонами, ограничениями и практическим следующим действием.', 'Transparent calculations with ranges, limitations and a practical next action.')}</p>
+          </div>
+        </div>
+        <aside class="lab-summary">
+          <strong>${t('Результат → смысл → действие', 'Result → meaning → action')}</strong>
+          <p>${t('Если расчёт зависит от популяционной формулы, интерфейс показывает это прямо. Сохранённые данные тренировок используются там, где они реально повышают полезность.', 'Population estimates are labelled as estimates. Saved training data is reused where it meaningfully improves the result.')}</p>
+        </aside>
       </div>
-      <div class="gym-tools-grid">
-        <article class="card gym-tool-card">
-          <div class="card-head"><div><p class="eyebrow">e1RM</p><h2>${en ? 'Estimated one-rep max' : 'Расчёт e1RM'}</h2></div><span class="tool-mark">01</span></div>
-          <p class="tiny">${en ? 'Two models are shown as a range, not as false precision.' : 'Две модели показаны диапазоном, а не ложной точностью.'}</p>
-          <form data-gym-form="e1rm" class="form-grid gym-tool-form">
-            ${field('gym-e1rm-weight', en ? 'Weight' : 'Вес', '80', 'type="number" min="0.5" step="0.5" inputmode="decimal" required')}
-            ${field('gym-e1rm-reps', en ? 'Reps' : 'Повторы', '5', 'type="number" min="1" max="30" step="1" inputmode="numeric" required')}
-            <label class="field" for="gym-e1rm-unit"><span>${en ? 'Unit' : 'Единицы'}</span><select class="select" id="gym-e1rm-unit"><option value="kg">kg</option><option value="lb">lb</option></select></label>
-            <button class="btn btn-primary" type="submit">${en ? 'Estimate' : 'Рассчитать'}</button>
-          </form>
-          <div class="gym-tool-output" id="gym-e1rm-output" aria-live="polite"></div>
-        </article>
 
-        <article class="card gym-tool-card">
-          <div class="card-head"><div><p class="eyebrow">PLATES</p><h2>${en ? 'Plate calculator' : 'Калькулятор блинов'}</h2></div><span class="tool-mark">02</span></div>
-          <p class="tiny">${en ? 'The result is for one side. Available values mean pairs.' : 'Результат показан на одну сторону. Доступное количество — это пары.'}</p>
-          <form data-gym-form="plates" class="form-grid gym-tool-form">
-            ${field('gym-plates-target', en ? 'Target total' : 'Целевой общий вес', '100', 'type="number" min="0.5" step="0.5" inputmode="decimal" required')}
-            ${field('gym-plates-bar', en ? 'Bar' : 'Гриф', '20', 'type="number" min="0.5" step="0.5" inputmode="decimal" required')}
-            ${field('gym-plates-collars', en ? 'Collars' : 'Замки', '0', 'type="number" min="0" step="0.5" inputmode="decimal"')}
-            <label class="field" for="gym-plates-unit"><span>${en ? 'Unit' : 'Единицы'}</span><select class="select" id="gym-plates-unit"><option value="kg">kg</option><option value="lb">lb</option></select></label>
-            <div class="plate-options" role="group" aria-label="${en ? 'Available plate pairs' : 'Доступные пары блинов'}">${Object.keys(defaultPairs).map((value) => field(`gym-pair-${value.replace('.', '-')}`, `${value} kg`, defaultPairs[value], 'type="number" min="0" max="20" step="1" inputmode="numeric"')).join('')}</div>
-            <button class="btn btn-primary" type="submit">${en ? 'Find plates' : 'Подобрать блины'}</button>
-          </form>
-          <div class="gym-tool-output" id="gym-plates-output" aria-live="polite"></div>
-        </article>
+      <div class="lab-tabs" role="tablist" aria-label="${t('Категории лаборатории', 'Lab categories')}">
+        ${categories.map(([id, label]) => `<button class="lab-tab" type="button" data-lab-tab="${id}" aria-pressed="${id === activeCategory}">${label}</button>`).join('')}
+      </div>
 
-        <article class="card gym-tool-card">
-          <div class="card-head"><div><p class="eyebrow">WARM-UP</p><h2>${en ? 'Warm-up ramp' : 'Разминочные подходы'}</h2></div><span class="tool-mark">03</span></div>
-          <p class="tiny">${en ? 'A practical editable template. Warm-up sets are not working volume.' : 'Практический редактируемый шаблон. Разминочные подходы не считаются рабочим объёмом.'}</p>
-          <form data-gym-form="warmup" class="form-grid gym-tool-form">
-            ${field('gym-warmup-working', en ? 'Working weight' : 'Рабочий вес', '100', 'type="number" min="0.5" step="0.5" inputmode="decimal" required')}
-            ${field('gym-warmup-bar', en ? 'Empty bar' : 'Пустой гриф', '20', 'type="number" min="0.5" step="0.5" inputmode="decimal" required')}
-            ${field('gym-warmup-step', en ? 'Smallest increment' : 'Минимальный шаг', '2.5', 'type="number" min="0.5" step="0.5" inputmode="decimal" required')}
-            <button class="btn btn-primary" type="submit">${en ? 'Build ramp' : 'Собрать ramp'}</button>
-          </form>
-          <div class="gym-tool-output" id="gym-warmup-output" aria-live="polite"></div>
-        </article>
+      <div class="lab-grid">
+        ${card('strength','lab-e1rm','e1RM',t('Оценка максимума на 1 повтор','Estimated one-rep max'),t('Epley + Brzycki: показываем диапазон, а не одну псевдоточную цифру.','Epley + Brzycki shown as a range rather than false precision.'),`
+          <form data-lab-form="e1rm" class="form-grid">
+            <div class="lab-form-row">${field('lab-e1rm-w',t('Вес','Weight'),'80','type="number" min="0.5" step="0.5" required')}${field('lab-e1rm-r',t('Повторы','Reps'),'5','type="number" min="1" max="30" step="1" required')}</div>
+            <button class="btn btn-primary" type="submit">${t('Рассчитать','Calculate')}</button>
+          </form><div data-lab-output="e1rm"></div>`)}
 
-        <article class="card gym-tool-card gym-tool-volume">
-          <div class="card-head"><div><p class="eyebrow">TRAINING SIGNAL</p><h2>${en ? 'Recorded volume' : 'Записанный объём'}</h2></div><span class="tool-mark">04</span></div>
-          <p class="tiny">${en ? 'Only completed weighted sets from local history. Tonnage compares best with the same exercise over time.' : 'Только завершённые отягощённые подходы из локальной истории. Тоннаж корректно сравнивать прежде всего у одного упражнения с самим собой.'}</p>
-          <div id="gym-volume-output" class="gym-tool-output" aria-live="polite"></div>
-          <button class="btn btn-quiet" type="button" data-gym-refresh-volume>${en ? 'Refresh from history' : 'Обновить из истории'}</button>
-        </article>
+        ${card('strength','lab-percent','LOAD',t('Рабочий вес по %1RM','Training load by %1RM'),t('С учётом минимального шага доступного веса.','Rounded to the smallest available increment.'),`
+          <form data-lab-form="percent" class="form-grid">
+            <div class="lab-form-row three">${field('lab-p-max','1RM / e1RM','100','type="number" step="0.5"')}${field('lab-p-pct','%','80','type="number" step="0.5"')}${field('lab-p-step',t('Шаг','Increment'),'2.5','type="number" step="0.25"')}</div>
+          </form><div data-lab-output="percent"></div>`)}
+
+        ${card('strength','lab-repconvert','REPS',t('Конвертер повторных максимумов','Rep-max converter'),t('Модельный эквивалент между разными диапазонами повторов.','Model-based equivalent across rep ranges.'),`
+          <form data-lab-form="repconvert" class="form-grid"><div class="lab-form-row three">${field('lab-rc-w',t('Вес','Weight'),'100','type="number" step="0.5"')}${field('lab-rc-from',t('Из повторов','From reps'),'5','type="number" min="1" max="30"')}${field('lab-rc-to',t('В повторы','To reps'),'10','type="number" min="1" max="30"')}</div></form><div data-lab-output="repconvert"></div>`)}
+
+        ${card('strength','lab-plates','PLATES',t('Калькулятор блинов PRO','Plate calculator PRO'),t('Показывает ближайший собираемый вес и раскладку на одну сторону.','Finds the nearest achievable total and one-side layout.'),`
+          <form data-lab-form="plates" class="form-grid">
+            <div class="lab-form-row three">${field('lab-pl-target',t('Целевой вес','Target total'),'100','type="number" step="0.5"')}${field('lab-pl-bar',t('Гриф','Bar'),'20','type="number" step="0.5"')}${field('lab-pl-collars',t('Замки','Collars'),'0','type="number" step="0.5"')}</div>
+            <details><summary>${t('Доступные пары блинов','Available plate pairs')}</summary><div class="plate-options">${Object.keys(defaultPairs).map((v)=>field(`lab-pair-${v.replace('.','-')}`,`${v} kg`,defaultPairs[v],'type="number" min="0" max="20" step="1"')).join('')}</div></details>
+          </form><div data-lab-output="plates"></div>`)}
+
+        ${card('strength','lab-warmup','WARM-UP',t('Разминочная лестница','Warm-up ramp'),t('Редактируемый шаблон; разминка не считается рабочим объёмом.','Editable template; warm-up sets are not working volume.'),`
+          <form data-lab-form="warmup" class="form-grid"><div class="lab-form-row three">${field('lab-wu-work',t('Рабочий','Working'),'100','type="number" step="0.5"')}${field('lab-wu-bar',t('Гриф','Bar'),'20','type="number" step="0.5"')}${field('lab-wu-step',t('Шаг','Increment'),'2.5','type="number" step="0.25"')}</div></form><div data-lab-output="warmup"></div>`)}
+
+        ${card('training','lab-volume','HISTORY',t('Записанный тренировочный объём','Recorded training volume'),t('Используются только завершённые подходы с весом и повторениями из локальной истории.','Uses only completed weighted sets from local history.'),`<div data-lab-output="volume"></div><button class="btn btn-quiet" type="button" data-refresh-history>${t('Обновить из истории','Refresh from history')}</button>`)}
+
+        ${card('nutrition','lab-energy','ENERGY',t('BMR → TDEE → цель','BMR → TDEE → target'),t('Mifflin–St Jeor для стартовой оценки. TDEE показывается коридором, затем его лучше заменять фактическими данными.','Mifflin–St Jeor provides a starting estimate. TDEE is shown as a range and should later yield to observed data.'),`
+          <form data-lab-form="energy" class="form-grid">
+            <div class="lab-form-row three">${select('lab-en-sex',t('Пол','Sex'),[['male',t('Мужской','Male')],['female',t('Женский','Female')]])}${field('lab-en-age',t('Возраст','Age'),'30','type="number" min="18" max="100"')}${field('lab-en-height',t('Рост, см','Height, cm'),'180','type="number" step="0.1"')}</div>
+            <div class="lab-form-row three">${field('lab-en-weight',t('Вес, кг','Weight, kg'),'80','type="number" step="0.1"')}${select('lab-en-act',t('Активность','Activity'),[['1.2',t('Низкая','Low')],['1.4',t('Лёгкая','Light')],['1.55',t('Умеренная','Moderate')],['1.725',t('Высокая','High')]])}${select('lab-en-goal',t('Цель','Goal'),[['maintain',t('Поддержание','Maintain')],['cut',t('Снижение','Fat loss')],['gain',t('Набор','Gain')]])}</div>
+          </form><div data-lab-output="energy"></div>`)}
+
+        ${card('nutrition','lab-protein','PROTEIN',t('Белок и макросы','Protein & macros'),t('Белок — диапазон. Углеводы считаются остатком после выбранных белка и жира.','Protein is a range. Carbs are the remainder after selected protein and fat.'),`
+          <form data-lab-form="protein" class="form-grid">
+            <div class="lab-form-row three">${field('lab-pr-weight',t('Вес, кг','Weight, kg'),'80','type="number" step="0.1"')}${select('lab-pr-goal',t('Цель','Goal'),[['maintain',t('Поддержание','Maintain')],['cut',t('Дефицит','Cut')],['gain',t('Набор','Gain')]])}${field('lab-pr-cal',t('Ккал','Calories'),'2500','type="number" step="10"')}</div>
+            <div class="lab-form-row">${field('lab-pr-fixed',t('Белок для плана, г','Protein for plan, g'),'160','type="number" step="1"')}${field('lab-pr-fat',t('Жир, г','Fat, g'),'70','type="number" step="1"')}</div>
+          </form><div data-lab-output="protein"></div>`)}
+
+        ${card('body','lab-body','BODY',t('Состав тела и целевой вес','Body composition & target weight'),t('Целевой вес при % жира — теоретическая модель при неизменной безжировой массе.','Target weight assumes lean mass remains constant.'),`
+          <form data-lab-form="body" class="form-grid">
+            <div class="lab-form-row three">${field('lab-b-weight',t('Вес, кг','Weight, kg'),'80','type="number" step="0.1"')}${field('lab-b-fat',t('Жир, %','Body fat, %'),'20','type="number" step="0.1"')}${field('lab-b-target',t('Цель, %','Target, %'),'15','type="number" step="0.1"')}</div>
+            <div class="lab-form-row">${field('lab-b-height',t('Рост, см','Height, cm'),'180','type="number" step="0.1"')}${field('lab-b-waist',t('Талия, см','Waist, cm'),'85','type="number" step="0.1"')}</div>
+          </form><div data-lab-output="body"></div>`)}
+
+        ${card('cardio','lab-hr','HRR',t('Пульсовые зоны','Heart-rate reserve zones'),t('HRmax оценивается по Tanaka; индивидуальная ошибка может быть значительной.','HRmax uses Tanaka and may have substantial individual error.'),`
+          <form data-lab-form="hr" class="form-grid"><div class="lab-form-row">${field('lab-hr-age',t('Возраст','Age'),'30','type="number" min="18"')}${field('lab-hr-rest',t('Пульс покоя','Resting HR'),'60','type="number" min="30" max="120"')}</div></form><div data-lab-output="hr"></div>`)}
+
+        ${card('cardio','lab-running','PACE',t('Темп и прогноз дистанции','Pace & race prediction'),t('Темп рассчитывается напрямую; Riegel — эмпирическая модель и не гарантирует результат.','Pace is direct arithmetic; Riegel is an empirical model, not a guarantee.'),`
+          <form data-lab-form="running" class="form-grid"><div class="lab-form-row three">${field('lab-run-d1',t('Дистанция, км','Distance, km'),'5','type="number" step="0.1"')}${field('lab-run-t1',t('Время, мин','Time, min'),'25','type="number" step="0.1"')}${field('lab-run-d2',t('Цель, км','Target, km'),'10','type="number" step="0.1"')}</div></form><div data-lab-output="running"></div>`)}
+
+        ${card('cardio','lab-field','VO₂',t('Полевые оценки VO₂max','Field VO₂max estimates'),t('Cooper и Rockport — непрямые полевые оценки, не лабораторное измерение.','Cooper and Rockport are indirect field estimates, not lab measurements.'),`
+          <form data-lab-form="field" class="form-grid">
+            <div class="lab-form-row">${field('lab-cooper-distance',t('Cooper: 12 мин, м','Cooper: 12-min distance, m'),'2800','type="number" step="10"')}${field('lab-met',t('MET активности','Activity MET'),'8','type="number" step="0.1"')}</div>
+            <details><summary>Rockport</summary><div class="lab-form-row three">${field('lab-rp-weight',t('Вес, кг','Weight, kg'),'80','type="number" step="0.1"')}${field('lab-rp-age',t('Возраст','Age'),'30','type="number"')}${select('lab-rp-sex',t('Пол','Sex'),[['male',t('Мужской','Male')],['female',t('Женский','Female')]])}${field('lab-rp-time',t('1 миля, мин','1 mile, min'),'13','type="number" step="0.1"')}${field('lab-rp-hr',t('Пульс на финише','Finish HR'),'130','type="number"')}${field('lab-met-min',t('MET: минуты','MET minutes'),'60','type="number"')}</div></details>
+          </form><div data-lab-output="field"></div>`)}
+
+        ${card('convert','lab-convert','UNITS',t('Конвертер единиц','Unit converter'),t('Мгновенные двусторонние преобразования без кнопки Calculate.','Instant two-way conversions without a Calculate button.'),`
+          <form data-lab-form="convert" class="form-grid"><div class="lab-form-row three">${field('lab-c-value',t('Значение','Value'),'100','type="number" step="any"')}${select('lab-c-from',t('Из','From'),[['kg','kg'],['lb','lb'],['cm','cm'],['in','in'],['km','km'],['mi','mi'],['kcal','kcal'],['kj','kJ'],['kmh','km/h'],['mph','mph']])}${select('lab-c-to',t('В','To'),[['lb','lb'],['kg','kg'],['in','in'],['cm','cm'],['mi','mi'],['km','km'],['kj','kJ'],['kcal','kcal'],['mph','mph'],['kmh','km/h']])}</div></form><div data-lab-output="convert"></div>`)}
       </div>
     </div>`;
-  bindForms();
+
+  bind();
+  updateCategory();
   calculateAll();
 }
 
-function showOneRepMax(form) {
-  const result = estimateOneRepMax(form.querySelector('#gym-e1rm-weight').value, form.querySelector('#gym-e1rm-reps').value);
-  const output = section.querySelector('#gym-e1rm-output');
-  if (!result) { output.innerHTML = `<p class="form-error">${text('Введи вес и от 1 до 30 повторов.', 'Enter a weight and 1–30 reps.')}</p>`; return; }
-  const unit = form.querySelector('#gym-e1rm-unit').value;
-  const confidence = result.confidence === 'high' ? text('выше', 'higher') : result.confidence === 'medium' ? text('средняя', 'medium') : text('ниже', 'lower');
-  const rows = [50, 60, 70, 75, 80, 85, 90, 95].map((percent) => `<div><span>${percent}%</span><b>${number(result.central * percent / 100)} ${unit}</b></div>`).join('');
-  output.innerHTML = `<div class="gym-result-main"><strong>${number(result.central)} ${unit}</strong><span>${text('центральная оценка', 'central estimate')} · ${text('диапазон', 'range')} ${number(result.range[0])}–${number(result.range[1])} ${unit}</span></div><p class="tiny">${text('Уверенность', 'Confidence')}: ${confidence}. ${result.reps > 15 ? text('При большом числе повторов неопределённость выше.', 'Uncertainty is higher at higher rep counts.') : ''}</p><div class="gym-percent-table">${rows}</div>`;
-}
+function out(key) { return section.querySelector(`[data-lab-output="${key}"]`); }
+function val(id) { return section.querySelector(`#${id}`)?.value; }
 
-function showPlates(form) {
-  const values = Object.fromEntries(Object.keys(defaultPairs).map((value) => [value, form.querySelector(`#gym-pair-${value.replace('.', '-')}`).value]));
-  const result = calculatePlates({
-    targetTotal: form.querySelector('#gym-plates-target').value,
-    barWeight: form.querySelector('#gym-plates-bar').value,
-    collars: form.querySelector('#gym-plates-collars').value,
-    availablePairs: values,
-  });
-  const output = section.querySelector('#gym-plates-output');
-  if (!result) { output.innerHTML = `<p class="form-error">${text('Введи целевой вес.', 'Enter a target weight.')}</p>`; return; }
-  const unit = form.querySelector('#gym-plates-unit').value;
-  const plates = result.perSide.length ? result.perSide.map((plate) => `${number(plate)} ${unit}`).join(' + ') : text('без блинов', 'no plates');
-  const delta = Math.abs(result.difference) < 0.01 ? text('точно', 'exact') : `${result.difference > 0 ? '+' : ''}${number(result.difference)} ${unit}`;
-  output.innerHTML = `<div class="gym-result-main"><strong>${esc(plates)}</strong><span>${text('на одну сторону', 'per side')} · ${text('итого', 'total')} ${number(result.achievedTotal)} ${unit}</span></div><p class="tiny">${text('Разница', 'Difference')}: ${delta}. ${result.exact ? '' : text('Ближайший достижимый вес с выбранными парами.', 'Closest achievable weight with the selected pairs.')}</p>`;
+function renderE1rm() {
+  const r = estimateOneRepMax(val('lab-e1rm-w'), val('lab-e1rm-r'));
+  out('e1rm').innerHTML = r ? resultBox(`${num(r.central)} kg`, t('центральная оценка','central estimate'), `<div class="lab-result-grid"><div><span>Epley</span><b>${num(r.epley)}</b></div><div><span>Brzycki</span><b>${num(r.brzycki)}</b></div><div><span>${t('Диапазон','Range')}</span><b>${num(r.range[0])}–${num(r.range[1])}</b></div></div>`, `${t('Уверенность','Confidence')}: ${r.confidence}. ${t('При высоком числе повторов ошибка обычно выше.','Error generally increases at higher rep counts.')}`) : '';
 }
-
-function showWarmup(form) {
-  const sets = warmupRamp({ workingWeight: form.querySelector('#gym-warmup-working').value, barWeight: form.querySelector('#gym-warmup-bar').value, increment: form.querySelector('#gym-warmup-step').value });
-  const output = section.querySelector('#gym-warmup-output');
-  output.innerHTML = sets.length ? `<div class="gym-warmup-list">${sets.map((set, index) => `<div><span>${String(index + 1).padStart(2, '0')}</span><b>${number(set.weight)}</b><small>${set.reps} ${text('повторов', 'reps')} · ${esc(set.label)}</small></div>`).join('')}</div><p class="tiny">${text('Шаблон можно изменить под упражнение и самочувствие.', 'Edit the template for the movement and how you feel.')}</p>` : `<p class="tiny">${text('Укажи рабочий вес.', 'Enter a working weight.')}</p>`;
+function renderPercent() {
+  const r = loadFromOneRepMax(val('lab-p-max'), val('lab-p-pct'), val('lab-p-step'));
+  out('percent').innerHTML = r ? resultBox(`${num(r.rounded)} kg`, `${num(r.percent)}% · ${t('сырой расчёт','raw')} ${num(r.raw)} kg`) : '';
 }
-
-function readHistory() {
-  try { const value = JSON.parse(localStorage.getItem('mmg.history.v1') || '[]'); return Array.isArray(value) ? value : []; } catch { return []; }
+function renderRepConvert() {
+  const r = convertRepMax(val('lab-rc-w'), val('lab-rc-from'), val('lab-rc-to'));
+  out('repconvert').innerHTML = r ? resultBox(`${num(r.central)} kg × ${r.toReps}`, `${t('диапазон','range')} ${num(r.range[0])}–${num(r.range[1])} kg`, '', `${t('Уверенность','Confidence')}: ${r.confidence}`) : '';
 }
-
+function renderPlates() {
+  const pairs = Object.fromEntries(Object.keys(defaultPairs).map((v)=>[v,val(`lab-pair-${v.replace('.','-')}`)]));
+  const r = calculatePlates({targetTotal:val('lab-pl-target'),barWeight:val('lab-pl-bar'),collars:val('lab-pl-collars'),availablePairs:pairs});
+  out('plates').innerHTML = r ? resultBox(r.perSide.length ? r.perSide.map((x)=>`${num(x)} kg`).join(' + ') : t('без блинов','no plates'), t('на одну сторону','per side'), `<div class="lab-result-grid"><div><span>${t('Итого','Total')}</span><b>${num(r.achievedTotal)} kg</b></div><div><span>${t('Разница','Difference')}</span><b>${r.difference>0?'+':''}${num(r.difference)} kg</b></div><div><span>${t('Точность','Fit')}</span><b>${r.exact?t('точно','exact'):t('ближайший','nearest')}</b></div></div>`) : '';
+}
+function renderWarmup() {
+  const rows = warmupRamp({workingWeight:val('lab-wu-work'),barWeight:val('lab-wu-bar'),increment:val('lab-wu-step')});
+  out('warmup').innerHTML = rows.length ? resultBox(`${rows.length} ${t('подхода','sets')}`,t('до рабочего веса','before work sets'),`<div class="lab-result-grid">${rows.map((s,i)=>`<div><span>0${i+1}</span><b>${num(s.weight)} kg × ${s.reps}</b><small>${esc(s.label)}</small></div>`).join('')}</div>`) : '';
+}
+function history() { try { const x=JSON.parse(localStorage.getItem('mmg.history.v1')||'[]'); return Array.isArray(x)?x:[]; } catch { return []; } }
 function renderVolume() {
-  const history = readHistory();
-  const sets = history.flatMap((session) => (session.items || []).flatMap((item) => item.setLog || []));
-  const total = sessionVolume(sets);
-  const sessions = history.length;
-  const output = section.querySelector('#gym-volume-output');
-  output.innerHTML = `<div class="gym-volume-kpis"><div><span>${text('Сессий', 'Sessions')}</span><b>${sessions}</b></div><div><span>${text('Тоннаж', 'Volume load')}</span><b>${number(total)} kg</b></div><div><span>${text('Источник', 'Source')}</span><b>${text('локально', 'local')}</b></div></div>${total ? `<p class="tiny">${text('В расчёт попали только подходы с весом и повторениями; собственный вес не превращается в фиктивный тоннаж.', 'Only sets with weight and reps are counted; bodyweight work is not turned into fake tonnage.')}</p>` : `<p class="tiny">${text('После первой завершённой тренировки здесь появится объём.', 'Recorded volume appears after your first completed workout.')}</p>`}`;
+  const h=history(); const sets=h.flatMap((s)=>(s.items||[]).flatMap((i)=>i.setLog||[])); const total=sessionVolume(sets);
+  out('volume').innerHTML=resultBox(`${num(total,0)} kg`,t('зафиксированный тоннаж','recorded volume load'),`<div class="lab-result-grid"><div><span>${t('Сессий','Sessions')}</span><b>${h.length}</b></div><div><span>${t('Источник','Source')}</span><b>${t('мои данные','my data')}</b></div><div><span>${t('Правило','Rule')}</span><b>${t('только завершённые','completed only')}</b></div></div>`,t('Собственный вес не превращается в фиктивный тоннаж. Сравнивай тоннаж прежде всего у одного упражнения с самим собой.','Bodyweight work is not converted into fake tonnage. Compare volume load primarily within the same movement over time.'));
+}
+function renderEnergy() {
+  const b=bmrMifflinStJeor({sex:val('lab-en-sex'),age:val('lab-en-age'),heightCm:val('lab-en-height'),weightKg:val('lab-en-weight')});
+  const td=b&&tdeeEstimate({bmr:b.kcal,activityFactor:val('lab-en-act')});
+  const target=td&&calorieTargetRange({maintenanceKcal:td.central,goal:val('lab-en-goal'),rate:'moderate'});
+  out('energy').innerHTML = b&&td&&target ? resultBox(`${num(target.range[0],0)}–${num(target.range[1],0)} kcal`,t('стартовый целевой коридор','starting target range'),`<div class="lab-result-grid"><div><span>BMR</span><b>${num(b.kcal,0)}</b></div><div><span>TDEE</span><b>${num(td.central,0)}</b></div><div><span>${t('TDEE диапазон','TDEE range')}</span><b>${num(td.range[0],0)}–${num(td.range[1],0)}</b></div></div>`,`${t('Это стартовая оценка, а не измеренный расход. После достаточного периода логирования приоритет должен получать персональный тренд.','This is a starting estimate, not measured expenditure. With enough logging, observed personal trend should take priority.')}${evidence(['mifflin-st-jeor-1990'])}`) : '';
+}
+function renderProtein() {
+  const p=proteinRange({weightKg:val('lab-pr-weight'),goal:val('lab-pr-goal'),resistanceTraining:true});
+  const m=macroPlan({calories:val('lab-pr-cal'),proteinG:val('lab-pr-fixed'),fatG:val('lab-pr-fat')});
+  out('protein').innerHTML = p&&m ? resultBox(`${num(p.grams[0],0)}–${num(p.grams[1],0)} g`,t('ориентир белка','protein range'),`<div class="lab-result-grid"><div><span>${t('Белок в плане','Plan protein')}</span><b>${num(m.proteinG,0)} g</b></div><div><span>${t('Жиры','Fat')}</span><b>${num(m.fatG,0)} g</b></div><div><span>${t('Углеводы','Carbs')}</span><b>${num(m.carbsG,0)} g</b></div></div>`,`${t('Диапазон — практический ориентир для здоровых тренирующихся взрослых, а не медицинское назначение.','The range is a practical guide for healthy exercising adults, not a medical prescription.')}${evidence(p.evidenceIds)}`) : '';
+}
+function renderBody() {
+  const c=bodyCompositionFromFat({weightKg:val('lab-b-weight'),bodyFatPct:val('lab-b-fat')});
+  const target=targetWeightAtBodyFat({weightKg:val('lab-b-weight'),currentBodyFatPct:val('lab-b-fat'),targetBodyFatPct:val('lab-b-target')});
+  const ratio=waistToHeight({waistCm:val('lab-b-waist'),heightCm:val('lab-b-height')});
+  const weight=Number(val('lab-b-weight')); const height=Number(val('lab-b-height'))/100; const bmiVal=weight&&height?weight/(height*height):null;
+  out('body').innerHTML=c&&target ? resultBox(`${num(target.targetWeightKg)} kg`,t('теоретический вес при целевом % жира','theoretical weight at target body fat'),`<div class="lab-result-grid"><div><span>${t('Безжировая масса','Lean mass')}</span><b>${num(c.leanMassKg)} kg</b></div><div><span>BMI</span><b>${bmiVal?num(bmiVal,1):'—'}</b></div><div><span>Waist / height</span><b>${ratio??'—'}</b></div></div>`,t('Ключевое допущение: безжировая масса остаётся неизменной. Ошибка измерения % жира может быть больше ожидаемого изменения.','Key assumption: lean mass stays constant. Body-fat measurement error may exceed the projected change.')):'';
+}
+function renderHr() {
+  const r=heartRateReserveZones({age:val('lab-hr-age'),restingHr:val('lab-hr-rest')});
+  out('hr').innerHTML=r?resultBox(`${r.hrMax} bpm`,t('оценка HRmax','estimated HRmax'),`<div class="lab-result-grid">${r.zones.map((z)=>`<div><span>Zone ${z.zone}</span><b>${z.low}–${z.high}</b></div>`).join('')}</div>`,`${t('Формула HRmax имеет индивидуальную ошибку; измеренное значение предпочтительнее, если оно валидно и безопасно получено.','Predicted HRmax has individual error; a valid safely measured value is preferable.')}${evidence([r.evidenceId])}`):'';
+}
+function renderRunning() {
+  const pace=paceFromDistanceTime({distanceKm:val('lab-run-d1'),timeMinutes:val('lab-run-t1')});
+  const pred=riegelPrediction({knownDistanceKm:val('lab-run-d1'),knownTimeMinutes:val('lab-run-t1'),targetDistanceKm:val('lab-run-d2')});
+  out('running').innerHTML=pace&&pred?resultBox(`${num(pace.minPerKm)} min/km`,`${num(pace.kmh)} km/h`,`<div class="lab-result-grid"><div><span>${t('Прогноз цели','Target prediction')}</span><b>${num(pred.minutes)} min</b></div><div><span>${t('Экспонента','Exponent')}</span><b>${pred.exponent}</b></div><div><span>${t('Тип','Type')}</span><b>${t('эмпирика','empirical')}</b></div></div>`,`${t('Прогноз чувствителен к дистанции и специфичности подготовки.','Prediction depends on distance and training specificity.')}${evidence([pred.evidenceId])}`):'';
+}
+function renderField() {
+  const cooper=cooperVo2FromDistance(val('lab-cooper-distance'));
+  const rp=rockportVo2({weightKg:val('lab-rp-weight'),age:val('lab-rp-age'),sex:val('lab-rp-sex'),timeMinutes:val('lab-rp-time'),heartRate:val('lab-rp-hr')});
+  const kcal=metCalories({met:val('lab-met'),weightKg:val('lab-rp-weight'),minutes:val('lab-met-min')});
+  out('field').innerHTML=cooper&&rp&&kcal?resultBox(`${num(cooper.vo2max,1)} ml/kg/min`,t('Cooper estimate','Cooper estimate'),`<div class="lab-result-grid"><div><span>Rockport</span><b>${num(rp.vo2max,1)}</b></div><div><span>MET kcal</span><b>${num(kcal.kcal,0)}</b></div><div><span>${t('Уверенность','Confidence')}</span><b>${t('полевой estimate','field estimate')}</b></div></div>`,`${t('Это непрямые оценки. MET — справочное популяционное значение, а не персональный калориметр.','These are indirect estimates. MET is a population reference, not a personal calorimeter.')}${evidence([cooper.evidenceId,rp.evidenceId,kcal.evidenceId])}`):'';
+}
+function renderConvert() {
+  const r=convertUnits(val('lab-c-value'),val('lab-c-from'),val('lab-c-to'));
+  out('convert').innerHTML=r==null?resultBox('—',t('Эта пара единиц несовместима','This unit pair is incompatible')):resultBox(num(r,3),`${val('lab-c-to')}`);
 }
 
 function calculateAll() {
-  const e1rm = section.querySelector('[data-gym-form="e1rm"]');
-  const plates = section.querySelector('[data-gym-form="plates"]');
-  const warmup = section.querySelector('[data-gym-form="warmup"]');
-  showOneRepMax(e1rm); showPlates(plates); showWarmup(warmup); renderVolume();
+  [renderE1rm,renderPercent,renderRepConvert,renderPlates,renderWarmup,renderVolume,renderEnergy,renderProtein,renderBody,renderHr,renderRunning,renderField,renderConvert].forEach((fn)=>fn());
 }
-
-function bindForms() {
-  section.querySelectorAll('[data-gym-form]').forEach((form) => form.addEventListener('submit', (event) => {
-    event.preventDefault();
-    if (form.dataset.gymForm === 'e1rm') showOneRepMax(form);
-    if (form.dataset.gymForm === 'plates') showPlates(form);
-    if (form.dataset.gymForm === 'warmup') showWarmup(form);
-  }));
-  section.querySelector('[data-gym-refresh-volume]')?.addEventListener('click', renderVolume);
+function updateCategory() {
+  section.querySelectorAll('[data-lab-category]').forEach((el)=>{el.hidden=el.dataset.labCategory!==activeCategory;});
+  section.querySelectorAll('[data-lab-tab]').forEach((el)=>el.setAttribute('aria-pressed',String(el.dataset.labTab===activeCategory)));
+}
+function bind() {
+  section.querySelectorAll('[data-lab-tab]').forEach((btn)=>btn.addEventListener('click',()=>{activeCategory=btn.dataset.labTab;updateCategory();}));
+  section.querySelectorAll('[data-lab-form]').forEach((form)=>{
+    form.addEventListener('submit',(e)=>e.preventDefault());
+    form.addEventListener('input',calculateAll);
+    form.addEventListener('change',calculateAll);
+  });
+  section.querySelector('[data-refresh-history]')?.addEventListener('click',renderVolume);
 }
 
 function addNavigation() {
-  const topMenu = document.querySelector('#navmenu-more');
-  if (topMenu && !topMenu.querySelector('[href="#tools"]')) topMenu.insertAdjacentHTML('afterbegin', '<a href="#tools" data-v7-more="tools"><b>Инструменты</b><span data-v7-more-sub="tools">e1RM, блины и разминочные подходы</span></a>');
-  const mobile = document.querySelector('#mobile-nav');
-  if (mobile && !mobile.querySelector('[href="#tools"]')) mobile.insertAdjacentHTML('afterbegin', '<a class="mnav-link" href="#tools"><span data-v7-more="tools">Инструменты</span><span>→</span></a>');
-  const moreGrid = document.querySelector('#v7-more-grid .v8-more-group');
-  if (moreGrid && !moreGrid.querySelector('[data-v7-route="tools"]')) {
-    const list = moreGrid.querySelector('.v8-more-list');
-    list?.insertAdjacentHTML('afterbegin', '<button class="v7-more-item" type="button" data-v7-route="tools"><span class="v7-more-icon" aria-hidden="true">↗</span><span><b data-v7-more="tools">Инструменты</b><p data-v7-more-sub="tools">e1RM, блины и разминка</p></span><span aria-hidden="true">→</span></button>');
-  }
+  const topMenu=document.querySelector('#navmenu-more');
+  if(topMenu&&!topMenu.querySelector('[href="#tools"]')) topMenu.insertAdjacentHTML('afterbegin', `<a href="#tools" data-v7-more="tools"><b>${t('Лаборатория','Lab')}</b><span data-v7-more-sub="tools">${t('Сила, питание, тело, кардио и конвертеры','Strength, nutrition, body, cardio and converters')}</span></a>`);
+  const mobile=document.querySelector('#mobile-nav');
+  if(mobile&&!mobile.querySelector('[href="#tools"]')) mobile.insertAdjacentHTML('afterbegin', `<a class="mnav-link" href="#tools"><span data-v7-more="tools">${t('Лаборатория','Lab')}</span><span>→</span></a>`);
+  const group=document.querySelector('#v7-more-grid .v8-more-group');
+  if(group&&!group.querySelector('[data-v7-route="tools"]')) group.querySelector('.v8-more-list')?.insertAdjacentHTML('afterbegin', `<button class="v7-more-item" type="button" data-v7-route="tools"><span class="v7-more-icon" aria-hidden="true">↗</span><span><b data-v7-more="tools">${t('Лаборатория','Lab')}</b><p data-v7-more-sub="tools">${t('Расчёты с объяснением','Calculations with interpretation')}</p></span><span aria-hidden="true">→</span></button>`);
 }
-
 function syncRoute() {
-  const route = (location.hash || '#home').slice(1).split('?')[0];
-  if (section) section.hidden = route !== 'tools';
+  const route=(location.hash||'#home').slice(1).split('?')[0];
+  if(section)section.hidden=route!=='tools';
   addNavigation();
 }
-
 function init() {
-  section = document.createElement('section');
-  section.id = 'tools';
-  section.className = 'section v7-app-view';
-  section.hidden = true;
-  section.setAttribute('aria-labelledby', 'gym-tools-title');
+  addStylesheet();
+  section=document.createElement('section');
+  section.id='tools';
+  section.className='section v7-app-view';
+  section.hidden=true;
+  section.setAttribute('aria-labelledby','gym-tools-title');
   document.querySelector('main')?.appendChild(section);
-  renderShell();
-  syncRoute();
-  window.addEventListener('hashchange', syncRoute);
-  const observer = new MutationObserver(() => {
-    if (lastLanguage !== document.documentElement.lang) { lastLanguage = document.documentElement.lang; renderShell(); }
+  renderShell(); syncRoute();
+  window.addEventListener('hashchange',syncRoute);
+  const observer=new MutationObserver(()=>{
+    if(lastLanguage!==document.documentElement.lang){lastLanguage=document.documentElement.lang;renderShell();}
     addNavigation();
   });
-  observer.observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] });
-  observer.observe(document.body, { childList: true, subtree: true });
+  observer.observe(document.documentElement,{attributes:true,attributeFilter:['lang']});
+  observer.observe(document.body,{childList:true,subtree:true});
 }
-
-if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once: true });
-else init();
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true}); else init();

@@ -1,4 +1,4 @@
-const VERSION = '2026.09-r3-media4';
+const VERSION = '2026.09-r5-lab1';
 const PREFIX = 'mmg-gym-';
 const SHELL = `${PREFIX}shell-${VERSION}`;
 const MEDIA = `${PREFIX}media-${VERSION}`;
@@ -9,7 +9,9 @@ const PRECACHE = [
   './app.js',
   './bootstrap.js',
   './gym-tools.js',
+  './lab.css',
   './tools/gym-calculators.mjs',
+  './data/evidence/calculators.json',
   './data/content.json',
   './data/exercises-compact.json',
   './manifest.webmanifest',

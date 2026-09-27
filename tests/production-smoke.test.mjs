@@ -220,3 +220,27 @@ test('in-library quick scenarios reuse preset state and session balance flags du
   assert.match(index, /app\.css\?v=20260927-flagship2/);
   assert.match(index, /app\.js\?v=20260927-flagship2/);
 });
+
+
+test('Lab is a first-class multi-domain calculator surface', async () => {
+  const tools = await read('gym-tools.js');
+  const calc = await read('tools/gym-calculators.mjs');
+  const css = await read('lab.css');
+  const evidence = JSON.parse(await read('data/evidence/calculators.json'));
+  for (const category of ['strength','training','nutrition','body','cardio','convert']) {
+    assert.match(tools, new RegExp('data-lab-category=["\\\']' + category));
+  }
+  for (const fn of ['bmrMifflinStJeor','proteinRange','targetWeightAtBodyFat','heartRateReserveZones','riegelPrediction','convertUnits']) {
+    assert.match(calc, new RegExp('export function ' + fn));
+  }
+  assert.match(css, /\.lab-tabs/);
+  assert.ok(evidence.entries.length >= 8);
+  assert.equal(evidence.schemaVersion, 1);
+});
+
+test('quality workflow gates production-facing changes', async () => {
+  const quality = await read('.github/workflows/quality.yml');
+  for (const step of ['npm ci','npm run syntax','npm test','npm run build:index','npm run e2e','npm run visual']) {
+    assert.match(quality, new RegExp(step.replace(/[.*+?^$()|[\]{}\\]/g, '\\$&')));
+  }
+});
