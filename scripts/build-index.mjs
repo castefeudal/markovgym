@@ -1,6 +1,7 @@
 import { readFile, writeFile } from 'node:fs/promises';
 
 const body = await readFile(new URL('../app-body.html', import.meta.url), 'utf8');
+const BUILD_VERSION = '2026.09-r5-lab1';
 const structuredData = {
   '@context': 'https://schema.org',
   '@type': 'SoftwareApplication',
@@ -9,8 +10,8 @@ const structuredData = {
   operatingSystem: 'Web',
   isAccessibleForFree: true,
   inLanguage: ['ru', 'en'],
-  description: 'Локальный тренировочный журнал с библиотекой упражнений, Run Mode, прогрессом, программой и инструментами расчёта нагрузки.',
-  featureList: ['Библиотека упражнений', 'Конструктор тренировки', 'Run Mode и таймер отдыха', 'КБЖУ', 'Прогресс', 'Инструменты зала'],
+  description: 'Local-first система тренировок, прогрессии, питания, состава тела и прозрачных fitness-расчётов.',
+  featureList: ['Библиотека упражнений', 'Конструктор тренировки', 'Run Mode и таймер отдыха', 'Прогресс', 'Питание', 'MARKOV MADE LAB'],
 };
 
 const bootCss = `
@@ -67,21 +68,21 @@ const index = `<!doctype html>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>MARKOV MADE GYM — тренировки, прогресс и техника</title>
-  <meta name="description" content="MARKOV MADE GYM — локальный тренировочный журнал, библиотека упражнений, Run Mode, прогресс, программа и расчёты нагрузки.">
+  <meta name="description" content="MARKOV MADE GYM — local-first система тренировок, прогрессии, питания, состава тела и прозрачных fitness-расчётов.">
   <meta name="author" content="Павел Марков / MarkovMade">
   <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large">
   <meta name="theme-color" content="#070a0e">
   <meta name="application-name" content="MARKOV MADE GYM">
   <meta name="color-scheme" content="dark light">
-  <link rel="canonical" href="./">
-  <link rel="alternate" hreflang="ru" href="./">
-  <link rel="alternate" hreflang="en" href="./?lang=en">
-  <link rel="alternate" hreflang="x-default" href="./">
+  <link rel="canonical" href="https://castefeudal.github.io/markovgym/">
+  <link rel="alternate" hreflang="ru" href="https://castefeudal.github.io/markovgym/">
+  <link rel="alternate" hreflang="en" href="https://castefeudal.github.io/markovgym/?lang=en">
+  <link rel="alternate" hreflang="x-default" href="https://castefeudal.github.io/markovgym/">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="MARKOV MADE GYM">
   <meta property="og:title" content="MARKOV MADE GYM — тренировки, прогресс и техника">
-  <meta property="og:description" content="Локальная система для выбора упражнений, сборки тренировки и контроля прогресса.">
-  <meta property="og:url" content="./">
+  <meta property="og:description" content="Local-first система тренировок, прогрессии, питания, состава тела и MARKOV MADE LAB.">
+  <meta property="og:url" content="https://castefeudal.github.io/markovgym/">
   <meta name="twitter:card" content="summary">
   <meta name="twitter:title" content="MARKOV MADE GYM">
   <meta name="twitter:description" content="Библиотека упражнений, Run Mode, прогресс и инструменты зала без регистрации.">
@@ -103,11 +104,12 @@ const index = `<!doctype html>
     } catch (_) {}
   })();
   </script>
-  <link rel="stylesheet" href="./app.css?v=20260927-flagship2">
+  <link rel="stylesheet" href="./app.css?v=${BUILD_VERSION}">
+  <link rel="stylesheet" href="./lab.css?v=${BUILD_VERSION}">
   <style>${bootCss}</style>
   <script type="application/ld+json">${JSON.stringify(structuredData)}</script>
 </head>
-<body data-app-version="2026.09-r4">
+<body data-app-version="${BUILD_VERSION}">
   <script>
   (function () {
     var marker = 'media4';
@@ -143,7 +145,7 @@ const index = `<!doctype html>
   </div>
 ${body}
   <script src="./bootstrap.js" defer></script>
-  <script src="./app.js?v=20260927-flagship2" defer></script>
+  <script src="./app.js?v=${BUILD_VERSION}" defer></script>
   <script type="module" src="./gym-tools.js"></script>
 </body>
 </html>
