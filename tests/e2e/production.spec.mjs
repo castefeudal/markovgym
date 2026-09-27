@@ -234,3 +234,18 @@ test('readability choice persists and progress supports multiple chart signals',
   await page.locator('[data-progress-metric="sleep"]').click();
   await expect(page.locator('[data-progress-metric="sleep"]')).toHaveAttribute('aria-pressed', 'true');
 });
+
+
+test('library quick scenarios stay synchronized with filters', async ({ page }) => {
+  await page.goto('/index.html#library');
+  await expect(page.locator('#mmg-boot')).toHaveCount(0);
+  const home = page.locator('#v10-library-quick-presets [data-preset="home"]');
+  await expect(home).toBeVisible();
+  await home.click();
+  await expect(home).toHaveAttribute('aria-pressed', 'true');
+
+  const gym = page.locator('#v10-library-quick-presets [data-preset="gym"]');
+  await gym.click();
+  await expect(gym).toHaveAttribute('aria-pressed', 'true');
+  await expect(home).toHaveAttribute('aria-pressed', 'false');
+});
