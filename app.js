@@ -1003,6 +1003,30 @@
       '<span><b>' + Object.keys(zones).length + '</b><em>' + esc(labels.zones) + '</em></span>';
   }
 
+  function sameStringSet(a, b) {
+    if (!a || !b || a.length !== b.length) return false;
+    return a.every(function (v) { return b.indexOf(v) !== -1; });
+  }
+
+  function renderLibraryQuickPresets() {
+    var host = $('library-quick-presets');
+    var label = $('library-quick-label');
+    if (!host) return;
+    if (label) label.textContent = S.lang === 'en' ? 'Quick selection' : 'Быстрый выбор';
+    var gymEquip = ['barbell', 'cable', 'leverage machine', 'smith machine', 'ez barbell'];
+    var defs = [
+      ['home', S.lang === 'en' ? 'Home' : 'Дом', sameStringSet(S.equipment, HOME_EQUIP)],
+      ['gym', S.lang === 'en' ? 'Gym' : 'Зал', sameStringSet(S.equipment, gymEquip)],
+      ['chest', S.lang === 'en' ? 'Chest' : 'Грудь', S.zones.length === 1 && S.zones[0] === 'chest'],
+      ['back', S.lang === 'en' ? 'Back' : 'Спина', S.zones.length === 1 && S.zones[0] === 'back'],
+      ['legs', S.lang === 'en' ? 'Legs' : 'Ноги', sameStringSet(S.zones, ['upper legs', 'lower legs'])],
+      ['favorites', S.lang === 'en' ? 'Favorites' : 'Избранное', !!S.favOnly]
+    ];
+    host.innerHTML = defs.map(function (d) {
+      return '<button class="library-quick-btn" type="button" data-preset="' + d[0] + '" aria-pressed="' + String(d[2]) + '">' + esc(d[1]) + '</button>';
+    }).join('');
+  }
+
   function renderResults() {
     var items = getFiltered();
     S.lastFiltered = items;
@@ -1027,6 +1051,7 @@
     });
     $('active-chips').innerHTML = activeChipsHtml();
     renderResultsInsights(items);
+    renderLibraryQuickPresets();
 
     var more = items.length > visible.length;
     $('load-more').hidden = !more;
@@ -1045,6 +1070,7 @@
     qs('#search-box').setAttribute('data-filled', String(!!S.query));
     renderCoachLib(S.lastFiltered);
     renderMuscleBoard();
+    if (document.body && document.body.dataset.v8Ready === 'true' && v7RouteFromHash() === 'library') renderV8Shell('library', false);
   }
 
   function filterListHtml(values, counts, labelFn, kind, selected) {
@@ -6407,6 +6433,64 @@
   function v7DateLabel(){try{return new Intl.DateTimeFormat(S.lang==='en'?'en-GB':'ru-RU',{weekday:'long',day:'numeric',month:'long'}).format(new Date());}catch(e){return todayISO();}}
   function v7PlanSummary(){if(!S.plan||!S.plan.days)return{v:'—',s:v7c('noPlan')};var done=(S.plan.completedDays||[]).length;return{v:done+' / '+S.plan.days.length,s:(S.lang==='en'?'sessions ':'тренировок ')+v7c('completed')};}
   function v7TrendSummary(){if(S.diary.length<2)return{v:'—',s:v7c('noTrend')};var d=diaryDelta('weight',14);if(d===null)return{v:'—',s:v7c('noTrend')};return{v:(d>0?'+':'')+d.toFixed(1)+' '+t('kg'),s:S.lang==='en'?'14-day weight change':'изменение веса за 14 дней'};}
+  function renderWorkoutIntelligence() {
+    var host = $('workout-intelligence');
+    if (!host) return;
+    var records = S.workout || [];
+    var items = records.map(function (w) { return BY_ID[w.id]; }).filter(Boolean);
+    if (!items.length) {
+      host.innerHTML =
+        '<div class="workout-intel-empty"><b>' + esc(S.lang === 'en' ? 'Session check' : 'Проверка сессии') + '</b>' +
+        '<span>' + esc(S.lang === 'en' ? 'Add exercises — balance and structure will appear here.' : 'Добавь упражнения — здесь появится оценка структуры и баланса.') + '</span></div>';
+      return;
+    }
+
+    var totalSets = records.reduce(function (sum, w) { return sum + (Number(w.sets) || 0); }, 0);
+    var compounds = items.filter(function (ex) { return exKind(ex) === 'compound'; }).length;
+    var compoundPct = Math.round(compounds / items.length * 100);
+    var zoneSets = {}, targetHits = {};
+    records.forEach(function (w) {
+      var ex = BY_ID[w.id];
+      if (!ex) return;
+      zoneSets[ex.zone] = (zoneSets[ex.zone] || 0) + (Number(w.sets) || 0);
+      targetHits[ex.target] = (targetHits[ex.target] || 0) + 1;
+    });
+    var zones = Object.keys(zoneSets);
+    var topZone = zones.sort(function (a, b) { return zoneSets[b] - zoneSets[a]; })[0] || '';
+    var maxZoneSets = topZone ? zoneSets[topZone] : 0;
+    var maxSameTarget = Math.max.apply(null, Object.keys(targetHits).map(function (k) { return targetHits[k]; }).concat([0]));
+
+    var state = 'ok';
+    var title = S.lang === 'en' ? 'Session ready' : 'Сессия собрана';
+    var note = S.lang === 'en' ? 'The structure is compact enough to run and easy to track.' : 'Структура достаточно компактна для выполнения и отслеживания.';
+    if (items.length > 9 || totalSets > 32) {
+      state = 'warn';
+      title = S.lang === 'en' ? 'Check session length' : 'Проверь объём';
+      note = S.lang === 'en' ? 'There is a lot of work in one session. Remove low-priority duplication before adding more.' : 'Работы на одну сессию много. Убери низкоприоритетные повторы, прежде чем добавлять ещё.';
+    } else if (maxZoneSets > 16) {
+      state = 'warn';
+      title = S.lang === 'en' ? 'Load is concentrated' : 'Нагрузка сконцентрирована';
+      note = (S.lang === 'en' ? 'Most work falls on ' : 'Большая часть объёма приходится на ') + labelZone(topZone) + '.';
+    } else if (maxSameTarget >= 3) {
+      state = 'warn';
+      title = S.lang === 'en' ? 'Check duplication' : 'Проверь дублирование';
+      note = S.lang === 'en' ? 'Three or more exercises target the same primary muscle.' : 'Три или больше упражнений бьют в одну и ту же основную мышцу.';
+    } else if (compounds === 0 && items.length >= 4) {
+      state = 'info';
+      title = S.lang === 'en' ? 'Isolation-heavy session' : 'Много изоляции';
+      note = S.lang === 'en' ? 'That can be intentional, but check whether one compound pattern should anchor the session.' : 'Это может быть осознанно, но проверь, нужен ли один базовый паттерн в основе сессии.';
+    }
+
+    host.innerHTML =
+      '<div class="workout-intel-head"><span>' + esc(S.lang === 'en' ? 'Session intelligence' : 'Аналитика сессии') + '</span><b data-state="' + state + '">' + esc(title) + '</b></div>' +
+      '<div class="workout-intel-metrics">' +
+        '<span><b>' + zones.length + '</b><small>' + esc(S.lang === 'en' ? 'body areas' : 'зоны') + '</small></span>' +
+        '<span><b>' + compoundPct + '%</b><small>' + esc(S.lang === 'en' ? 'compound' : 'базовых') + '</small></span>' +
+        '<span><b>' + maxZoneSets + '</b><small>' + esc(S.lang === 'en' ? 'sets max / area' : 'подх. макс. / зона') + '</small></span>' +
+      '</div>' +
+      '<p>' + esc(note) + '</p>';
+  }
+
   function renderV7Home(){var host=$('home');if(!host)return;$('v7-home-kicker').textContent=v7c('home');$('v7-home-sub').textContent=v7c('homeSub');$('v7-home-date').textContent=v7DateLabel();var next=v7NextAction(),title=next.title,why=next.why;var ev=(next.evidence||[]).map(function(x){return'<span class="v7-evidence">'+esc(x)+'</span>';}).join('');var secondary=next.type==='planDay'?'<button class="btn btn-quiet" type="button" data-v7-route="program">'+esc(v7c('program'))+'</button>':'';$('v7-home-next').innerHTML='<span class="v7-next-label">'+esc(v7c('next'))+'</span><h2 class="v7-next-title">'+esc(title)+'</h2><p class="v7-next-copy">'+esc(why)+'</p>'+(ev?'<div class="v7-next-evidence">'+ev+'</div>':'')+'<div class="v7-next-actions"><button class="btn btn-primary" type="button" data-v7-action="'+esc(next.type)+'"'+(next.day!=null?' data-v7-day="'+next.day+'"':'')+'>'+esc(title)+'</button>'+secondary+'</div>';
     var plan=v7PlanSummary(),last=S.history[0],trend=v7TrendSummary();$('v7-home-plan').innerHTML='<span>'+esc(v7c('plan'))+'</span><b>'+(S.plan?esc(S.lang==='en'?'Active programme':'Активная программа'):esc(v7c('noPlan')))+'</b><strong>'+esc(plan.v)+'</strong><small>'+esc(plan.s)+'</small>';$('v7-home-last').innerHTML='<span>'+esc(v7c('last'))+'</span><b>'+esc(last?last.name:v7c('noHistory'))+'</b><strong>'+esc(last?String(last.items.length):'—')+'</strong><small>'+esc(last?(last.date+' · '+totalCompletedHistorySets(last)+' '+v7c('sets')):v7c('noHistory'))+'</small>';$('v7-home-progress').innerHTML='<span>'+esc(v7c('trend'))+'</span><b>'+esc(S.diary.length?(S.lang==='en'?'Feedback is current':'Обратная связь сохранена'):v7c('noTrend'))+'</b><strong>'+esc(trend.v)+'</strong><small>'+esc(trend.s)+'</small>';$('v7-home-nutrition').innerHTML='<span>'+esc(v7c('kcal'))+'</span><b>'+esc(S.kbjuLast?(S.lang==='en'?'Current target':'Текущий ориентир'):v7c('notCalculated'))+'</b><strong>'+esc(S.kbjuLast?String(S.kbjuLast.target):'—')+'</strong><small>'+esc(S.kbjuLast?t('kcal'):v7c('notCalculated'))+'</small>';
     var cmds=[['library','search','quickLibrary','quickLibraryS'],['workout','workout','quickWorkout','quickWorkoutS'],['program','program','quickProgram','quickProgramS'],['progress','progress','quickProgress','quickProgressS']];$('v7-home-quick').innerHTML=cmds.map(function(c){return'<button class="v7-command" type="button" data-v7-route="'+c[0]+'"><i aria-hidden="true">'+premiumIcon(c[1])+'</i><span><b>'+esc(v7c(c[2]))+'</b><small>'+esc(v7c(c[3]))+'</small></span></button>';}).join('');
@@ -6461,10 +6545,61 @@
     else if(route==='program'&&S.plan&&S.plan.days){meta=(S.plan.completedDays||[]).length+' / '+S.plan.days.length+' '+(S.lang==='en'?'sessions this week':'тренировок на этой неделе');}
     return{k:base[0],t:v7c(route)||route,m:meta};
   }
+  function renderV8ContextAction(route) {
+    var btn = $('v8-context-action');
+    if (!btn) return;
+    ['data-v7-action','data-v7-day','data-v7-route','data-v8-start-run','data-v8-focus-search'].forEach(function (name) { btn.removeAttribute(name); });
+    btn.hidden = false;
+    if (route === 'home') {
+      var next = v7NextAction();
+      btn.textContent = next.title;
+      btn.setAttribute('data-v7-action', next.type);
+      if (next.day != null) btn.setAttribute('data-v7-day', String(next.day));
+      return;
+    }
+    if (route === 'library') {
+      if (S.workout.length) {
+        btn.textContent = (S.lang === 'en' ? 'Workout · ' : 'Тренировка · ') + S.workout.length;
+        btn.setAttribute('data-v7-route', 'workout');
+      } else {
+        btn.textContent = S.lang === 'en' ? 'Find an exercise' : 'Найти упражнение';
+        btn.setAttribute('data-v8-focus-search', 'true');
+      }
+      return;
+    }
+    if (route === 'workout') {
+      if (S.workout.length) {
+        btn.textContent = S.lang === 'en' ? 'Start workout' : 'Начать тренировку';
+        btn.setAttribute('data-v8-start-run', 'true');
+      } else {
+        btn.textContent = S.lang === 'en' ? 'Add exercises' : 'Добавить упражнения';
+        btn.setAttribute('data-v7-route', 'library');
+      }
+      return;
+    }
+    if (route === 'progress') {
+      btn.textContent = S.lang === 'en' ? 'Add check-in' : 'Добавить измерение';
+      btn.setAttribute('data-v7-action', 'checkin');
+      return;
+    }
+    if (route === 'program') {
+      btn.textContent = S.lang === 'en' ? 'Open workout' : 'К тренировке';
+      btn.setAttribute('data-v7-route', 'workout');
+      return;
+    }
+    if (route === 'nutrition') {
+      btn.textContent = S.lang === 'en' ? 'Update target' : 'Обновить ориентир';
+      btn.setAttribute('data-v7-route', 'nutrition');
+      return;
+    }
+    btn.hidden = true;
+  }
+
   function renderV8Shell(route,animate){
     route=route||v7RouteFromHash();var returning=v7Returning();document.body.dataset.v8Returning=returning?'true':'false';document.body.dataset.v8Ready='true';
     var meta=v8RouteMeta(route),k=$('v8-context-kicker'),t8=$('v8-context-title'),m8=$('v8-context-meta'),lt=$('v8-context-local-text');
     if(k)k.textContent=meta.k;if(t8)t8.textContent=meta.t;if(m8)m8.textContent=meta.m;if(lt)lt.textContent=S.lang==='en'?'Saved on this device':'Сохранено на устройстве';
+    renderV8ContextAction(route);
     qsa('[data-v8-rail]').forEach(function(a){var on=a.dataset.v8Rail===route||(route!=='home'&&route!=='library'&&route!=='workout'&&route!=='progress'&&a.dataset.v8Rail==='more');if(on)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');});
     if(animate&&!REDUCED_MOTION.matches){var target=route==='home'&&returning?$('home'):(route==='home'?qs('.hero'):$(route));if(target){target.classList.remove('v8-route-enter');requestAnimationFrame(function(){target.classList.add('v8-route-enter');setTimeout(function(){target.classList.remove('v8-route-enter');},280);});}}
   }
@@ -6481,14 +6616,14 @@
     ensureMobileAppNav();renderV7All();initV8Keyboard();
     window.addEventListener('hashchange',function(){applyV7Route(true);track('home_action',{route:v7RouteFromHash()});});
     window.addEventListener('hashchange',function(){var route=v7RouteFromHash();if(dataRouteNeedsLibrary(route))ensureData().then(refreshDataDependentUI);});
-    document.addEventListener('click',function(e){var startRun=e.target.closest('[data-v8-start-run]');if(startRun){e.preventDefault();openRun();return;}var r=e.target.closest('a[data-v7-route],button[data-v7-route]');if(r){e.preventDefault();navigateV7(r.dataset.v7Route,true);return;}var a=e.target.closest('[data-v7-action]');if(a){var type=a.dataset.v7Action;if(type==='resume'||type==='run')openRun();else if(type==='planDay')startPlanDayV7(Number(a.dataset.v7Day)||0,true);else if(type==='profile'){navigateV7('home',false);var panel=qs('.hero-panel');if(panel){panel.scrollIntoView({block:'start'});var first=qs('.console-opt',panel);if(first)first.focus();}}else if(type==='checkin'){navigateV7('progress',true);setTimeout(function(){if($('g-weight'))$('g-weight').focus();},80);}else navigateV7(V7_ROUTE_IDS[type]?type:(type==='program'?'program':'library'),true);track('home_action',{action:type});return;}var th=e.target.closest('[data-v7-theme]');if(th){S.theme=th.dataset.v7Theme;applyTheme();renderV7Settings();return;}var st=e.target.closest('[data-v7-setting]');if(st){var key=st.dataset.v7Setting;S.settings[key]=!S.settings[key];saveSettings();renderV7Settings();if(runOpen())renderRun();return;}if(e.target.closest('[data-v7-coach]')){$('coach-switch').click();renderV7Settings();return;}var data=e.target.closest('[data-v7-data]');if(data){var map={export:'data-export',import:'data-import',clear:'data-clear'};var target=$(map[data.dataset.v7Data]);if(target)target.click();return;}},true);
+    document.addEventListener('click',function(e){var focusSearch=e.target.closest('[data-v8-focus-search]');if(focusSearch){e.preventDefault();navigateV7('library',false);requestAnimationFrame(function(){if($('search')){$('search').focus();$('search').select();}});return;}var startRun=e.target.closest('[data-v8-start-run]');if(startRun){e.preventDefault();openRun();return;}var r=e.target.closest('a[data-v7-route],button[data-v7-route]');if(r){e.preventDefault();navigateV7(r.dataset.v7Route,true);return;}var a=e.target.closest('[data-v7-action]');if(a){var type=a.dataset.v7Action;if(type==='resume'||type==='run')openRun();else if(type==='planDay')startPlanDayV7(Number(a.dataset.v7Day)||0,true);else if(type==='profile'){navigateV7('home',false);var panel=qs('.hero-panel');if(panel){panel.scrollIntoView({block:'start'});var first=qs('.console-opt',panel);if(first)first.focus();}}else if(type==='checkin'){navigateV7('progress',true);setTimeout(function(){if($('g-weight'))$('g-weight').focus();},80);}else navigateV7(V7_ROUTE_IDS[type]?type:(type==='program'?'program':'library'),true);track('home_action',{action:type});return;}var th=e.target.closest('[data-v7-theme]');if(th){S.theme=th.dataset.v7Theme;applyTheme();renderV7Settings();return;}var st=e.target.closest('[data-v7-setting]');if(st){var key=st.dataset.v7Setting;S.settings[key]=!S.settings[key];saveSettings();renderV7Settings();if(runOpen())renderRun();return;}if(e.target.closest('[data-v7-coach]')){$('coach-switch').click();renderV7Settings();return;}var data=e.target.closest('[data-v7-data]');if(data){var map={export:'data-export',import:'data-import',clear:'data-clear'};var target=$(map[data.dataset.v7Data]);if(target)target.click();return;}},true);
     if(window.MutationObserver){var mo=new MutationObserver(function(){renderV7Home();syncV7Floating();});['workout-list','hist','prog-out','plan-out'].forEach(function(id){var el=$(id);if(el)mo.observe(el,{childList:true,subtree:false,attributes:true,attributeFilter:['data-filled']});});}
     applyV7Route(false);window.mmgV7={navigate:navigateV7,get route(){return v7RouteFromHash();},render:renderV7All};window.mmgV8=window.mmgV7;
   }
 
   /* Wrap proven renderers instead of duplicating business logic. */
   var _renderSystemV7=renderSystem;renderSystem=function(){_renderSystemV7();if(document.body&&document.body.dataset.v7Ready==='true')applyV7Route(false);};
-  var _renderWorkoutV7=renderWorkout;renderWorkout=function(){_renderWorkoutV7();addProgressionAdviceV7();renderV7Home();};
+  var _renderWorkoutV7=renderWorkout;renderWorkout=function(){_renderWorkoutV7();addProgressionAdviceV7();renderWorkoutIntelligence();renderV7Home();if(document.body&&document.body.dataset.v8Ready==='true'&&v7RouteFromHash()==='workout')renderV8Shell('workout',false);};
   var _renderHistoryV7=renderHistory;renderHistory=function(){_renderHistoryV7();renderV7Home();};
   var _renderProgressV7=renderProgress;renderProgress=function(){_renderProgressV7();renderV7Home();};
   var _renderRunV7=renderRun;renderRun=function(){_renderRunV7();renderV7RunAdvanced();};
