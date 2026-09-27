@@ -228,7 +228,7 @@ test('Lab is a first-class multi-domain calculator surface', async () => {
   const css = await read('lab.css');
   const evidence = JSON.parse(await read('data/evidence/calculators.json'));
   for (const category of ['strength','training','nutrition','body','cardio','convert']) {
-    assert.match(tools, new RegExp('data-lab-category="' + category + '"'));
+    assert.match(tools, new RegExp("card\\('" + category + "'"));
   }
   for (const fn of ['bmrMifflinStJeor','proteinRange','targetWeightAtBodyFat','heartRateReserveZones','riegelPrediction','convertUnits']) {
     assert.match(calc, new RegExp('export function ' + fn));
