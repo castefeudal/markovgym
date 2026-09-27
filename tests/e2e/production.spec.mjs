@@ -82,8 +82,27 @@ test('run mode keeps full exercise media visible and surfaces execution cues', a
 
   await expect(page.locator('#run')).toHaveAttribute('data-open', 'true');
   await expect(page.locator('.run-tech-cues')).toBeVisible();
+  await expect(page.locator('[data-run-set-type]')).toHaveValue('working');
+  await expect(page.locator('[data-run-field="rir"]')).toHaveCount(0);
   const fit = await page.locator('.run-media').evaluate((img) => getComputedStyle(img).objectFit);
   expect(fit).toBe('contain');
+});
+
+test('run mode exposes RIR and RPE only when advanced logging is enabled', async ({ page }) => {
+  await page.goto('/index.html#library');
+  await expect(page.locator('#mmg-boot')).toHaveCount(0);
+  await page.evaluate(() => localStorage.setItem('mmg.settings.v1', JSON.stringify({ rir: true, rpe: true, reading: 'balanced' })));
+  await page.reload();
+  await expect(page.locator('#mmg-boot')).toHaveCount(0);
+  await page.locator('#grid [data-add]').first().click();
+  await page.goto('/index.html#workout');
+  await page.locator('#w-run').click();
+  await expect(page.locator('[data-run-field="rir"]')).toBeVisible();
+  await expect(page.locator('[data-run-field="rpe"]')).toBeVisible();
+  await page.locator('[data-run-field="rir"]').fill('2');
+  await page.locator('[data-run-field="rpe"]').fill('8');
+  await page.locator('[data-run-set-type]').selectOption('backoff');
+  await expect(page.locator('[data-run-set-type]')).toHaveValue('backoff');
 });
 
 test('exercise detail has no horizontal overflow on a 390px viewport', async ({ page }) => {
