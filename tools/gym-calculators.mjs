@@ -354,6 +354,94 @@ export function metCalories({ met, weightKg, minutes } = {}) {
   };
 }
 
+
+function rollingAverage(values, endIndex, windowSize = 7) {
+  const start = Math.max(0, endIndex - windowSize + 1);
+  const slice = values.slice(start, endIndex + 1).filter(Number.isFinite);
+  return slice.length ? slice.reduce((sum, value) => sum + value, 0) / slice.length : null;
+}
+
+/**
+ * Transparent energy-balance heuristic from logged intake + scale-weight trend.
+ * This is not calorimetry. A deliberately wide range reflects uncertainty in
+ * short-term weight composition and the energy density of weight change.
+ */
+export function adaptiveExpenditure(entries = [], { minDays = 14, minCoverage = 0.7 } = {}) {
+  const clean = (Array.isArray(entries) ? entries : [])
+    .map((entry) => ({
+      date: String(entry?.date || '').slice(0, 10),
+      calories: finitePositive(entry?.calories),
+      weight: finitePositive(entry?.weight),
+    }))
+    .filter((entry) => entry.date && (entry.calories || entry.weight))
+    .sort((a, b) => a.date.localeCompare(b.date));
+
+  if (clean.length < 2) return { ready: false, reason: 'insufficient-data', coverage: 0 };
+
+  const startMs = Date.parse(clean[0].date + 'T12:00:00Z');
+  const endMs = Date.parse(clean[clean.length - 1].date + 'T12:00:00Z');
+  const spanDays = Math.max(1, Math.round((endMs - startMs) / 86400000) + 1);
+  const calorieEntries = clean.filter((entry) => entry.calories);
+  const weightEntries = clean.filter((entry) => entry.weight);
+  const coverage = calorieEntries.length / spanDays;
+
+  if (spanDays < minDays || coverage < minCoverage || weightEntries.length < Math.min(7, minDays / 2)) {
+    return {
+      ready: false,
+      reason: 'insufficient-data',
+      spanDays,
+      coverage: round(coverage, 3),
+      loggedDays: calorieEntries.length,
+      weightDays: weightEntries.length,
+      requiredDays: minDays,
+      requiredCoverage: minCoverage,
+    };
+  }
+
+  const weights = weightEntries.map((entry) => entry.weight);
+  const window = Math.min(7, Math.max(3, Math.floor(weights.length / 3)));
+  const startWindowEnd = Math.min(window - 1, weights.length - 1);
+  const endWindowEnd = weights.length - 1;
+  const startTrend = rollingAverage(weights, startWindowEnd, window);
+  const endTrend = rollingAverage(weights, endWindowEnd, window);
+  const firstWeightDate = Date.parse(weightEntries[Math.max(0, startWindowEnd - window + 1)].date + 'T12:00:00Z');
+  const lastWeightDate = Date.parse(weightEntries[endWindowEnd].date + 'T12:00:00Z');
+  const trendDays = Math.max(1, (lastWeightDate - firstWeightDate) / 86400000);
+  const changeKg = endTrend - startTrend;
+  const averageCalories = calorieEntries.reduce((sum, entry) => sum + entry.calories, 0) / calorieEntries.length;
+
+  const estimateForDensity = (kcalPerKg) => averageCalories - (changeKg * kcalPerKg / trendDays);
+  const densityLow = 6500;
+  const densityCentral = 7700;
+  const densityHigh = 8500;
+  const candidates = [densityLow, densityCentral, densityHigh].map(estimateForDensity);
+  const central = estimateForDensity(densityCentral);
+  const dataMargin = central * (coverage >= 0.9 && spanDays >= 21 ? 0.05 : 0.08);
+  const low = Math.min(...candidates) - dataMargin;
+  const high = Math.max(...candidates) + dataMargin;
+  const confidence = coverage >= 0.9 && spanDays >= 21 && weightEntries.length >= 10 ? 'moderate' : 'low';
+
+  return {
+    ready: true,
+    central: round(central),
+    range: [round(Math.max(0, low)), round(Math.max(0, high))],
+    confidence,
+    averageCalories: round(averageCalories),
+    trendChangeKg: round(changeKg, 3),
+    spanDays,
+    trendDays: round(trendDays, 1),
+    coverage: round(coverage, 3),
+    loggedDays: calorieEntries.length,
+    weightDays: weightEntries.length,
+    smoothingDays: window,
+    methodVersion: 'transparent-energy-balance-v1',
+    assumptions: {
+      energyDensityKcalPerKg: [densityLow, densityCentral, densityHigh],
+      note: 'Weight change is not pure fat or lean tissue; the range is intentionally wide.',
+    },
+  };
+}
+
 export function convertUnits(value, from, to) {
   const n = Number(value);
   if (!Number.isFinite(n)) return null;
