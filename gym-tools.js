@@ -1,4 +1,5 @@
 import {
+  adaptiveExpenditure,
   bmrMifflinStJeor,
   bodyCompositionFromFat,
   calculatePlates,
@@ -66,6 +67,7 @@ function renderShell() {
     ['body', t('Состав тела', 'Body')],
     ['cardio', t('Кардио', 'Cardio')],
     ['convert', t('Конвертеры', 'Converters')],
+    ['mydata', t('Мои данные', 'My data')],
   ];
 
   section.innerHTML = `
@@ -144,6 +146,10 @@ function renderShell() {
             <details><summary>Rockport</summary><div class="lab-form-row three">${field('lab-rp-weight',t('Вес, кг','Weight, kg'),'80','type="number" step="0.1"')}${field('lab-rp-age',t('Возраст','Age'),'30','type="number"')}${select('lab-rp-sex',t('Пол','Sex'),[['male',t('Мужской','Male')],['female',t('Женский','Female')]])}${field('lab-rp-time',t('1 миля, мин','1 mile, min'),'13','type="number" step="0.1"')}${field('lab-rp-hr',t('Пульс на финише','Finish HR'),'130','type="number"')}${field('lab-met-min',t('MET: минуты','MET minutes'),'60','type="number"')}</div></details>
           </form><div data-lab-output="field"></div>`)}
 
+        ${card('mydata','lab-adaptive','MY DATA',t('Адаптивный расход энергии','Adaptive energy expenditure'),t('Использует локальные записи калорий и веса. До достаточного покрытия данных результат не показывается.','Uses local calorie and weight logs. No estimate is shown until coverage is sufficient.'),`
+          <div data-lab-output="adaptive"></div>
+          <button class="btn btn-quiet" type="button" data-refresh-adaptive>${t('Обновить из дневника','Refresh from diary')}</button>`)}
+
         ${card('convert','lab-convert','UNITS',t('Конвертер единиц','Unit converter'),t('Мгновенные двусторонние преобразования без кнопки Calculate.','Instant two-way conversions without a Calculate button.'),`
           <form data-lab-form="convert" class="form-grid"><div class="lab-form-row three">${field('lab-c-value',t('Значение','Value'),'100','type="number" step="any"')}${select('lab-c-from',t('Из','From'),[['kg','kg'],['lb','lb'],['cm','cm'],['in','in'],['km','km'],['mi','mi'],['kcal','kcal'],['kj','kJ'],['kmh','km/h'],['mph','mph']])}${select('lab-c-to',t('В','To'),[['lb','lb'],['kg','kg'],['in','in'],['cm','cm'],['mi','mi'],['km','km'],['kj','kJ'],['kcal','kcal'],['mph','mph'],['kmh','km/h']])}</div></form><div data-lab-output="convert"></div>`)}
       </div>
@@ -179,6 +185,7 @@ function renderWarmup() {
   out('warmup').innerHTML = rows.length ? resultBox(`${rows.length} ${t('подхода','sets')}`,t('до рабочего веса','before work sets'),`<div class="lab-result-grid">${rows.map((s,i)=>`<div><span>0${i+1}</span><b>${num(s.weight)} kg × ${s.reps}</b><small>${esc(s.label)}</small></div>`).join('')}</div>`) : '';
 }
 function history() { try { const x=JSON.parse(localStorage.getItem('mmg.history.v1')||'[]'); return Array.isArray(x)?x:[]; } catch { return []; } }
+function diary() { try { const x=JSON.parse(localStorage.getItem('mmg.diary.v1')||'[]'); return Array.isArray(x)?x:[]; } catch { return []; } }
 function renderVolume() {
   const h=history(); const sets=h.flatMap((s)=>(s.items||[]).flatMap((i)=>i.setLog||[])); const total=sessionVolume(sets);
   out('volume').innerHTML=resultBox(`${num(total,0)} kg`,t('зафиксированный тоннаж','recorded volume load'),`<div class="lab-result-grid"><div><span>${t('Сессий','Sessions')}</span><b>${h.length}</b></div><div><span>${t('Источник','Source')}</span><b>${t('мои данные','my data')}</b></div><div><span>${t('Правило','Rule')}</span><b>${t('только завершённые','completed only')}</b></div></div>`,t('Собственный вес не превращается в фиктивный тоннаж. Сравнивай тоннаж прежде всего у одного упражнения с самим собой.','Bodyweight work is not converted into fake tonnage. Compare volume load primarily within the same movement over time.'));
@@ -216,13 +223,34 @@ function renderField() {
   const kcal=metCalories({met:val('lab-met'),weightKg:val('lab-rp-weight'),minutes:val('lab-met-min')});
   out('field').innerHTML=cooper&&rp&&kcal?resultBox(`${num(cooper.vo2max,1)} ml/kg/min`,t('Cooper estimate','Cooper estimate'),`<div class="lab-result-grid"><div><span>Rockport</span><b>${num(rp.vo2max,1)}</b></div><div><span>MET kcal</span><b>${num(kcal.kcal,0)}</b></div><div><span>${t('Уверенность','Confidence')}</span><b>${t('полевой estimate','field estimate')}</b></div></div>`,`${t('Это непрямые оценки. MET — справочное популяционное значение, а не персональный калориметр.','These are indirect estimates. MET is a population reference, not a personal calorimeter.')}${evidence([cooper.evidenceId,rp.evidenceId,kcal.evidenceId])}`):'';
 }
+
+function renderAdaptive() {
+  const r = adaptiveExpenditure(diary());
+  if (!r.ready) {
+    const coverage = Number(r.coverage || 0);
+    out('adaptive').innerHTML = resultBox(
+      t('Недостаточно данных','Not enough data'),
+      t('нужны калории + вес минимум за 14 дней','calories + weight are needed across at least 14 days'),
+      `<div class="lab-result-grid"><div><span>${t('Покрытие','Coverage')}</span><b>${Math.round(coverage*100)}%</b></div><div><span>${t('Дней с калориями','Calorie days')}</span><b>${r.loggedDays || 0}</b></div><div><span>${t('Дней с весом','Weight days')}</span><b>${r.weightDays || 0}</b></div></div>`,
+      t('Заполняй вес и фактически съеденные калории в разделе Прогресс. Система не подменяет недостаток данных формульной псевдоточностью.','Log body weight and actual calorie intake in Progress. The system does not replace missing data with false precision.')
+    );
+    return;
+  }
+  out('adaptive').innerHTML = resultBox(
+    `${num(r.central,0)} kcal/day`,
+    t('адаптивная оценка расхода','adaptive expenditure estimate'),
+    `<div class="lab-result-grid"><div><span>${t('Диапазон','Range')}</span><b>${num(r.range[0],0)}–${num(r.range[1],0)}</b></div><div><span>${t('Среднее питание','Average intake')}</span><b>${num(r.averageCalories,0)}</b></div><div><span>${t('Покрытие','Coverage')}</span><b>${Math.round(r.coverage*100)}%</b></div></div>`,
+    `${t('Уверенность','Confidence')}: ${r.confidence}. ${t('Это прозрачная energy-balance эвристика, а не калориметрия. Краткосрочное изменение веса включает воду и другие компоненты, поэтому диапазон намеренно широкий.','This is a transparent energy-balance heuristic, not calorimetry. Short-term scale change includes water and other components, so the range is intentionally wide.')}<br>${t('Метод','Method')}: ${r.methodVersion} · ${t('сглаживание','smoothing')} ${r.smoothingDays} d`
+  );
+}
+
 function renderConvert() {
   const r=convertUnits(val('lab-c-value'),val('lab-c-from'),val('lab-c-to'));
   out('convert').innerHTML=r==null?resultBox('—',t('Эта пара единиц несовместима','This unit pair is incompatible')):resultBox(num(r,3),`${val('lab-c-to')}`);
 }
 
 function calculateAll() {
-  [renderE1rm,renderPercent,renderRepConvert,renderPlates,renderWarmup,renderVolume,renderEnergy,renderProtein,renderBody,renderHr,renderRunning,renderField,renderConvert].forEach((fn)=>fn());
+  [renderE1rm,renderPercent,renderRepConvert,renderPlates,renderWarmup,renderVolume,renderEnergy,renderProtein,renderBody,renderHr,renderRunning,renderField,renderAdaptive,renderConvert].forEach((fn)=>fn());
 }
 function updateCategory() {
   section.querySelectorAll('[data-lab-category]').forEach((el)=>{el.hidden=el.dataset.labCategory!==activeCategory;});
@@ -236,6 +264,7 @@ function bind() {
     form.addEventListener('change',calculateAll);
   });
   section.querySelector('[data-refresh-history]')?.addEventListener('click',renderVolume);
+  section.querySelector('[data-refresh-adaptive]')?.addEventListener('click',renderAdaptive);
 }
 
 function addNavigation() {
