@@ -192,7 +192,7 @@ export function calorieTargetRange({ maintenanceKcal, goal = 'maintain', rate = 
   const goalMap = goal === 'loss' ? 'cut' : goal === 'gain' ? 'gain' : goal;
   const pair = deltas[goalMap]?.[rate] || deltas.maintain.moderate;
   return {
-    range: pair.map((delta) => round(maintenance * (1 + delta))),
+    range: pair.map((delta) => round(maintenance * (1 + delta))).sort((a, b) => a - b),
     maintenance: round(maintenance),
     goal: goalMap,
     rate,
