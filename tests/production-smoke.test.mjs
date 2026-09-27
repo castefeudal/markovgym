@@ -25,7 +25,7 @@ test('exercise GIF media uses a fresh revision and cache write failures stay non
   const sw = await read('sw.js');
   assert.match(app, /MEDIA_REVISION = '20260927-media4'/);
   assert.match(app, /\.gif\?v=' \+ MEDIA_REVISION/);
-  assert.match(sw, /2026\.09-r3-media4/);
+  assert.match(sw, /2026\.09-r5-lab1/);
   assert.match(sw, /Cache Storage is an optimisation only/);
   assert.match(sw, /ignoreSearch: true/);
 });
