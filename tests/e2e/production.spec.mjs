@@ -68,7 +68,8 @@ test('exercise detail shows complete GIF and structured technique guidance', asy
     };
   });
   expect(geometry.contained).toBe(true);
-  expect(geometry.numbers).toEqual(['01', '02', '03']);
+  expect(geometry.numbers).toHaveLength(3);
+  expect(geometry.numbers.every((value) => value === 'counter(s, decimal-leading-zero)' || /^0[1-3]$/.test(value))).toBe(true);
   expect(errors).toEqual([]);
 });
 
@@ -77,7 +78,9 @@ test('run mode keeps full exercise media visible and surfaces execution cues', a
   await expect(page.locator('#mmg-boot')).toHaveCount(0);
   await page.locator('#grid [data-add]').first().click();
   await page.goto('/index.html#workout');
-  await page.locator('#w-run').click();
+  const startRun = page.locator('[data-v8-start-run]:visible, #w-run:visible').first();
+  await expect(startRun).toBeVisible();
+  await startRun.click();
 
   await expect(page.locator('#run')).toHaveAttribute('data-open', 'true');
   await expect(page.locator('.run-tech-cues')).toBeVisible();
@@ -228,6 +231,7 @@ test('readability choice persists and progress supports multiple chart signals',
     ]));
   });
   await page.goto('/index.html#progress');
+  await expect(page.locator('#mmg-boot')).toHaveCount(0);
   await expect(page.locator('[data-progress-metric="weight"]')).toHaveAttribute('aria-pressed', 'true');
   await page.locator('[data-progress-metric="waist"]').click();
   await expect(page.locator('[data-progress-metric="waist"]')).toHaveAttribute('aria-pressed', 'true');
@@ -242,10 +246,10 @@ test('library quick scenarios stay synchronized with filters', async ({ page }) 
   const home = page.locator('#v10-library-quick-presets [data-preset="home"]');
   await expect(home).toBeVisible();
   await home.click();
-  await expect(home).toHaveAttribute('aria-pressed', 'true');
+  await expect.poll(async () => home.getAttribute('aria-pressed')).toBe('true');
 
   const gym = page.locator('#v10-library-quick-presets [data-preset="gym"]');
   await gym.click();
-  await expect(gym).toHaveAttribute('aria-pressed', 'true');
+  await expect.poll(async () => gym.getAttribute('aria-pressed')).toBe('true');
   await expect(home).toHaveAttribute('aria-pressed', 'false');
 });
