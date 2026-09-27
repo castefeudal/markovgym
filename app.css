@@ -4266,3 +4266,334 @@ html[data-theme="ivory"] .modal-media-expand{
 @media(prefers-reduced-motion:reduce){
   .btn,.card,.v7-command,.v7-context-card{transition:none}
 }
+
+
+/* 22. FLAGSHIP PRODUCT PASS --------------------------------------------------
+   Readability, next-action clarity and dense-but-calm product ergonomics.
+   This is the final canonical interaction layer after the premium theme system. */
+:root{
+  --flagship-reading:72ch;
+  --flagship-control-h:42px;
+  --flagship-touch:44px;
+  --flagship-gap:clamp(14px,1.4vw,20px);
+}
+
+/* Readability guardrails: no critical UI copy should look like fine print. */
+body{
+  font-size:16px;
+  line-height:1.5;
+  text-rendering:optimizeLegibility;
+  -webkit-font-smoothing:antialiased;
+}
+p,li,dd,dt{line-height:1.58}
+.small{font-size:.80rem;line-height:1.55}
+.tiny{font-size:.75rem;line-height:1.5}
+.eyebrow,
+.modal-kicker,
+.modal-section-kicker,
+.form-section-label,
+.v8-more-label{
+  font-size:.67rem;
+  line-height:1.25;
+  letter-spacing:.09em;
+}
+label,.field label{
+  font-size:.76rem;
+  line-height:1.35;
+}
+.field-hint{
+  font-size:.72rem;
+  line-height:1.45;
+}
+.section-head p,
+.v7-page-head .lede,
+.hero-lede,
+.v7-next-copy,
+.method-panel p,
+.kb-body p{
+  max-width:var(--flagship-reading);
+}
+.section-head p,.v7-page-head .lede{font-size:.88rem}
+.card-target{font-size:.64rem}
+.card-title{font-size:1rem;line-height:1.36}
+.meta-tag{font-size:.63rem;line-height:1.3}
+.btn{
+  min-height:var(--flagship-control-h);
+  font-size:.76rem;
+  font-weight:730;
+}
+.btn-sm{min-height:38px;font-size:.71rem}
+.icon-btn{min-width:40px;min-height:40px}
+.input,.select,.textarea{
+  min-height:44px;
+  font-size:.86rem;
+}
+.textarea{line-height:1.5}
+.chip,.pill,.seg button{min-height:36px;font-size:.71rem}
+
+/* Stronger route context: information + one obvious next action. */
+.v8-context-inner{min-height:60px}
+.v8-context-copy{gap:11px}
+.v8-context-kicker{
+  font-size:.62rem;
+  letter-spacing:.10em;
+  color:var(--v8-text-3);
+}
+.v8-context-title{font-size:.86rem;font-weight:790}
+.v8-context-meta{font-size:.73rem;color:var(--v8-text-2)}
+.v8-context-side{gap:9px}
+.v8-context-local{font-size:.68rem}
+.v8-context-action{
+  min-height:34px;
+  padding:0 12px;
+  font-size:.68rem;
+  white-space:nowrap;
+  box-shadow:none;
+}
+.v8-context-action[hidden]{display:none}
+
+/* Library quick scenarios expose the capability that previously lived too deep. */
+.library-quick-row{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  min-width:0;
+  margin-bottom:10px;
+}
+.library-quick-label{
+  flex:none;
+  color:var(--v8-text-3);
+  font-size:.65rem;
+  font-weight:760;
+  letter-spacing:.035em;
+}
+.library-quick-presets{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  min-width:0;
+  overflow-x:auto;
+  overscroll-behavior-inline:contain;
+  scrollbar-width:none;
+}
+.library-quick-presets::-webkit-scrollbar{display:none}
+.library-quick-btn{
+  flex:0 0 auto;
+  min-height:32px;
+  padding:0 10px;
+  border:1px solid var(--v8-line);
+  border-radius:999px;
+  background:color-mix(in srgb,var(--v8-surface) 72%,transparent);
+  color:var(--v8-text-2);
+  font:inherit;
+  font-size:.67rem;
+  font-weight:700;
+  cursor:pointer;
+  transition:background var(--premium-transition),border-color var(--premium-transition),color var(--premium-transition),transform var(--premium-transition);
+}
+.library-quick-btn:hover{
+  color:var(--v8-text);
+  border-color:color-mix(in srgb,var(--v8-signal) 26%,var(--v8-line));
+  background:var(--premium-panel-raised);
+}
+.library-quick-btn[aria-pressed="true"]{
+  color:var(--v8-text);
+  border-color:color-mix(in srgb,var(--v8-signal) 42%,var(--v8-line));
+  background:var(--v8-signal-soft);
+}
+.results-head{
+  padding-top:12px;
+  padding-bottom:12px;
+}
+.results-count{font-size:.77rem}
+.results-insights>span{min-height:32px}
+.results-insights b{font-size:.71rem}
+.results-insights em{font-size:.62rem}
+
+/* Exercise cards: more legible at a glance without making the grid visually heavy. */
+.card{
+  overflow:hidden;
+}
+.card-body{
+  gap:9px;
+  padding:16px;
+}
+.card-specs span{
+  min-height:25px;
+  padding:4px 8px;
+  font-size:.61rem;
+}
+.card-actions .btn:first-child{
+  min-width:0;
+  flex:1 1 auto;
+}
+.card-actions .btn-add{
+  flex:0 0 42px;
+  width:42px;
+  min-width:42px;
+}
+
+/* Workout intelligence turns raw counts into a decision aid. */
+.workout-intelligence{
+  margin:12px 0 10px;
+  padding:12px;
+  border:1px solid var(--v8-line);
+  border-radius:12px;
+  background:color-mix(in srgb,var(--v8-surface) 74%,transparent);
+}
+.workout-intel-empty{
+  display:grid;
+  gap:4px;
+}
+.workout-intel-empty b{
+  color:var(--v8-text);
+  font-size:.74rem;
+  font-weight:780;
+}
+.workout-intel-empty span{
+  color:var(--v8-text-3);
+  font-size:.68rem;
+  line-height:1.45;
+}
+.workout-intel-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+}
+.workout-intel-head>span{
+  color:var(--v8-text-3);
+  font-size:.62rem;
+  font-weight:760;
+  letter-spacing:.045em;
+  text-transform:uppercase;
+}
+.workout-intel-head>b{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  color:var(--v8-text);
+  font-size:.68rem;
+  font-weight:780;
+}
+.workout-intel-head>b::before{
+  content:"";
+  width:7px;
+  height:7px;
+  border-radius:50%;
+  background:var(--v8-signal);
+}
+.workout-intel-head>b[data-state="ok"]::before{background:var(--color-success)}
+.workout-intel-head>b[data-state="warn"]::before{background:var(--color-warning)}
+.workout-intel-head>b[data-state="info"]::before{background:var(--v8-signal)}
+.workout-intel-metrics{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:6px;
+  margin-top:10px;
+}
+.workout-intel-metrics>span{
+  min-width:0;
+  padding:8px 7px;
+  border:1px solid var(--v8-line);
+  border-radius:9px;
+  background:color-mix(in srgb,var(--v8-raised) 46%,transparent);
+}
+.workout-intel-metrics b{
+  display:block;
+  color:var(--v8-text);
+  font-size:.83rem;
+  font-weight:820;
+  font-variant-numeric:tabular-nums;
+}
+.workout-intel-metrics small{
+  display:block;
+  margin-top:2px;
+  color:var(--v8-text-3);
+  font-size:.58rem;
+  line-height:1.3;
+}
+.workout-intelligence>p{
+  margin:10px 0 0;
+  color:var(--v8-text-2);
+  font-size:.69rem;
+  line-height:1.46;
+}
+
+/* Cleaner information hierarchy in dense application surfaces. */
+.v7-context-card span,
+.v7-next-label,
+.rec-context-chip span,
+.rec-metric span,
+.workout-kpi span,
+.intel-metric span,
+.prog-deltas .kpi span{
+  font-size:.64rem;
+  letter-spacing:.025em;
+}
+.v7-context-card small,
+.v7-command small{
+  font-size:.69rem;
+  line-height:1.4;
+}
+.v7-command b{font-size:.78rem}
+.v7-next-title{line-height:1.06}
+.v7-next-actions{gap:8px}
+.v7-setting-card h2{font-size:.96rem}
+
+/* Focus should be unmistakable without neon UI. */
+:where(a,button,input,select,textarea,summary):focus-visible{
+  outline:2px solid color-mix(in srgb,var(--v8-signal) 78%,white 22%);
+  outline-offset:2px;
+}
+
+/* Motion stays restrained and functional. */
+@media(hover:hover){
+  .library-quick-btn:hover,.v7-command:hover{transform:translateY(-1px)}
+}
+
+/* Tablet / mobile: preserve actions and legibility instead of shrinking text. */
+@media(max-width:900px){
+  .v8-context-local{display:none}
+  .v8-context-side{gap:6px}
+  .v8-context-action{display:inline-flex}
+}
+@media(max-width:840px){
+  :root{--v8-context-h:54px}
+  .v8-context-inner{min-height:54px}
+  .v8-context-kicker{display:none}
+  .v8-context-title{font-size:.78rem}
+  .v8-context-meta{display:none}
+  .v8-context-action{
+    min-height:34px;
+    max-width:46vw;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .library-quick-row{
+    margin-inline:-2px;
+    align-items:flex-start;
+    flex-direction:column;
+    gap:7px;
+  }
+  .library-quick-presets{
+    width:100%;
+    padding-bottom:2px;
+  }
+  .library-quick-btn{
+    min-height:34px;
+    font-size:.69rem;
+  }
+  .small{font-size:.79rem}
+  .tiny{font-size:.74rem}
+  .section-head p,.v7-page-head .lede{font-size:.84rem}
+  .card-title{font-size:.98rem}
+  .workout-intelligence{margin-top:10px}
+}
+@media(max-width:520px){
+  body{font-size:15.5px}
+  .btn{min-height:42px}
+  .btn-sm{min-height:38px}
+  .workout-intel-metrics small{font-size:.57rem}
+  .results-insights em{font-size:.60rem}
+}
