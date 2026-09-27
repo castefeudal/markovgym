@@ -1003,6 +1003,30 @@
       '<span><b>' + Object.keys(zones).length + '</b><em>' + esc(labels.zones) + '</em></span>';
   }
 
+  function sameStringSetV10(a, b) {
+    if (!a || !b || a.length !== b.length) return false;
+    return a.every(function (v) { return b.indexOf(v) !== -1; });
+  }
+
+  function renderV10LibraryQuick() {
+    var host = $('v10-library-quick-presets');
+    var label = $('v10-library-quick-label');
+    if (!host) return;
+    if (label) label.textContent = S.lang === 'en' ? 'Quick selection' : 'Быстрый выбор';
+    var gymEquip = ['barbell', 'cable', 'leverage machine', 'smith machine', 'ez barbell'];
+    var defs = [
+      ['home', S.lang === 'en' ? 'Home' : 'Дом', sameStringSetV10(S.equipment, HOME_EQUIP)],
+      ['gym', S.lang === 'en' ? 'Gym' : 'Зал', sameStringSetV10(S.equipment, gymEquip)],
+      ['chest', S.lang === 'en' ? 'Chest' : 'Грудь', S.zones.length === 1 && S.zones[0] === 'chest'],
+      ['back', S.lang === 'en' ? 'Back' : 'Спина', S.zones.length === 1 && S.zones[0] === 'back'],
+      ['legs', S.lang === 'en' ? 'Legs' : 'Ноги', sameStringSetV10(S.zones, ['upper legs', 'lower legs'])],
+      ['favorites', S.lang === 'en' ? 'Favorites' : 'Избранное', !!S.favOnly]
+    ];
+    host.innerHTML = defs.map(function (d) {
+      return '<button class="v10-library-quick-btn" type="button" data-preset="' + d[0] + '" aria-pressed="' + String(d[2]) + '">' + esc(d[1]) + '</button>';
+    }).join('');
+  }
+
   function renderResults() {
     var items = getFiltered();
     S.lastFiltered = items;
@@ -1027,6 +1051,7 @@
     });
     $('active-chips').innerHTML = activeChipsHtml();
     renderResultsInsights(items);
+    renderV10LibraryQuick();
 
     var more = items.length > visible.length;
     $('load-more').hidden = !more;
@@ -6655,19 +6680,26 @@
     var rows=S.workout.map(function(w){return{w:w,ex:BY_ID[w.id]};}).filter(function(r){return !!r.ex;});
     if(!rows.length){host.hidden=true;host.innerHTML='';return;}
     var totalSets=rows.reduce(function(a,r){return a+(Number(r.w.sets)||0);},0);
-    var zoneSets=Object.create(null),compound=0;
-    rows.forEach(function(r){zoneSets[r.ex.zone]=(zoneSets[r.ex.zone]||0)+(Number(r.w.sets)||0);if(exKind(r.ex)==='compound')compound++;});
+    var zoneSets=Object.create(null),targetHits=Object.create(null),compound=0;
+    rows.forEach(function(r){
+      zoneSets[r.ex.zone]=(zoneSets[r.ex.zone]||0)+(Number(r.w.sets)||0);
+      targetHits[r.ex.target]=(targetHits[r.ex.target]||0)+1;
+      if(exKind(r.ex)==='compound')compound++;
+    });
     var ordered=Object.keys(zoneSets).sort(function(a,b){return zoneSets[b]-zoneSets[a];});
     var top=ordered[0],topSets=top?zoneSets[top]:0;
+    var maxSame=Math.max.apply(null,Object.keys(targetHits).map(function(k){return targetHits[k];}).concat([0]));
     var high=topSets>14;
+    var duplicated=maxSame>=3;
+    var noCompound=compound===0&&rows.length>=4;
     var focused=ordered.length===1&&rows.length>=4;
-    var status=high?(S.lang==='en'?'Volume concentrated':'Объём сильно сконцентрирован'):(focused?(S.lang==='en'?'Focused session':'Фокусная сессия'):(S.lang==='en'?'Balanced structure':'Сбалансированная структура'));
-    var state=high?'watch':'ok';
+    var status=high?(S.lang==='en'?'Volume concentrated':'Объём сильно сконцентрирован'):(duplicated?(S.lang==='en'?'Check duplication':'Проверь дублирование'):(noCompound?(S.lang==='en'?'Isolation-heavy':'Много изоляции'):(focused?(S.lang==='en'?'Focused session':'Фокусная сессия'):(S.lang==='en'?'Balanced structure':'Сбалансированная структура'))));
+    var state=(high||duplicated)?'watch':(noCompound?'neutral':'ok');
     host.hidden=false;
     host.innerHTML='<div class="v10-balance-head"><div><span class="eyebrow">'+esc(S.lang==='en'?'SESSION STRUCTURE':'СТРУКТУРА СЕССИИ')+'</span><b>'+esc(status)+'</b></div><span class="signal" data-state="'+state+'">'+esc(totalSets+' '+v7c('sets'))+'</span></div>'+
       '<div class="v10-balance-metrics"><div><span>'+esc(S.lang==='en'?'Compound':'Составные')+'</span><strong>'+Math.round(compound/rows.length*100)+'%</strong></div><div><span>'+esc(S.lang==='en'?'Body areas':'Зоны тела')+'</span><strong>'+ordered.length+'</strong></div><div><span>'+esc(S.lang==='en'?'Estimated time':'Оценка времени')+'</span><strong>'+Math.max(10,round(totalSets*2.6+rows.length*2))+' '+esc(S.lang==='en'?'min':'мин')+'</strong></div></div>'+
       '<div class="v10-zone-load">'+ordered.slice(0,4).map(function(z){var pct=Math.round(zoneSets[z]/Math.max(1,totalSets)*100);return'<span><b>'+esc(labelZone(z))+'</b><i><u style="width:'+pct+'%"></u></i><em>'+zoneSets[z]+'</em></span>';}).join('')+'</div>'+
-      (high?'<p class="small">'+esc(S.lang==='en'?'One body area carries more than 14 planned sets. Check whether every exercise is necessary before adding more volume.':'На одну зону приходится больше 14 запланированных подходов. Проверь, действительно ли нужны все упражнения, прежде чем добавлять объём.')+'</p>':'');
+      (high?'<p class="small">'+esc(S.lang==='en'?'One body area carries more than 14 planned sets. Check whether every exercise is necessary before adding more volume.':'На одну зону приходится больше 14 запланированных подходов. Проверь, действительно ли нужны все упражнения, прежде чем добавлять объём.')+'</p>':(duplicated?'<p class="small">'+esc(S.lang==='en'?'Three or more exercises share the same primary target. Check whether every variation adds a distinct purpose.':'Три или больше упражнений имеют одну основную целевую мышцу. Проверь, действительно ли каждый вариант решает отдельную задачу.')+'</p>':(noCompound?'<p class="small">'+esc(S.lang==='en'?'The session contains no compound movement. That may be intentional, but verify that the session still has a clear anchor exercise.':'В сессии нет составного движения. Это может быть осознанно, но проверь, есть ли у тренировки понятное основное упражнение.')+'</p>':'')));
   }
 
   /* Wrap proven renderers instead of duplicating business logic. */
