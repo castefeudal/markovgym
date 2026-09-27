@@ -4415,3 +4415,78 @@ p,.lede,.small,.tiny,.note,.v7-next-copy,.theme-choice-copy small{text-wrap:pret
   .v10-zone-load>span{grid-template-columns:minmax(80px,120px) minmax(60px,1fr) 24px}
   .v10-plan-actions .btn{flex:1 1 calc(50% - 4px)}
 }
+
+
+/* 23. FLAGSHIP LIBRARY REFINEMENT -------------------------------------------
+   Keep high-value presets visible inside the working library, not only on the
+   acquisition/hero screen. Reuses the proven preset state and event contracts. */
+.v10-library-quick{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  min-width:0;
+  margin:0 0 10px;
+}
+.v10-library-quick>span{
+  flex:none;
+  color:var(--v8-text-3);
+  font-size:max(.64rem,10.5px);
+  font-weight:760;
+  letter-spacing:.025em;
+}
+#v10-library-quick-presets{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  min-width:0;
+  overflow-x:auto;
+  overscroll-behavior-inline:contain;
+  scrollbar-width:none;
+}
+#v10-library-quick-presets::-webkit-scrollbar{display:none}
+.v10-library-quick-btn{
+  flex:0 0 auto;
+  min-height:34px;
+  padding:0 10px;
+  border:1px solid var(--v8-line);
+  border-radius:999px;
+  background:color-mix(in srgb,var(--v8-surface) 76%,transparent);
+  color:var(--v8-text-2);
+  font:inherit;
+  font-size:max(.66rem,10.5px);
+  font-weight:710;
+  cursor:pointer;
+  transition:
+    color var(--premium-transition),
+    background var(--premium-transition),
+    border-color var(--premium-transition),
+    transform var(--premium-transition);
+}
+.v10-library-quick-btn:hover{
+  color:var(--v8-text);
+  border-color:color-mix(in srgb,var(--v8-signal) 28%,var(--v8-line));
+  background:var(--premium-panel-raised);
+}
+.v10-library-quick-btn[aria-pressed="true"]{
+  color:var(--v8-text);
+  border-color:color-mix(in srgb,var(--v8-signal) 42%,var(--v8-line));
+  background:var(--v8-signal-soft);
+}
+@media(hover:hover){
+  .v10-library-quick-btn:hover{transform:translateY(-1px)}
+}
+@media(max-width:840px){
+  .v10-library-quick{
+    align-items:flex-start;
+    flex-direction:column;
+    gap:7px;
+  }
+  #v10-library-quick-presets{
+    width:100%;
+    padding-bottom:2px;
+  }
+  .v10-library-quick-btn{
+    min-height:36px;
+    padding-inline:11px;
+  }
+}

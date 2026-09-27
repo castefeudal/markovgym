@@ -103,7 +103,7 @@ const index = `<!doctype html>
     } catch (_) {}
   })();
   </script>
-  <link rel="stylesheet" href="./app.css?v=20260927-flagship1">
+  <link rel="stylesheet" href="./app.css?v=20260927-flagship2">
   <style>${bootCss}</style>
   <script type="application/ld+json">${JSON.stringify(structuredData)}</script>
 </head>
@@ -143,7 +143,7 @@ const index = `<!doctype html>
   </div>
 ${body}
   <script src="./bootstrap.js" defer></script>
-  <script src="./app.js?v=20260927-flagship1" defer></script>
+  <script src="./app.js?v=20260927-flagship2" defer></script>
   <script type="module" src="./gym-tools.js"></script>
 </body>
 </html>
