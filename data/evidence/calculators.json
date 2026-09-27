@@ -1,0 +1,127 @@
+{
+  "schemaVersion": 1,
+  "lastReviewed": "2026-09-28",
+  "principles": {
+    "rangesOverFalsePrecision": true,
+    "calculatorsAreDecisionSupport": true,
+    "medicalDiagnosis": false,
+    "sourceQualityOrder": [
+      "systematic-review/meta-analysis",
+      "position-stand/guideline",
+      "primary-study",
+      "validated-field-equation"
+    ]
+  },
+  "entries": [
+    {
+      "id": "mifflin-st-jeor-1990",
+      "domain": "nutrition",
+      "title": "Mifflin-St Jeor resting energy expenditure equation",
+      "method": "REE prediction from sex, age, height and body mass",
+      "source": "Mifflin MD et al. A new predictive equation for resting energy expenditure in healthy individuals.",
+      "journal": "American Journal of Clinical Nutrition",
+      "year": 1990,
+      "doi": "10.1093/ajcn/51.2.241",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/2305711/",
+      "evidenceLevel": "primary-validation-study",
+      "limitations": "Population equation; individual measured expenditure can differ materially."
+    },
+    {
+      "id": "issn-protein-2017",
+      "domain": "nutrition",
+      "title": "ISSN position stand: protein and exercise",
+      "method": "Protein intake ranges for healthy exercising adults",
+      "source": "Jäger R et al. International Society of Sports Nutrition Position Stand: protein and exercise.",
+      "year": 2017,
+      "url": "https://pubmed.ncbi.nlm.nih.gov/28642676/",
+      "evidenceLevel": "position-stand",
+      "limitations": "General ranges require individual context; not a prescription for kidney disease or other clinical conditions."
+    },
+    {
+      "id": "morton-protein-2018",
+      "domain": "nutrition",
+      "title": "Protein supplementation and resistance-training adaptations",
+      "method": "Meta-analysis/meta-regression of protein supplementation with resistance training",
+      "source": "Morton RW et al.",
+      "journal": "British Journal of Sports Medicine",
+      "year": 2018,
+      "doi": "10.1136/bjsports-2017-097608",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/28698222/",
+      "evidenceLevel": "systematic-review-meta-analysis",
+      "limitations": "Group-level response; does not establish a precise optimum for every individual."
+    },
+    {
+      "id": "helms-cutting-protein-2014",
+      "domain": "nutrition",
+      "title": "Protein during caloric restriction in resistance-trained lean athletes",
+      "method": "Systematic review",
+      "source": "Helms ER et al.",
+      "journal": "International Journal of Sport Nutrition and Exercise Metabolism",
+      "year": 2014,
+      "doi": "10.1123/ijsnem.2013-0054",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/24092765/",
+      "evidenceLevel": "systematic-review",
+      "limitations": "Small evidence base and athlete-specific population; higher ranges are not automatically appropriate for all users."
+    },
+    {
+      "id": "tanaka-hrmax-2001",
+      "domain": "cardio",
+      "title": "Age-predicted maximal heart rate",
+      "method": "HRmax = 208 - 0.7 × age",
+      "source": "Tanaka H, Monahan KD, Seals DR. Age-predicted maximal heart rate revisited.",
+      "journal": "Journal of the American College of Cardiology",
+      "year": 2001,
+      "doi": "10.1016/S0735-1097(00)01054-8",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/11153730/",
+      "evidenceLevel": "meta-analysis",
+      "limitations": "Population estimate with substantial individual error; measured HRmax is preferable when valid and safe."
+    },
+    {
+      "id": "riegel-1981",
+      "domain": "cardio",
+      "title": "Riegel race-time prediction",
+      "method": "T2 = T1 × (D2 / D1)^1.06",
+      "source": "Riegel PS. Athletic records and human endurance.",
+      "journal": "American Scientist",
+      "year": 1981,
+      "url": "https://pubmed.ncbi.nlm.nih.gov/7235349/",
+      "evidenceLevel": "empirical-model",
+      "limitations": "Approximation derived from performance records; accuracy depends on distance, training specificity and endurance profile."
+    },
+    {
+      "id": "rockport-1987",
+      "domain": "cardio",
+      "title": "Rockport one-mile walk VO2max estimate",
+      "method": "Validated field equation using walk time, HR, age, sex and body mass",
+      "source": "Kline GM et al. Estimation of VO2max from a one-mile track walk, gender, age, and body weight.",
+      "journal": "Medicine & Science in Sports & Exercise",
+      "year": 1987,
+      "url": "https://pubmed.ncbi.nlm.nih.gov/3600239/",
+      "evidenceLevel": "primary-validation-study",
+      "limitations": "Population-dependent estimate; subsequent studies have reported bias in some groups."
+    },
+    {
+      "id": "cooper-1968",
+      "domain": "cardio",
+      "title": "Cooper 12-minute field test",
+      "method": "Distance-based field estimate of aerobic fitness",
+      "source": "Cooper KH. A means of assessing maximal oxygen intake.",
+      "journal": "JAMA",
+      "year": 1968,
+      "url": "https://pubmed.ncbi.nlm.nih.gov/5694044/",
+      "evidenceLevel": "primary-field-test",
+      "limitations": "Indirect estimate; performance, pacing and population affect error."
+    },
+    {
+      "id": "compendium-2024",
+      "domain": "cardio",
+      "title": "2024 Compendium of Physical Activities",
+      "method": "Standard MET values for physical activities",
+      "source": "Herrmann SD et al. 2024 Adult Compendium of Physical Activities.",
+      "year": 2024,
+      "url": "https://pacompendium.com/adult-compendium/",
+      "evidenceLevel": "reference-compendium",
+      "limitations": "Standard METs are population reference values and do not precisely measure an individual's energy expenditure."
+    }
+  ]
+}
