@@ -67,7 +67,7 @@ const index = `<!doctype html>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>MARKOV MADE GYM — тренировки, прогресс и техника</title>
-  <meta name="description" content="MARKOV MADE GYM — локальный тренировочный журнал, библиотека упражнений, Run Mode, прогресс, программа и расчёты нагрузки.">
+  <meta name="description" content="MARKOV MADE GYM — Local-first система тренировок, прогрессии, питания, Run Mode и доказательных расчётов.">
   <meta name="author" content="Павел Марков / MarkovMade">
   <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large">
   <meta name="theme-color" content="#070a0e">
