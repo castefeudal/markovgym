@@ -78,8 +78,8 @@ test('exercise detail view keeps full-frame media and structured guidance', asyn
 
 test('detail assets use a cache-busting revision', async () => {
   const index = await read('index.html');
-  assert.match(index, /app\.css\?v=20260927-flagship1/);
-  assert.match(index, /app\.js\?v=20260927-flagship1/);
+  assert.match(index, /app\.css\?v=20260927-flagship2/);
+  assert.match(index, /app\.js\?v=20260927-flagship2/);
 });
 
 test('detail media box itself stays inside the visual frame and step counter increments once', async () => {
@@ -109,7 +109,7 @@ test('saved theme is hydrated before stylesheet and runtime keeps theme metadata
   const index = await read('index.html');
   const app = await read('app.js');
   const hydrate = index.indexOf("localStorage.getItem('mmg.theme.v2')");
-  const stylesheet = index.indexOf('app.css?v=20260927-flagship1');
+  const stylesheet = index.indexOf('app.css?v=20260927-flagship2');
   assert.ok(hydrate >= 0 && stylesheet > hydrate, 'saved theme must resolve before stylesheet paint');
   assert.match(app, /document\.documentElement\.style\.colorScheme = S\.theme === 'obsidian' \? 'dark' : 'light'/);
   assert.match(app, /obsidian: '#070A0E', soft: '#EAF0F6', ivory: '#F6F5F1'/);
@@ -192,7 +192,7 @@ test('progress view can switch between weight waist and sleep', async () => {
 test('first paint restores readability preference before flagship stylesheet', async () => {
   const index = await read('index.html');
   const hydration = index.indexOf("localStorage.getItem('mmg.settings.v1')");
-  const stylesheet = index.indexOf('app.css?v=20260927-flagship1');
+  const stylesheet = index.indexOf('app.css?v=20260927-flagship2');
   assert.ok(hydration >= 0 && stylesheet > hydration, 'reading preference must hydrate before stylesheet paint');
   assert.match(index, /data-app-version="2026\.09-r4"/);
 });
