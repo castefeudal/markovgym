@@ -110,26 +110,6 @@ const index = `<!doctype html>
   <script type="application/ld+json">${JSON.stringify(structuredData)}</script>
 </head>
 <body data-app-version="${BUILD_VERSION}">
-  <script>
-  (function () {
-    var marker = 'media4';
-    var url = new URL(location.href);
-    if (url.searchParams.get('_mmgsw') === marker) {
-      url.searchParams.delete('_mmgsw');
-      history.replaceState(null, '', url.pathname + (url.search || '') + url.hash);
-      return;
-    }
-    if (!('serviceWorker' in navigator) || !navigator.serviceWorker.controller) return;
-    navigator.serviceWorker.getRegistration('./').then(function (registration) {
-      if (!registration) return;
-      return registration.unregister().then(function (removed) {
-        if (!removed) return;
-        url.searchParams.set('_mmgsw', marker);
-        location.replace(url.href);
-      });
-    }).catch(function () {});
-  })();
-  </script>
   <div id="mmg-boot" role="status" aria-live="polite" aria-label="Загрузка MARKOV MADE GYM">
     <div class="mmg-boot-card">
       <div class="mmg-boot-mark">${icon}<div class="mmg-boot-brand">MARKOV MADE<span>GYM</span></div></div>
