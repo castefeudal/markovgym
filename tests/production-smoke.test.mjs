@@ -45,12 +45,14 @@ test('GIF previews are not gated by fine-pointer detection', async () => {
   assert.match(app, /GIF-превью работают на мыши, стилусе и гибридных\/сенсорных устройствах/);
 });
 
-test('stale markovgym service workers are reset once and shell assets are network-first', async () => {
+test('service worker uses an explicit safe update lifecycle and network-first shell', async () => {
   const index = await read('index.html');
+  const bootstrap = await read('bootstrap.js');
   const sw = await read('sw.js');
-  assert.match(index, /var marker = 'media4'/);
-  assert.match(index, /getRegistration\('\.\/'\)/);
-  assert.match(index, /registration\.unregister\(\)/);
+  assert.doesNotMatch(index, /_mmgsw|registration\.unregister\(\)/);
+  assert.match(bootstrap, /registration\.waiting/);
+  assert.match(bootstrap, /SKIP_WAITING/);
+  assert.match(bootstrap, /controllerchange/);
   assert.match(sw, /fetch\(request, \{ cache: 'no-store' \}\)/);
 });
 
