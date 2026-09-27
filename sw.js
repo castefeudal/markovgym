@@ -1,4 +1,4 @@
-const VERSION = '2026.09-r3-media4';
+const VERSION = '2026.09-r5-lab1';
 const PREFIX = 'mmg-gym-';
 const SHELL = `${PREFIX}shell-${VERSION}`;
 const MEDIA = `${PREFIX}media-${VERSION}`;
@@ -7,9 +7,11 @@ const PRECACHE = [
   './index.html',
   './app.css',
   './app.js',
+  './lab.css',
   './bootstrap.js',
   './gym-tools.js',
   './tools/gym-calculators.mjs',
+  './tools/lab-calculators.mjs',
   './data/content.json',
   './data/exercises-compact.json',
   './manifest.webmanifest',
@@ -19,7 +21,7 @@ const PRECACHE = [
 const MEDIA_LIMIT = 180;
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(SHELL).then((cache) => cache.addAll(PRECACHE)).then(() => self.skipWaiting()));
+  event.waitUntil(caches.open(SHELL).then((cache) => cache.addAll(PRECACHE)));
 });
 
 self.addEventListener('activate', (event) => {
