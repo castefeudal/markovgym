@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  adaptiveExpenditure,
   bmrMifflinStJeor,
   bodyCompositionFromFat,
   calculatePlates,
@@ -112,4 +113,30 @@ test('pace, MET and unit conversions work in both directions', () => {
   assert.equal(metCalories({ met: 8, weightKg: 80, minutes: 60 }).kcal, 672);
   assert.equal(convertUnits(100, 'kg', 'lb'), 220.462);
   assert.equal(convertUnits(convertUnits(100, 'kg', 'lb'), 'lb', 'kg'), 100);
+});
+
+
+test('adaptive expenditure refuses sparse data and exposes coverage', () => {
+  const sparse = adaptiveExpenditure([
+    { date: '2026-09-01', calories: 2500, weight: 80 },
+    { date: '2026-09-14', calories: 2500, weight: 79.8 },
+  ]);
+  assert.equal(sparse.ready, false);
+  assert.equal(sparse.reason, 'insufficient-data');
+});
+
+test('adaptive expenditure combines intake and smoothed weight trend transparently', () => {
+  const entries = Array.from({ length: 21 }, (_, index) => ({
+    date: `2026-09-${String(index + 1).padStart(2, '0')}`,
+    calories: 2500,
+    weight: 80 - index * 0.03,
+  }));
+  const result = adaptiveExpenditure(entries);
+  assert.equal(result.ready, true);
+  assert.equal(result.loggedDays, 21);
+  assert.equal(result.coverage, 1);
+  assert.equal(result.confidence, 'moderate');
+  assert.ok(result.central > result.averageCalories);
+  assert.ok(result.range[0] < result.central && result.range[1] > result.central);
+  assert.equal(result.methodVersion, 'transparent-energy-balance-v1');
 });
