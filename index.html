@@ -233,6 +233,7 @@
     <div class="v8-context-side">
       <span class="v8-context-local"><span id="v8-context-local-text">Локально сохранено</span></span>
       <span class="v8-context-shortcut" aria-hidden="true">⌘ K</span>
+      <button class="btn btn-primary btn-sm v8-context-action" id="v8-context-action" type="button" hidden></button>
     </div>
   </div>
 </div>
@@ -615,6 +616,11 @@
               </div>
             </div>
 
+            <div class="library-quick-row" aria-label="Быстрые сценарии">
+              <span class="library-quick-label" id="library-quick-label">Быстрый выбор</span>
+              <div class="library-quick-presets" id="library-quick-presets"></div>
+            </div>
+
             <div class="results-meta">
               <p class="results-count" id="results-count" role="status" aria-live="polite"></p>
               <div class="active-chips" id="active-chips"></div>
@@ -655,6 +661,7 @@
             <div class="workout-kpi"><b class="num" id="w-sets">0</b><span data-i18n="workout.kpiSets">подходов</span></div>
             <div class="workout-kpi"><b class="num" id="w-time">0</b><span data-i18n="workout.kpiTime">мин</span></div>
           </div>
+          <div class="workout-intelligence" id="workout-intelligence" aria-live="polite"></div>
           <p class="tiny" id="w-progress" data-i18n="workout.progressEmpty">Выполнено: 0 из 0</p>
           <div class="workout-side-actions">
             <button class="btn btn-primary" id="w-run" type="button" data-i18n="workout.run">Начать тренировку</button>
