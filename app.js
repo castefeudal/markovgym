@@ -3323,6 +3323,51 @@
     store.set(K.runSession, JSON.stringify(S.runSession));
   }
 
+  var progressionEngine = null;
+  import('./tools/progression.mjs').then(function (module) {
+    progressionEngine = module;
+    if ($('run') && $('run').getAttribute('data-open') === 'true') renderRun();
+  }).catch(function () {
+    progressionEngine = null;
+  });
+
+  function progressionForItem(item) {
+    if (!progressionEngine || !item) return null;
+    var previous = previousPerformance(item.id);
+    if (!previous || !Array.isArray(previous.setLog)) return null;
+    return progressionEngine.recommendProgression({
+      previousSets: previous.setLog,
+      targetRepRange: item.reps,
+      increment: 2.5
+    });
+  }
+
+  function progressionCopy(rec) {
+    if (!rec || rec.status !== 'recommendation') return null;
+    var range = rec.targetReps && rec.targetReps.length ? rec.targetReps[0] + '–' + rec.targetReps[1] : '';
+    var ru = S.lang !== 'en';
+    if (rec.reason === 'all-sets-at-top-of-range') return {
+      title: ru ? 'Следующая нагрузка' : 'Next load',
+      value: rec.nextLoad + ' kg',
+      why: ru ? 'Все завершённые рабочие подходы достигли верхней границы ' + range + '. Вес повышен на минимальный шаг правила.' : 'Every completed working set reached the top of ' + range + '. Load increases by the rule increment.'
+    };
+    if (rec.reason === 'top-range-but-maximal-effort') return {
+      title: ru ? 'Сохранить вес' : 'Hold load',
+      value: rec.nextLoad + ' kg',
+      why: ru ? 'Повторы достигнуты, но в записи есть предельный RPE/RIR. Сначала закрепи результат без максимального усилия.' : 'The rep target was reached, but logged RPE/RIR indicates maximal effort. Consolidate before increasing.'
+    };
+    if (rec.reason === 'build-reps-within-range') return {
+      title: ru ? 'Сохранить вес' : 'Hold load',
+      value: rec.nextLoad + ' kg',
+      why: ru ? 'Все подходы уже внутри диапазона ' + range + ', но верхняя граница ещё не достигнута во всех сетах.' : 'All sets are inside ' + range + ', but not every set has reached the top yet.'
+    };
+    return {
+      title: ru ? 'Сохранить вес' : 'Hold load',
+      value: rec.nextLoad + ' kg',
+      why: ru ? 'Нижняя граница ' + range + ' ещё не закреплена во всех завершённых сетах.' : 'The lower edge of ' + range + ' is not yet secured across all completed sets.'
+    };
+  }
+
   function previousPerformance(id) {
     for (var i = 0; i < S.history.length; i++) {
       var hit = (S.history[i].items || []).filter(function (x) { return x.id === id; })[0];
@@ -3402,6 +3447,8 @@
     var usePrev=prev&&(prev.reps||prev.weight)?'<button class="run-use-prev" type="button" data-run-copy-prev><span>'+premiumIcon('progress')+esc(t('runUsePrevious'))+'</span><b>'+esc(t('runUsePreviousValue',{v:prevText}))+'</b></button>':'';
     var runTechnique=exerciseTechniqueModel(ex);
     var runPrimary=runTechnique.cues[0]||runTechnique.control;
+    var progression=progressionCopy(progressionForItem(item));
+    var progressionHtml=progression?'<div class="run-progression"><div><span>'+esc(progression.title)+'</span><b>'+esc(progression.value)+'</b></div><p>'+esc(progression.why)+'</p></div>':'';
     stage.innerHTML = '<div class="run-shell">' +
       '<div class="run-media-frame"><img class="run-media" src="' + esc(exMotion(ex)) + '" data-still="' + esc(exStill(ex)) + '" data-ex-media alt="" decoding="async"><span class="run-media-badge">' + esc(labelZone(ex.zone)) + '</span></div>' +
       '<div class="run-context"><div><div class="run-submeta"><span class="meta-tag">' + esc(labelMu(ex.target)) + '</span><span class="meta-tag">' + premiumIcon('equipment') + esc(labelEq(ex.equip)) + '</span></div>' +
@@ -3410,7 +3457,7 @@
       '<div class="run-current"><div class="run-setline"><b>' + esc(t('runSetLabel', { i: runState.set, n: item.sets })) + '</b><span>' + esc(t('runElapsed')) + ' · ' + elapsed + '</span></div>' +
       '<div class="run-current-inputs"><label>' + esc(ex.zone==='cardio'?t('runVolume'):t('wReps')) + '<input type="text" inputmode="' + (ex.zone==='cardio'?'text':'numeric') + '" data-run-field="reps" value="' + esc(currentSet.reps || item.reps || '') + '"></label>' +
       '<label>' + esc(t('wWeight')) + '<input type="text" inputmode="decimal" data-run-field="weight" value="' + esc(currentSet.weight || item.weight || '') + '"></label></div>' +
-      '<div class="run-prev-record"><b>' + esc(t('runPrevPerformance')) + ':</b> ' + esc(prevText) + '</div>' + usePrev + '<div class="run-set-strip" aria-label="' + esc(t('workoutSetsDone',{done:completedSetCount(item),total:item.sets})) + '">' + setStrip + '</div></div>' +
+      '<div class="run-prev-record"><b>' + esc(t('runPrevPerformance')) + ':</b> ' + esc(prevText) + '</div>' + progressionHtml + usePrev + '<div class="run-set-strip" aria-label="' + esc(t('workoutSetsDone',{done:completedSetCount(item),total:item.sets})) + '">' + setStrip + '</div></div>' +
       '<div class="run-session-meta"><div><span>' + esc(t('sessionExercises')) + '</span><b>' + (runState.ex + 1) + ' / ' + S.workout.length + '</b></div>' +
       '<div><span>' + esc(t('sessionSets')) + '</span><b>' + runDoneSets() + ' / ' + total + '</b></div>' +
       '<div><span>' + esc(t('runElapsed')) + '</span><b>' + elapsed + '</b></div></div>' +
