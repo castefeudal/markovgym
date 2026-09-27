@@ -2224,15 +2224,36 @@
 
   /* ---------- КОМАНДНАЯ ПАНЕЛЬ -------------------------------------------- */
   var SECTIONS = [
-    { hash: '#muscles', key: 'nav.muscles' }, { hash: '#library', key: 'nav.library' },
-    { hash: '#workout', key: 'nav.workout' }, { hash: '#nutrition', key: 'nav.nutrition' },
-    { hash: '#program', key: 'nav.program' }, { hash: '#how', key: 'mnav.how' },
-    { hash: '#faq', key: 'nav.faq' }, { hash: '#contact', key: 'nav.cta' }
+    { hash:'#home', label:{ru:'Сегодня',en:'Today'} },
+    { hash:'#workout', label:{ru:'Тренировка',en:'Workout'} },
+    { hash:'#library', label:{ru:'Библиотека',en:'Library'} },
+    { hash:'#program', label:{ru:'Программа',en:'Programme'} },
+    { hash:'#progress', label:{ru:'Прогресс',en:'Progress'} },
+    { hash:'#nutrition', label:{ru:'Питание',en:'Nutrition'} },
+    { hash:'#tools', label:{ru:'MARKOV MADE LAB',en:'MARKOV MADE LAB'} },
+    { hash:'#knowledge', label:{ru:'База знаний',en:'Knowledge'} },
+    { hash:'#settings', label:{ru:'Настройки',en:'Settings'} },
+    { hash:'#method', label:{ru:'Метод',en:'Method'} },
+    { hash:'#about', label:{ru:'Павел Марков',en:'Pavel Markov'} }
+  ];
+  var LAB_COMMANDS = [
+    {q:'1rm e1rm максимум',label:{ru:'e1RM — оценка максимума',en:'e1RM estimate'}},
+    {q:'блины plates barbell',label:{ru:'Plate Calculator PRO',en:'Plate Calculator PRO'}},
+    {q:'разминка warmup',label:{ru:'Разминочный ramp',en:'Warm-up ramp'}},
+    {q:'bmr tdee расход калории',label:{ru:'BMR / TDEE',en:'BMR / TDEE'}},
+    {q:'белок protein',label:{ru:'Белковый диапазон',en:'Protein range'}},
+    {q:'макросы macros кбжу',label:{ru:'План макросов',en:'Macro planner'}},
+    {q:'ffmi состав тела жир',label:{ru:'Состав тела / FFMI',en:'Body composition / FFMI'}},
+    {q:'пульс зоны heart rate',label:{ru:'Пульсовые зоны',en:'Heart-rate zones'}},
+    {q:'темп pace бег',label:{ru:'Темп и скорость',en:'Pace and speed'}},
+    {q:'adaptive expenditure расход мои данные',label:{ru:'Adaptive expenditure',en:'Adaptive expenditure'}}
   ];
   var cmdkItems = [];
   var cmdkIndex = 0;
 
-  function sectionLabel(key) {
+  function sectionLabel(section) {
+    if (section && section.label) return S.lang === 'en' ? section.label.en : section.label.ru;
+    var key = section && section.key ? section.key : section;
     return S.lang === 'en' ? (EN[key] || RU_DOM[key] || key) : (RU_DOM[key] || key);
   }
 
@@ -2243,13 +2264,16 @@
 
     if (!q) {
       cmdkItems = SECTIONS.map(function (s) {
-        return { type: 'section', hash: s.hash, label: sectionLabel(s.key), hint: t('cmdkSection') };
+        return { type: 'section', hash: s.hash, label: sectionLabel(s), hint: t('cmdkSection') };
       });
     } else {
       SECTIONS.forEach(function (s) {
-        if (norm(sectionLabel(s.key)).indexOf(q) !== -1) {
-          cmdkItems.push({ type: 'section', hash: s.hash, label: sectionLabel(s.key), hint: t('cmdkSection') });
+        if (norm(sectionLabel(s)).indexOf(q) !== -1) {
+          cmdkItems.push({ type: 'section', hash: s.hash, label: sectionLabel(s), hint: t('cmdkSection') });
         }
+      });
+      LAB_COMMANDS.filter(function(command){return norm(command.q+' '+command.label.ru+' '+command.label.en).indexOf(q)!==-1;}).slice(0,4).forEach(function(command){
+        cmdkItems.push({type:'lab',query:q,label:S.lang==='en'?command.label.en:command.label.ru,hint:'MARKOV MADE LAB'});
       });
       MUSCLES.map(function(m){return {m:m,rank:Math.max(matchRank(q,m),matchRank(q,labelMu(m)))};}).filter(function(x){return x.rank>=0;}).sort(function(a,b){return b.rank-a.rank;}).slice(0,3).forEach(function(x){cmdkItems.push({type:'muscle',muscle:x.m,label:labelMu(x.m),hint:t('discMuscles')});});
       EX.map(function(ex){return {ex:ex,rank:exerciseDiscoveryRank(ex,q)};}).filter(function(x){return x.rank>=0;}).sort(function(a,b){return b.rank-a.rank;}).slice(0,8).forEach(function(x){cmdkItems.push({type:'exercise',id:x.ex.id,label:exName(x.ex),hint:labelMu(x.ex.target)});});
@@ -2283,8 +2307,10 @@
     if (!item) return;
     closeOverlay($('cmdk'));
     if (item.type === 'section') {
-      var target = qs(item.hash);
-      if (target) target.scrollIntoView({ behavior: REDUCED_MOTION.matches ? 'auto' : 'smooth', block: 'start' });
+      location.hash = item.hash;
+    } else if (item.type === 'lab') {
+      if (typeof window.mmgLabOpen === 'function') window.mmgLabOpen(item.query);
+      else location.hash = '#tools';
     } else if (item.type === 'muscle') {
       S.query=''; S.zones=[]; S.muscles=[item.muscle]; S.limit=PAGE; $('search').value=''; renderFilters(); renderResults(); scrollToLibrary();
     } else {
