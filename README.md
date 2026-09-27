@@ -1,32 +1,96 @@
 <div align="center">
 
-# 💪 Exercises Dataset
+# MARKOV MADE GYM
 
-<p>
-  <img src="videos/0025-EIeI8Vf.gif" width="120" alt="barbell bench press" />
-  <img src="videos/0043-qXTaZnJ.gif" width="120" alt="barbell full squat" />
-  <img src="videos/0032-ila4NZS.gif" width="120" alt="barbell deadlift" />
-  <img src="videos/0652-lBDjFxJ.gif" width="120" alt="pull-up" />
-  <img src="videos/0294-NbVPDMW.gif" width="120" alt="dumbbell biceps curl" />
-  <img src="videos/0334-DsgkuIt.gif" width="120" alt="dumbbell lateral raise" />
-</p>
+**Local-first training, progression and nutrition system.**
 
-**A comprehensive, ready-to-use fitness exercise dataset with 1,324 exercises — each with an animation GIF, 180×180 thumbnail image, category, body-part, equipment, target and muscle-group data, and step-by-step instructions in 9 languages (English, Spanish, Italian, Turkish, Russian, Chinese, Hindi, Polish, Korean).**
+[Live app](https://castefeudal.github.io/markovgym/) · [Architecture](docs/ARCHITECTURE.md) · [Evidence registry](data/evidence/calculators.json)
 
-[![Exercises](https://img.shields.io/badge/Exercises-1324-blue?style=flat-square)](data/exercises.json)
-[![Animation GIFs](https://img.shields.io/badge/Animation%20GIFs-1324-brightgreen?style=flat-square)](videos/)
-[![Thumbnails](https://img.shields.io/badge/Thumbnails-1324-orange?style=flat-square)](images/)
-[![Languages](https://img.shields.io/badge/Languages-9-green?style=flat-square)](#-overview)
-[![Mobile App](https://img.shields.io/badge/App-LogPress-111111?style=flat-square&logo=react)](https://github.com/hasaneyldrm/logpress-public)
-[![License](https://img.shields.io/badge/License-MIT%20%2B%20media%20terms-blue?style=flat-square)](LICENSE)
+![Exercises](https://img.shields.io/badge/Exercises-1324-blue?style=flat-square)
+![Languages](https://img.shields.io/badge/Instructions-9%20languages-green?style=flat-square)
+![PWA](https://img.shields.io/badge/PWA-offline--ready-111827?style=flat-square)
+![Privacy](https://img.shields.io/badge/Data-local--first-334155?style=flat-square)
 
 </div>
 
-> **📱 Powers the [LogPress](https://github.com/hasaneyldrm/logpress-public) app** — an AI-assisted workout tracker; this dataset is its exercise data layer. Building your own fitness app? Drop it straight into your backend.
+MARKOV MADE GYM is a browser-based fitness operating system for planning, performing and reviewing training without requiring an account or server-side storage.
+
+The product connects the full loop:
+
+**Today → Library → Workout → Run Mode → Programme → Progress → Nutrition → Lab**
+
+## Product capabilities
+
+- **Today** — next useful action, weekly pulse and current context.
+- **Exercise Library** — 1,324 movements with RU/EN search, filters, body map, GIF technique, cues, errors and substitutions.
+- **Workout Builder** — ordered exercises, sets, reps, load, rest and local persistence.
+- **Run Mode** — focused in-session execution, technique media, set logging, RIR/RPE options and rest timer.
+- **Programme** — persistent weekly training structure rather than a disposable generator.
+- **Progress** — body and training signals, diary, history, programme completion and trend context.
+- **Nutrition** — starting calorie/macro targets with explicit limitations.
+- **MARKOV MADE LAB** — pure, testable calculators for strength, training, nutrition, body composition, cardio and unit conversion.
+- **PWA / Offline** — installable app shell with local storage, backup/import and offline-safe core assets.
+- **Accessibility** — keyboard flows, reduced-motion support, mobile layouts and automated axe checks.
+
+## MARKOV MADE LAB
+
+The Lab is built as a decision-support layer rather than a collection of isolated number generators.
+
+Current domains include:
+
+- e1RM with Epley + Brzycki range;
+- %1RM load planning;
+- rep-max conversion;
+- plate loading;
+- warm-up ramp;
+- recorded training volume;
+- Mifflin–St Jeor BMR;
+- starting TDEE and calorie corridors;
+- protein and macro planning;
+- body composition and target-weight estimates;
+- heart-rate reserve zones;
+- pace and Riegel prediction;
+- Cooper and Rockport field estimates;
+- MET energy estimates;
+- unit conversions.
+
+Population and field equations are explicitly presented as estimates. Scientific/official references used by calculators are versioned in [data/evidence/calculators.json](data/evidence/calculators.json).
+
+## Local-first privacy
+
+Training history, measurements, preferences, programmes and calculations remain in the browser by default.
+
+- no mandatory account;
+- no hidden upload of health/training data;
+- export/import for backups;
+- versioned migration contracts;
+- existing local-storage keys remain readable during migration.
+
+## Development
+
+~~~bash
+npm ci
+npm run syntax
+npm test
+npm run build:index
+npm run e2e
+npm run visual
+~~~
+
+The repository includes Playwright, axe accessibility tests, production smoke tests and a GitHub Actions quality gate. index.html is generated from the canonical source flow and CI checks generated-file drift.
+
+## Architecture
+
+The current migration is intentionally incremental: no big-bang rewrite, no destruction of proven user flows.
+
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for feature boundaries, persistence rules and Lab contracts.
 
 ---
 
-## 📦 Data Source
+# Exercise dataset
+
+MARKOV MADE GYM is powered by the structured exercise dataset retained in this repository. The dataset documentation below remains available for developers and downstream use.
+## 📦 Dataset source
 
 **This repository provides:**
 
