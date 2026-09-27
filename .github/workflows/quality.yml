@@ -32,6 +32,9 @@ jobs:
       - name: Syntax, unit, smoke and build
         run: npm run quality
 
+      - name: Generated index must be current
+        run: git diff --exit-code -- index.html
+
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium firefox webkit
 
