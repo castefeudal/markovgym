@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "lastReviewed": "2026-09-28",
+  "models": [
+    {
+      "id": "mifflin-st-jeor-1990",
+      "name": "Mifflin–St Jeor resting energy equation",
+      "formulaVersion": "1990-original",
+      "source": "Mifflin MD et al. A new predictive equation for resting energy expenditure in healthy individuals. Am J Clin Nutr. 1990;51(2):241-247.",
+      "doi": "10.1093/ajcn/51.2.241",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/2305711/",
+      "evidenceLevel": "primary-predictive-study",
+      "limitations": "Population-derived estimate of resting energy expenditure; individual error remains and measured indirect calorimetry is different."
+    },
+    {
+      "id": "karvonen-hrr-1957",
+      "name": "Heart-rate reserve / Karvonen method",
+      "formulaVersion": "HRR-basic",
+      "source": "Karvonen MJ, Kentala E, Mustala O. The effects of training on heart rate; a longitudinal study. 1957.",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/13470504/",
+      "evidenceLevel": "historical-primary-study",
+      "limitations": "Calculated zones are planning estimates; measured thresholds can differ materially."
+    },
+    {
+      "id": "fiber-ai-energy-density",
+      "name": "Dietary fiber planning reference",
+      "formulaVersion": "14-g-per-1000-kcal",
+      "source": "Institute of Medicine Dietary Reference Intake basis: 14 g fiber per 1000 kcal.",
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC11555338/",
+      "evidenceLevel": "dietary-reference-intake",
+      "limitations": "Population planning reference; individual gastrointestinal tolerance and clinical needs are not inferred."
+    },
+    {
+      "id": "riegel-1981",
+      "name": "Riegel endurance prediction",
+      "formulaVersion": "1.06-exponent",
+      "source": "Riegel PS. Athletic Records and Human Endurance. American Scientist. 1981;69(3):285-290.",
+      "evidenceLevel": "empirical-performance-model",
+      "limitations": "Extrapolation is sensitive to distance gap, event specificity, terrain, weather and training status."
+    },
+    {
+      "id": "epley-e1rm",
+      "name": "Epley e1RM estimate",
+      "formulaVersion": "w*(1+r/30)",
+      "source": "Common submaximal-load e1RM model retained from the existing MARKOV MADE GYM calculator.",
+      "evidenceLevel": "estimation-model",
+      "limitations": "Accuracy varies by exercise, repetition count, proximity to failure and individual profile."
+    },
+    {
+      "id": "brzycki-e1rm",
+      "name": "Brzycki e1RM estimate",
+      "formulaVersion": "w*36/(37-r)",
+      "source": "Common submaximal-load e1RM model retained from the existing MARKOV MADE GYM calculator.",
+      "evidenceLevel": "estimation-model",
+      "limitations": "Accuracy varies by exercise, repetition count, proximity to failure and individual profile."
+    }
+  ]
+}
