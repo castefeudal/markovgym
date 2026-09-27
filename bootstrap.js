@@ -23,6 +23,32 @@
     if (errorPanel) errorPanel.focus({ preventScroll: true });
   }
 
+  function offerUpdate(registration) {
+    if (!registration || !registration.waiting || document.getElementById('mmg-update-ready')) return;
+    var bar = document.createElement('div');
+    bar.id = 'mmg-update-ready';
+    bar.className = 'mmg-update-ready';
+    bar.setAttribute('role', 'status');
+    bar.innerHTML = '<div><strong>Доступно обновление</strong><span>Новая версия готова. Локальные данные сохранятся.</span></div>' +
+      '<button type="button" data-mmg-update-apply>Обновить</button>' +
+      '<button type="button" data-mmg-update-dismiss aria-label="Закрыть уведомление">×</button>';
+    document.body.appendChild(bar);
+    var apply = bar.querySelector('[data-mmg-update-apply]');
+    var dismiss = bar.querySelector('[data-mmg-update-dismiss]');
+    if (dismiss) dismiss.addEventListener('click', function () { bar.remove(); });
+    if (apply) apply.addEventListener('click', function () {
+      apply.disabled = true;
+      apply.textContent = 'Обновление…';
+      var reloaded = false;
+      navigator.serviceWorker.addEventListener('controllerchange', function () {
+        if (reloaded) return;
+        reloaded = true;
+        window.location.reload();
+      }, { once: true });
+      if (registration.waiting) registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+    });
+  }
+
   function hide() {
     if (!boot) return;
     setStage('ready');
@@ -41,11 +67,14 @@
 
   if (navigator.serviceWorker && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
     navigator.serviceWorker.register('./sw.js', { scope: './' }).then(function (registration) {
+      if (registration.waiting && navigator.serviceWorker.controller) offerUpdate(registration);
+      registration.update().catch(function () {});
       registration.addEventListener('updatefound', function () {
         var worker = registration.installing;
         if (!worker) return;
         worker.addEventListener('statechange', function () {
           if (worker.state === 'installed' && navigator.serviceWorker.controller) {
+            offerUpdate(registration);
             window.dispatchEvent(new CustomEvent('mmg:update-ready'));
           }
         });
