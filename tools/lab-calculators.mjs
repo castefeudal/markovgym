@@ -148,9 +148,10 @@ export function paceFromDistanceTime({ distanceKm, minutes } = {}) {
   const m = positive(minutes);
   if (!d || !m) return null;
   const pace = m / d;
-  const whole = Math.floor(pace);
-  const seconds = Math.round((pace - whole) * 60);
-  return { minPerKm: round(pace, 3), display: `${whole}:${String(seconds === 60 ? 0 : seconds).padStart(2,'0')}`, speedKmh: round(d / (m / 60), 2) };
+  const totalSeconds = Math.round(pace * 60);
+  const whole = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return { minPerKm: round(pace, 3), display: `${whole}:${String(seconds).padStart(2,'0')}`, speedKmh: round(d / (m / 60), 2) };
 }
 
 export function riegelPredict({ distance1Km, time1Minutes, distance2Km, exponent = 1.06 } = {}) {
@@ -164,8 +165,15 @@ export function adaptiveExpenditure({ days = [] } = {}) {
   if (valid.length < 7) return { status: 'insufficient', completeDays: valid.length };
   const sorted = [...valid].sort((a,b) => new Date(a.date || 0) - new Date(b.date || 0));
   const avgIntake = sorted.reduce((s,d)=>s+Number(d.calories),0)/sorted.length;
-  const span = Math.max(1, (new Date(sorted.at(-1).date || 0) - new Date(sorted[0].date || 0)) / 86400000);
-  const deltaKg = Number(sorted.at(-1).weightKg) - Number(sorted[0].weightKg);
+  const edgeWindow = Math.min(3, Math.max(1, Math.floor(sorted.length / 4)));
+  const startSlice = sorted.slice(0, edgeWindow);
+  const endSlice = sorted.slice(-edgeWindow);
+  const meanWeight = (rows) => rows.reduce((sum, row) => sum + Number(row.weightKg), 0) / rows.length;
+  const meanTime = (rows) => rows.reduce((sum, row) => sum + new Date(row.date || 0).getTime(), 0) / rows.length;
+  const startWeight = meanWeight(startSlice);
+  const endWeight = meanWeight(endSlice);
+  const span = Math.max(1, (meanTime(endSlice) - meanTime(startSlice)) / 86400000);
+  const deltaKg = endWeight - startWeight;
   const dailyBalance = deltaKg * 7700 / span;
   const expenditure = avgIntake - dailyBalance;
   const coverage = clamp(sorted.length / Math.max(7, Math.round(span) + 1), 0, 1);
@@ -179,5 +187,6 @@ export function adaptiveExpenditure({ days = [] } = {}) {
     confidence: coverage >= .85 && sorted.length >= 14 ? 'moderate' : 'low',
     averageIntake: round(avgIntake),
     weightChangeKg: round(deltaKg, 2),
+    smoothing: `${edgeWindow}-day edge mean`,
   };
 }
