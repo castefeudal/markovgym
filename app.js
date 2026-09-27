@@ -1009,15 +1009,19 @@
     if (!a || !b || a.length !== b.length) return false;
     return a.every(function (v) { return b.indexOf(v) !== -1; });
   }
+  function availablePresetEquipmentV10(values) {
+    return (values || []).filter(function (value) { return EQUIPMENT.indexOf(value) !== -1; });
+  }
 
   function renderV10LibraryQuick() {
     var host = $('v10-library-quick-presets');
     var label = $('v10-library-quick-label');
     if (!host) return;
     if (label) label.textContent = S.lang === 'en' ? 'Quick selection' : 'Быстрый выбор';
-    var gymEquip = ['barbell', 'cable', 'leverage machine', 'smith machine', 'ez barbell'];
+    var gymEquip = availablePresetEquipmentV10(['barbell', 'cable', 'leverage machine', 'smith machine', 'ez barbell']);
+    var homeEquip = availablePresetEquipmentV10(HOME_EQUIP);
     var defs = [
-      ['home', S.lang === 'en' ? 'Home' : 'Дом', sameStringSetV10(S.equipment, HOME_EQUIP)],
+      ['home', S.lang === 'en' ? 'Home' : 'Дом', sameStringSetV10(S.equipment, homeEquip)],
       ['gym', S.lang === 'en' ? 'Gym' : 'Зал', sameStringSetV10(S.equipment, gymEquip)],
       ['chest', S.lang === 'en' ? 'Chest' : 'Грудь', S.zones.length === 1 && S.zones[0] === 'chest'],
       ['back', S.lang === 'en' ? 'Back' : 'Спина', S.zones.length === 1 && S.zones[0] === 'back'],
