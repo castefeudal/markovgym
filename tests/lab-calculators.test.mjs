@@ -91,10 +91,12 @@ test('heart rate zones support HRR when resting HR exists', () => {
   assert.ok(zones[4].high > zones[0].high);
 });
 
-test('pace calculator returns expected speed', () => {
+test('pace calculator returns expected speed and carries rounded seconds', () => {
   const result = paceFromDistanceTime({ distanceKm: 5, minutes: 25 });
   assert.equal(result.display, '5:00');
   assert.equal(result.speedKmh, 12);
+  const boundary = paceFromDistanceTime({ distanceKm: 1, minutes: 4.999 });
+  assert.equal(boundary.display, '5:00');
 });
 
 test('Riegel predictor is deterministic', () => {
@@ -119,4 +121,17 @@ test('adaptive expenditure uses intake and weight change transparently', () => {
   assert.equal(result.completeDays, 14);
   assert.ok(result.central > 2500);
   assert.ok(result.range[0] < result.central && result.central < result.range[1]);
+  assert.equal(result.smoothing, '3-day edge mean');
+});
+
+test('adaptive expenditure dampens a single noisy endpoint', () => {
+  const days = Array.from({ length: 14 }, (_, i) => ({
+    date: new Date(Date.UTC(2026, 8, 1 + i)).toISOString(),
+    calories: 2500,
+    weightKg: 80 - i * 0.05,
+  }));
+  days[13].weightKg += 1.2;
+  const result = adaptiveExpenditure({ days });
+  assert.equal(result.status, 'ok');
+  assert.ok(result.weightChangeKg < 0.2);
 });
