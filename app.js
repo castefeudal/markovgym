@@ -1632,9 +1632,13 @@
     }
 
     if (!rows.length) {
-      list.innerHTML = '<div class="empty"><b>' + esc(t('workoutEmptyTitle')) + '</b><p>' +
-        esc(t('workoutEmptyText')) + '</p><a class="btn btn-primary btn-sm" href="#library">' +
-        esc(t('workoutOpenLibrary')) + ' →</a></div>';
+      var nextPlanDay = v7NextPlanDay();
+      var planAction = S.plan && nextPlanDay >= 0
+        ? '<button class="btn btn-primary btn-sm" type="button" data-v7-action="planDay" data-v7-day="' + nextPlanDay + '">' + esc(S.lang === 'en' ? 'Load next programme session' : 'Загрузить следующую тренировку программы') + '</button>'
+        : '';
+      list.innerHTML = '<div class="empty v10-workout-empty"><b>' + esc(t('workoutEmptyTitle')) + '</b><p>' +
+        esc(S.plan && nextPlanDay >= 0 ? (S.lang === 'en' ? 'Your programme already has the next session ready. Load it or build a session manually from the library.' : 'В программе уже готова следующая тренировка. Загрузи её одним действием или собери сессию вручную из библиотеки.') : t('workoutEmptyText')) + '</p><div class="v10-empty-actions">' + planAction + '<a class="btn btn-solid btn-sm" href="#library">' +
+        esc(t('workoutOpenLibrary')) + ' →</a></div></div>';
     } else {
       list.innerHTML = rows.map(function (r, i) {
         var ex = r.ex, item = r.item;
@@ -1917,6 +1921,11 @@
 
   function renderPlanPlaceholder() {
     var out = $('plan-out');
+    if (!out) return;
+    if (S.plan && Array.isArray(S.plan.days) && S.plan.days.length) {
+      renderStoredPlanV10();
+      return;
+    }
     if (out.getAttribute('data-filled') === 'true') return;
     out.innerHTML = '<div class="empty v8-empty-flat">' +
       '<b>' + esc(t('planEmptyTitle')) + '</b><p>' + esc(t('planEmptyText')) + '</p></div>';
@@ -1941,6 +1950,12 @@
     var perSession = clamp(Math.round(time / 12), 3, 8);
     if (level === 'beginner') perSession = clamp(perSession - 1, 3, 6);
     if (days >= 5) perSession = clamp(perSession - 1, 3, 7);
+    var recovery = $('p-recovery') ? $('p-recovery').value : 'mid';
+    if (recovery === 'low') {
+      setsLo = Math.max(2, setsLo - 1);
+      setsHi = Math.max(2, setsHi - 1);
+      perSession = Math.max(3, perSession - 1);
+    }
 
     var split = splitFor(days, level, goal).slice(0, days);
     var used = Object.create(null);
@@ -1994,19 +2009,19 @@
       return { key: key, index: dayIndex, items: items };
     });
 
-    lastPlan = { week: week, goal: goal, level: level, days: days, time: time, place: place, focus: focus };
+    lastPlan = { week: week, goal: goal, level: level, days: days, time: time, place: place, focus: focus, ctx: {goal:goal,level:level,days:days,time:time,place:place,focus:focus,style:$('p-style')?$('p-style').value:'balanced',recovery:recovery,cardio:$('p-cardio')?$('p-cardio').value:'light',steps:$('p-steps')?$('p-steps').value:'mid'} };
 
     var goalLabel = $('p-goal').selectedOptions[0].textContent;
     var placeLabel = $('p-place').selectedOptions[0].textContent;
     var levelLabel = $('p-level').selectedOptions[0].textContent;
 
-    var weekHtml = week.map(function (day) {
+    var weekHtml = week.map(function (day, dayIndex) {
       var name = DAY_NAMES[day.key][S.lang] || DAY_NAMES[day.key].ru;
-      return '<div class="plan-day">' +
+      return '<div class="plan-day" data-plan-day="' + dayIndex + '">' +
         '<div class="plan-day-head"><b>' + esc(t('planDay', { n: day.index + 1 })) + ' · ' + esc(name) + '</b>' +
         '<span>' + esc(t('planRest')) + ' ' + day.items[0].rest + ' ' + esc(t('planSec')) + '</span></div>' +
-        day.items.map(function (it) {
-          return '<div class="plan-ex">' +
+        day.items.map(function (it, itemIndex) {
+          return '<div class="plan-ex" data-plan-day="' + dayIndex + '" data-plan-item="' + itemIndex + '">' +
             '<button class="plan-ex-name" type="button" data-open="' + esc(it.ex.id) + '">' + esc(exName(it.ex)) + '</button>' +
             '<span class="meta-tag">' + esc(labelEq(it.ex.equip)) + '</span>' +
             '<span class="plan-ex-dose">' + it.sets + ' × ' + esc(it.reps) + '</span>' +
@@ -2022,7 +2037,7 @@
         '<p class="small v8-mt-2">' + esc(t('planWeekly', { days: days, time: time, ex: perSession })) + '</p>' +
       '</div>' +
       '<div class="plan-week">' + weekHtml + '</div>' +
-      '<div class="note"><b>' + esc(t('planCardio')) + '.</b> ' + esc(CARDIO_TEXT[goal][S.lang] || CARDIO_TEXT[goal].ru) + '</div>' +
+      '<div class="note"><b>' + esc(t('planCardio')) + '.</b> ' + esc(planCardioTextV10({goal:goal,cardio:$('p-cardio')?$('p-cardio').value:'light',steps:$('p-steps')?$('p-steps').value:'mid'})) + '</div>' +
       '<div class="note"><b>' + esc(t('planProgress')) + '.</b> ' + esc(PROGRESS_TEXT[level][S.lang] || PROGRESS_TEXT[level].ru) + '</div>' +
       '<div class="note note-warn">' + esc(S.lang === 'en' ? (EN['plan.disclaimer'] || '') : (RU_DOM['plan.disclaimer'] || '')) + '</div>' +
       '<div class="plan-actions">' +
@@ -2043,7 +2058,11 @@
     });
 
     decoratePlan(week, {
-      days: days, time: time, goal: goal, level: level, place: place,
+      days: days, time: time, goal: goal, level: level, place: place, focus: focus,
+      style: $('p-style') ? $('p-style').value : 'balanced',
+      recovery: $('p-recovery') ? $('p-recovery').value : 'mid',
+      cardio: $('p-cardio') ? $('p-cardio').value : 'light',
+      steps: $('p-steps') ? $('p-steps').value : 'mid',
       goalLabel: goalLabel, levelLabel: levelLabel, placeLabel: placeLabel
     });
   }
@@ -2061,7 +2080,7 @@
       });
       lines.push('');
     });
-    lines.push(t('planCardio') + ': ' + (CARDIO_TEXT[lastPlan.goal][S.lang] || CARDIO_TEXT[lastPlan.goal].ru));
+    lines.push(t('planCardio') + ': ' + planCardioTextV10(lastPlan.ctx || { goal:lastPlan.goal, cardio:'light', steps:'mid' }));
     lines.push(t('planProgress') + ': ' + (PROGRESS_TEXT[lastPlan.level][S.lang] || PROGRESS_TEXT[lastPlan.level].ru));
     lines.push('', 'markovmade.com/gym');
     return lines.join('\n');
@@ -2309,6 +2328,11 @@
   function saveDiary() { store.set(K.diary, JSON.stringify(S.diary.slice(0, 400))); }
   function saveTips() { store.set(K.tips, JSON.stringify(S.tips)); }
   function saveSettings() { store.set(K.settings, JSON.stringify(S.settings)); }
+  function applyReadability() {
+    var mode = S.settings && ['balanced','comfortable','large'].indexOf(S.settings.reading) !== -1 ? S.settings.reading : 'balanced';
+    if (S.settings) S.settings.reading = mode;
+    document.documentElement.setAttribute('data-reading', mode);
+  }
   function serialisePlanV7(plan){
     if(!plan||!Array.isArray(plan.days))return null;
     return {v:2,createdAt:Number(plan.createdAt)||Date.now(),weekKey:String(plan.weekKey||v7CurrentWeekKey()),completedDays:Array.isArray(plan.completedDays)?plan.completedDays.map(Number).filter(function(n){return n>=0&&n<12;}):[],ctx:plan.ctx||{},days:plan.days.map(function(day,i){return {key:String(day.key||''),index:Number(day.index)>=0?Number(day.index):i,items:(day.items||[]).map(function(it){var ex=it&&it.ex;return {id:String(ex&&ex.id||it&&it.id||''),sets:Number(it&&it.sets)||3,reps:String(it&&it.reps||'10–12').slice(0,24),rest:Number(it&&it.rest)||90};}).filter(function(it){return !!BY_ID[it.id];})};})};
@@ -2341,7 +2365,7 @@
   S.recentSearches = [];
   S.recentExercises = [];
   S.runSession = null;
-  S.settings = { rir:false, rpe:false };
+  S.settings = { rir:false, rpe:false, reading:'balanced' };
 
   function migrateEco() {
     var p = store.json(K.profile, null);
@@ -2390,7 +2414,8 @@
     S.plan = restorePlanV7(store.json(K.plan,null));
     if(S.plan) savePlanV7();
     var settings=store.json(K.settings,null);
-    S.settings=(settings&&typeof settings==='object')?{rir:!!settings.rir,rpe:!!settings.rpe}:{rir:false,rpe:false};
+    S.settings=(settings&&typeof settings==='object')?{rir:!!settings.rir,rpe:!!settings.rpe,reading:['balanced','comfortable','large'].indexOf(settings.reading)!==-1?settings.reading:'balanced'}:{rir:false,rpe:false,reading:'balanced'};
+    applyReadability();
   }
 
   /* ---------- 15.5 ОБЩИЕ ПРИМИТИВЫ РЕНДЕРА ------------------------------- */
@@ -2900,7 +2925,7 @@
     var level = S.console.level || S.profile.level;
     var place = S.console.place || S.profile.place;
     if (goal && map[goal]) $('p-goal').value = map[goal];
-    if (level) $('p-level').value = level;
+    if (level) $('p-level').value = level === 'medium' ? 'middle' : level;
     if (place) $('p-place').value = place;
     if (S.console.time) $('p-time').value=String(S.console.time);
     else if(S.profile.typicalSessionMinutes) $('p-time').value=String(S.profile.typicalSessionMinutes);
@@ -3656,113 +3681,151 @@
     return 'mixed';
   }
 
-  function decoratePlan(week, ctx) {
-    var out = $('plan-out');
-    if (!out || !C) return;
+  function planCardioTextV10(ctx) {
+    ctx = ctx || {};
+    if (ctx.cardio === 'none') return S.lang === 'en' ? 'No dedicated cardio block selected.' : 'Отдельный кардио-блок не выбран.';
+    var lowSteps = ctx.steps === 'low', highSteps = ctx.steps === 'high';
+    if (ctx.cardio === 'mixed') {
+      if (ctx.goal === 'fatloss' && lowSteps) return S.lang === 'en' ? '2–3 easy sessions of 20–30 minutes plus no more than one short interval block. First raise daily movement before adding more intervals.' : '2–3 спокойных сессии по 20–30 минут и не больше одного короткого интервального блока. Сначала подними ежедневную активность, а не количество интервалов.';
+      return S.lang === 'en' ? '1–2 easy sessions of 20–30 minutes plus one short interval block if recovery stays normal.' : '1–2 спокойных сессии по 20–30 минут и один короткий интервальный блок, если восстановление остаётся нормальным.';
+    }
+    if (ctx.goal === 'fatloss') {
+      if (lowSteps) return S.lang === 'en' ? 'Start with 2–3 easy sessions of 20–30 minutes and move daily steps toward a sustainable baseline.' : 'Начни с 2–3 спокойных сессий по 20–30 минут и постепенно подними ежедневные шаги до устойчивого уровня.';
+      if (highSteps) return S.lang === 'en' ? 'Daily movement is already high; 1–2 easy sessions of 20–25 minutes are enough as a starting point.' : 'Ежедневная активность уже высокая; для старта достаточно 1–2 спокойных сессий по 20–25 минут.';
+      return S.lang === 'en' ? 'Use 2 easy sessions of 20–30 minutes and adjust only after the weight/waist trend is clear.' : 'Используй 2 спокойные сессии по 20–30 минут и меняй объём только после понятного тренда веса и талии.';
+    }
+    return S.lang === 'en' ? '1–2 easy sessions of 20–30 minutes are enough for general conditioning without competing with strength work.' : '1–2 спокойные сессии по 20–30 минут достаточно для общей выносливости без лишней конкуренции с силовой работой.';
+  }
 
+  function renderStoredPlanV10() {
+    var out = $('plan-out');
+    if (!out || !S.plan || !Array.isArray(S.plan.days) || !S.plan.days.length) return;
+    v7EnsurePlanWeek();
+    var week = S.plan.days;
+    var ctx = S.plan.ctx || {};
+    var days = Number(ctx.days) || week.length;
+    var time = Number(ctx.time) || Number(S.profile.typicalSessionMinutes) || 60;
+    var goal = ctx.goal || (S.profile.goal === 'fat' ? 'fatloss' : S.profile.goal) || 'muscle';
+    var level = ctx.level || (S.profile.level === 'medium' ? 'middle' : S.profile.level) || 'middle';
+    var place = ctx.place || S.profile.place || 'gym';
+    var completed = Array.isArray(S.plan.completedDays) ? S.plan.completedDays : [];
+    var nextDay = v7NextPlanDay();
+    lastPlan = { week:week, goal:goal, level:level, days:days, time:time, place:place, focus:ctx.focus||S.profile.focus||'balanced', ctx:ctx };
+
+    var goalLabel = ctx.goalLabel || (S.lang === 'en' ? ({muscle:'Muscle',strength:'Strength',fatloss:'Fat loss',health:'Health'}[goal] || goal) : ({muscle:'Мышцы',strength:'Сила',fatloss:'Снижение жира',health:'Здоровье'}[goal] || goal));
+    var levelLabel = ctx.levelLabel || (S.lang === 'en' ? ({beginner:'Beginner',middle:'Intermediate',advanced:'Advanced'}[level] || level) : ({beginner:'Начальный',middle:'Средний',advanced:'Продвинутый'}[level] || level));
+    var placeLabel = ctx.placeLabel || (S.lang === 'en' ? ({gym:'Gym',home:'Home',minimal:'Minimal equipment'}[place] || place) : ({gym:'Зал',home:'Дом',minimal:'Минимум оборудования'}[place] || place));
+    var created = S.plan.createdAt ? new Date(S.plan.createdAt) : null;
+    var createdLabel = created && !isNaN(created.getTime()) ? new Intl.DateTimeFormat(S.lang === 'en' ? 'en-GB' : 'ru-RU',{day:'numeric',month:'short'}).format(created) : '';
+
+    var weekHtml = week.map(function(day, dayIndex){
+      var name = DAY_NAMES[day.key] ? (DAY_NAMES[day.key][S.lang] || DAY_NAMES[day.key].ru) : (S.lang === 'en' ? 'Session' : 'Тренировка');
+      var done = completed.indexOf(dayIndex) !== -1;
+      var current = dayIndex === nextDay;
+      var status = done ? (S.lang === 'en' ? 'Completed' : 'Выполнено') : current ? (S.lang === 'en' ? 'Next' : 'Следующая') : (S.lang === 'en' ? 'Planned' : 'Запланировано');
+      var rest = day.items[0] ? day.items[0].rest : 90;
+      return '<section class="plan-day v10-plan-day" data-plan-day="'+dayIndex+'" data-state="'+(done?'done':current?'current':'planned')+'">' +
+        '<div class="plan-day-head"><div><span class="v10-plan-status">'+esc(status)+'</span><b>'+esc(t('planDay',{n:dayIndex+1}))+' · '+esc(name)+'</b></div><span>'+esc(t('planRest'))+' '+rest+' '+esc(t('planSec'))+'</span></div>' +
+        '<div class="v10-plan-exercises">' + day.items.map(function(it,itemIndex){
+          return '<div class="plan-ex" data-plan-day="'+dayIndex+'" data-plan-item="'+itemIndex+'">' +
+            '<button class="plan-ex-name" type="button" data-open="'+esc(it.ex.id)+'">'+esc(exName(it.ex))+'</button>' +
+            '<span class="meta-tag">'+esc(labelEq(it.ex.equip))+'</span>' +
+            '<span class="plan-ex-dose">'+it.sets+' × '+esc(it.reps)+'</span>' +
+            '<div class="plan-ex-tools">' +
+              '<button class="btn btn-quiet btn-sm" type="button" data-plan-swap="'+esc(it.ex.id)+'">'+esc(t('planSwapBtn'))+'</button>' +
+              '<button class="btn btn-quiet btn-sm" type="button" data-plan-add="'+esc(it.ex.id)+'">'+esc(t('planAddOne'))+'</button>' +
+              '<button class="btn btn-quiet btn-sm btn-danger" type="button" data-plan-del="1">'+esc(t('planDrop'))+'</button>' +
+            '</div></div>';
+        }).join('') + '</div>' +
+        '<div class="plan-day-actions"><button class="btn '+(current?'btn-primary':'btn-solid')+' btn-sm" type="button" data-plan-day-add="'+dayIndex+'">'+esc(done?(S.lang==='en'?'Repeat session':'Повторить тренировку'):(current?(S.lang==='en'?'Start next session':'Начать следующую') : t('planAddDay')))+'</button></div>' +
+      '</section>';
+    }).join('');
+
+    var coachWhy = C && C.coach && C.coach.plan && C.coach.plan.why ? C.coach.plan.why[planSplitKind(days)] : null;
+    var warm = C && C.coach && C.coach.plan ? C.coach.plan.warmup : null;
+    var progress = C && C.coach && C.coach.plan ? C.coach.plan.progress : null;
+    var progressText = progress ? L(progress) : (PROGRESS_TEXT[level] ? (PROGRESS_TEXT[level][S.lang] || PROGRESS_TEXT[level].ru) : '');
+    var completedText = completed.length + ' / ' + week.length;
+    var allDone = completed.length >= week.length;
+
+    out.innerHTML = '<div class="v10-plan-hero">' +
+        '<div><p class="eyebrow v8-eyebrow-tight">'+esc(goalLabel+' · '+levelLabel+' · '+placeLabel)+'</p>' +
+        '<h3 class="v8-output-title">'+esc(allDone?(S.lang==='en'?'Week complete':'Неделя выполнена'):(S.lang==='en'?'Active programme':'Активная программа'))+'</h3>' +
+        '<p class="small v8-mt-2">'+esc(t('planWeekly',{days:days,time:time,ex:week[0]&&week[0].items?week[0].items.length:0}))+(createdLabel?' · '+esc(createdLabel):'')+'</p></div>' +
+        '<div class="v10-plan-progress"><strong>'+esc(completedText)+'</strong><span>'+(S.lang==='en'?'sessions this week':'тренировок на неделе')+'</span><i style="--v10-plan-progress:'+Math.round(completed.length/Math.max(1,week.length)*100)+'%"></i></div>' +
+      '</div>' +
+      '<div class="plan-week">'+weekHtml+'</div>' +
+      '<div class="v10-plan-guidance">' +
+        (coachWhy?'<div class="note"><b>'+esc(t('planWhyT'))+'</b> '+esc(L(coachWhy))+'</div>':'') +
+        (warm?'<div class="note"><b>'+esc(t('planWarmT'))+'</b> '+esc(L(warm))+'</div>':'') +
+        '<div class="note"><b>'+esc(t('planCardio'))+'.</b> '+esc(planCardioTextV10(ctx))+'</div>' +
+        '<div class="note"><b>'+esc(t('planProgress'))+'.</b> '+esc(progressText)+'</div>' +
+        (ctx.recovery==='low'?'<div class="note note-warn">'+esc(t('planRecoveryWarn'))+'</div>':'') +
+      '</div>' +
+      '<div class="plan-actions v10-plan-actions">' +
+        '<button class="btn btn-primary btn-sm" type="button" id="plan-copy">'+esc(t('planCopy'))+'</button>' +
+        (nextDay>=0?'<button class="btn btn-solid btn-sm" type="button" data-plan-day-add="'+nextDay+'">'+esc(S.lang==='en'?'Load next session':'Загрузить следующую тренировку')+'</button>':'') +
+        '<button class="btn btn-solid btn-sm" type="button" id="plan-export">'+esc(t('planExport'))+'</button>' +
+        '<button class="btn btn-quiet btn-sm" type="button" id="plan-print">'+esc(t('workout.print'))+'</button>' +
+      '</div>';
+    out.setAttribute('data-filled','true');
+    var copy=$('plan-copy'); if(copy)copy.addEventListener('click',function(){copyText(planText());});
+    var exp=$('plan-export'); if(exp)exp.addEventListener('click',function(){copyText(JSON.stringify(serialisePlanV7(S.plan),null,2),t('planExported'));});
+    var print=$('plan-print'); if(print)print.addEventListener('click',function(){window.print();});
+  }
+
+  function decoratePlan(week, ctx) {
+    if (!$('plan-out')) return;
     S.plan={days:week,ctx:ctx,createdAt:Date.now(),weekKey:v7CurrentWeekKey(),completedDays:[]};
     S.profile.goal=ctx.goal==='fatloss'?'fat':ctx.goal;
-    S.profile.level=ctx.level;S.profile.place=ctx.place;S.profile.days=String(ctx.days);S.profile.typicalSessionMinutes=String(ctx.time);
-    S.profile.focus=ctx.focus||'balanced';S.profile.recoveryBaseline=$('p-recovery')?$('p-recovery').value:'mid';S.profile.limitations=S.planLimits.slice();S.profile.done=true;S.profile.skipped=false;
+    S.profile.level=ctx.level==='middle'?'medium':ctx.level;
+    S.profile.place=ctx.place;
+    S.profile.days=String(ctx.days);
+    S.profile.typicalSessionMinutes=String(ctx.time);
+    S.profile.focus=ctx.focus||'balanced';
+    S.profile.recoveryBaseline=ctx.recovery||'mid';
+    S.profile.limitations=S.planLimits.slice();
+    S.profile.done=true;S.profile.skipped=false;
     saveProfile();savePlanV7();
-
-    var kind = planSplitKind(ctx.days);
-    var why = [
-      t('whyPlanDays', { n: ctx.days }),
-      t('whyPlanTime', { n: ctx.time }),
-      t('whyPlanPlace', { v: ctx.placeLabel }),
-      t('whyPlanLevel', { v: ctx.levelLabel })
-    ];
-    if (S.planLimits.length) why.push(t('whyPlanLimits', { v: S.planLimits.map(labelZone).join(', ') }));
-
-    var recovery = $('p-recovery') ? $('p-recovery').value : 'mid';
-    var cardio = $('p-cardio') ? $('p-cardio').value : 'light';
-
-    var block = document.createElement('div');
-    block.style.display = 'grid';
-    block.style.gap = 'var(--space-4)';
-    block.innerHTML =
-      '<div class="note"><b>' + esc(t('planWhyT')) + '</b> ' + esc(L(C.coach.plan.why[kind])) + '</div>' +
-      '<div class="note"><b>' + esc(t('planWarmT')) + '</b> ' + esc(L(C.coach.plan.warmup)) + '</div>' +
-      (recovery === 'low' ? '<div class="note note-warn">' + esc(t('planRecoveryWarn')) + '</div>' : '') +
-      (cardio === 'none' ? '' : '<div class="note"><b>' + esc(t('planCardio')) + '.</b> ' +
-        esc(cardio === 'mixed' ? t('planCardioMixed') : t('planCardioLight')) + '</div>') +
-      '<div class="note"><b>' + esc(t('planProgress')) + '.</b> ' + esc(L(C.coach.plan.progress)) + '</div>' +
-      '<div class="note"><b>' + esc(t('planSkipT')) + '</b> ' + esc(L(C.coach.plan.skip)) + '</div>' +
-      '<div class="note"><b>' + esc(t('planSwapT')) + '</b> ' + esc(L(C.coach.plan.swap)) + '</div>' +
-      '<div class="note"><b>' + esc(t('planDurationT')) + '</b> ' + esc(L(C.coach.plan.duration)) + '</div>' +
-      coachNote({ t: null, d: C.coach.plan.note, a: null, w: null }, { why: why }) +
-      '<div class="plan-actions">' +
-        '<button class="btn btn-solid btn-sm" type="button" id="plan-export">' + esc(t('planExport')) + '</button>' +
-        '<button class="btn btn-quiet btn-sm" type="button" id="plan-print">' + esc(t('workout.print')) + '</button>' +
-      '</div>';
-    out.appendChild(block);
-
-    qsa('.plan-day', out).forEach(function (dayNode, dayIndex) {
-      var actions = document.createElement('div');
-      actions.className = 'plan-day-actions';
-      actions.innerHTML = '<button class="btn btn-solid btn-sm" type="button" data-plan-day-add="' + dayIndex + '">' + esc(t('planAddDay')) + '</button>';
-      dayNode.appendChild(actions);
-    });
-
-    // Инструменты редактирования на каждом упражнении плана
-    qsa('.plan-ex', out).forEach(function (row, i) {
-      var btn = qs('.plan-ex-name', row);
-      if (!btn) return;
-      var tools = document.createElement('div');
-      tools.className = 'plan-ex-tools';
-      tools.innerHTML =
-        '<button class="btn btn-quiet btn-sm" type="button" data-plan-swap="' + esc(btn.dataset.open) + '" data-plan-i="' + i + '">' + esc(t('planSwapBtn')) + '</button>' +
-        '<button class="btn btn-quiet btn-sm" type="button" data-plan-add="' + esc(btn.dataset.open) + '">' + esc(t('planAddOne')) + '</button>' +
-        '<button class="btn btn-quiet btn-sm btn-danger" type="button" data-plan-del="' + i + '">' + esc(t('planDrop')) + '</button>';
-      row.appendChild(tools);
-    });
-
-    $('plan-export').addEventListener('click', function () {
-      copyText(JSON.stringify({ v: 3, kind: 'plan', ctx: ctx, days: week.map(function (d) {
-        return { key: d.key, items: d.items.map(function (it) {
-          return { id: it.ex.id, name: exName(it.ex), sets: it.sets, reps: it.reps, rest: it.rest };
-        }) };
-      }) }, null, 2), t('planExported'));
-    });
-    $('plan-print').addEventListener('click', function () { window.print(); });
-
+    renderStoredPlanV10();
     renderDashIfVisible();
-    track('program_complete', { days: ctx.days, goal: ctx.goal });
+    track('program_complete',{days:ctx.days,goal:ctx.goal});
   }
 
   function planRowAction(e) {
     var dayAdd=e.target.closest('[data-plan-day-add]');
     if(dayAdd&&S.plan&&S.plan.days){startPlanDayV7(Number(dayAdd.dataset.planDayAdd),false);return;}
-    var swapBtn = e.target.closest('[data-plan-swap]');
-    if (swapBtn) {
-      var ex = BY_ID[swapBtn.dataset.planSwap];
-      if (!ex) return;
-      var alt = swapCandidates(ex, 'same')[0];
-      if (!alt) { showToast(t('swapNone')); return; }
-      var row = swapBtn.closest('.plan-ex');
-      var nameBtn = qs('.plan-ex-name', row);
-      nameBtn.textContent = exName(alt);
-      nameBtn.dataset.open = alt.id;
-      swapBtn.dataset.planSwap = alt.id;
-      var tag = qs('.meta-tag', row);
-      if (tag) tag.textContent = labelEq(alt.equip);
-      var addBtn = qs('[data-plan-add]', row);
-      if (addBtn) addBtn.dataset.planAdd = alt.id;
+    var row=e.target.closest('.plan-ex');
+    var dayIndex=row?Number(row.dataset.planDay):-1;
+    var itemIndex=row?Number(row.dataset.planItem):-1;
+    var day=S.plan&&S.plan.days&&S.plan.days[dayIndex];
+    var item=day&&day.items?day.items[itemIndex]:null;
+
+    var swapBtn=e.target.closest('[data-plan-swap]');
+    if(swapBtn){
+      var ex=item&&item.ex?item.ex:BY_ID[swapBtn.dataset.planSwap];
+      if(!ex||!day)return;
+      var used=day.items.map(function(it){return it.ex.id;});
+      var alt=swapCandidates(ex,'same').filter(function(candidate){return used.indexOf(candidate.id)===-1;})[0];
+      if(!alt){showToast(t('swapNone'));return;}
+      item.ex=alt;
+      savePlanV7();
+      renderStoredPlanV10();
       showToast(t('planSwapped'));
       return;
     }
-    var addBtn2 = e.target.closest('[data-plan-add]');
-    if (addBtn2) {
-      var id = addBtn2.dataset.planAdd;
-      if (inWorkout(id)) { showToast(t('inWorkout')); return; }
-      addToWorkout(id);
-      return;
+    var addBtn=e.target.closest('[data-plan-add]');
+    if(addBtn){
+      var id=addBtn.dataset.planAdd;
+      if(inWorkout(id)){showToast(t('inWorkout'));return;}
+      addToWorkout(id);return;
     }
-    var delBtn = e.target.closest('[data-plan-del]');
-    if (delBtn) {
-      var r = delBtn.closest('.plan-ex');
-      if (r) r.remove();
+    var delBtn=e.target.closest('[data-plan-del]');
+    if(delBtn&&day&&item){
+      if(day.items.length<=1){showToast(S.lang==='en'?'Keep at least one exercise in the session':'Оставь хотя бы одно упражнение в тренировке');return;}
+      day.items.splice(itemIndex,1);
+      savePlanV7();
+      renderStoredPlanV10();
       showToast(t('planDropped'));
     }
   }
@@ -3828,51 +3891,68 @@
     return vals.reduce(function (a, b) { return a + b; }, 0) / vals.length;
   }
 
+  var progressMetric = 'weight';
+
+  function progressChartTabsV10() {
+    var tabs = [
+      ['weight', S.lang === 'en' ? 'Weight' : 'Вес'],
+      ['waist', S.lang === 'en' ? 'Waist' : 'Талия'],
+      ['sleep', S.lang === 'en' ? 'Sleep' : 'Сон']
+    ];
+    return '<div class="v10-progress-tabs" role="group" aria-label="' + esc(S.lang === 'en' ? 'Chart metric' : 'Показатель графика') + '">' + tabs.map(function(x){
+      return '<button type="button" data-progress-metric="'+x[0]+'" aria-pressed="'+String(progressMetric===x[0])+'">'+esc(x[1])+'</button>';
+    }).join('') + '</div>';
+  }
+
+  function progressCoachNoteV10() {
+    if (progressMetric === 'waist') return coachNote({
+      t:{ru:'Талия полезна как второй сигнал',en:'Waist is useful as a second signal'},
+      d:{ru:'Измеряй её в одинаковых условиях. Она помогает отделить реальное изменение композиции тела от колебаний массы из-за воды.',en:'Measure it under the same conditions. It helps separate body-composition change from water-driven scale fluctuations.'},
+      a:{ru:'Оценивай направление за несколько недель вместе с весом, а не отдельную точку.',en:'Read the multi-week direction together with weight, not a single point.'}
+    },{compact:true});
+    if (progressMetric === 'sleep') return coachNote({
+      t:{ru:'Сон — контекст, а не оценка тренировки',en:'Sleep is context, not a workout score'},
+      d:{ru:'Несколько плохих ночей подряд могут объяснить падение работоспособности, аппетит и ощущение восстановления.',en:'Several poor nights in a row can explain lower performance, appetite changes and worse recovery.'},
+      a:{ru:'Ищи повторяющийся паттерн. Один короткий сон сам по себе не требует менять программу.',en:'Look for a repeated pattern. One short night alone is not a reason to change the programme.'}
+    },{compact:true});
+    return coachNote({
+      t:{ru:'Не меняй план по одному измерению',en:'Never change a plan on a single measurement'},
+      d:{ru:'Одна точка на графике почти всегда объясняется водой, солью или содержимым кишечника. Решение принимается по направлению линии за две-три недели.',en:'One point on the chart is almost always water, salt or gut content. Decisions come from the direction of the line over two or three weeks.'},
+      a:{ru:'Смотри на среднюю линию — пунктир на графике. Отдельные точки нужны только для того, чтобы её построить.',en:'Watch the dashed average line. Individual points exist only to build it.'}
+    },{compact:true});
+  }
+
   function progressChart() {
-    var pts = S.diary.filter(function (d) { return typeof d.weight === 'number'; })
-      .slice(0, 60).reverse();
-    if (pts.length < 2) return '<p class="tiny">' + esc(t('chartNeedMore')) + '</p>';
+    var cfg = {
+      weight:{unit:t('kg'), digits:1, label:S.lang==='en'?'Weight':'Вес'},
+      waist:{unit:t('cm'), digits:1, label:S.lang==='en'?'Waist':'Талия'},
+      sleep:{unit:t('hrs'), digits:1, label:S.lang==='en'?'Sleep':'Сон'}
+    }[progressMetric] || {unit:t('kg'),digits:1,label:S.lang==='en'?'Weight':'Вес'};
+    var field = progressMetric;
+    var pts = S.diary.filter(function(d){return typeof d[field] === 'number' && isFinite(d[field]);}).slice(0,60).reverse();
+    if (pts.length < 2) return '<div class="v10-chart-empty"><b>'+esc(cfg.label)+'</b><p class="tiny">'+esc(S.lang==='en'?'Add at least two entries to see a trend.':'Добавь минимум две записи, чтобы увидеть динамику.')+'</p></div>';
 
-    var W = 560, H = 200, PADL = 38, PADR = 10, PADT = 14, PADB = 24;
-    var values = pts.map(function (p) { return p.weight; });
-    var min = Math.min.apply(null, values), max = Math.max.apply(null, values);
-    if (max - min < 1) { max = max + 0.5; min = min - 0.5; }
-    var pad = (max - min) * 0.12;
-    min -= pad; max += pad;
-
-    var x = function (i) { return PADL + (i / (pts.length - 1)) * (W - PADL - PADR); };
-    var y = function (v) { return PADT + (1 - (v - min) / (max - min)) * (H - PADT - PADB); };
-
-    var line = pts.map(function (p, i) { return (i ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(p.weight).toFixed(1); }).join(' ');
-
-    // скользящее среднее за 7 точек
-    var avg = pts.map(function (_, i) {
-      var from = Math.max(0, i - 6);
-      var slice = values.slice(from, i + 1);
-      return slice.reduce(function (a, b) { return a + b; }, 0) / slice.length;
-    });
-    var avgLine = avg.map(function (v, i) { return (i ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(v).toFixed(1); }).join(' ');
-
-    var grid = '', labels = '';
-    for (var g = 0; g <= 3; g++) {
-      var val = min + ((max - min) * g) / 3;
-      var yy = y(val).toFixed(1);
-      grid += '<line class="prog-grid" x1="' + PADL + '" y1="' + yy + '" x2="' + (W - PADR) + '" y2="' + yy + '"/>';
-      labels += '<text class="prog-axis" x="4" y="' + (Number(yy) + 3.5).toFixed(1) + '">' + val.toFixed(1) + '</text>';
+    var W=560,H=200,PADL=42,PADR=10,PADT=14,PADB=24;
+    var values=pts.map(function(p){return p[field];});
+    var min=Math.min.apply(null,values),max=Math.max.apply(null,values);
+    var floor = field==='sleep' ? .5 : 1;
+    if(max-min<floor){max=max+floor/2;min=min-floor/2;}
+    var pad=(max-min)*.12;min-=pad;max+=pad;
+    var x=function(i){return PADL+(i/(pts.length-1))*(W-PADL-PADR);};
+    var y=function(v){return PADT+(1-(v-min)/(max-min))*(H-PADT-PADB);};
+    var line=pts.map(function(p,i){return(i?'L':'M')+x(i).toFixed(1)+' '+y(p[field]).toFixed(1);}).join(' ');
+    var avg=pts.map(function(_,i){var from=Math.max(0,i-6),slice=values.slice(from,i+1);return slice.reduce(function(a,b){return a+b;},0)/slice.length;});
+    var avgLine=avg.map(function(v,i){return(i?'L':'M')+x(i).toFixed(1)+' '+y(v).toFixed(1);}).join(' ');
+    var grid='',labels='';
+    for(var g=0;g<=3;g++){
+      var val=min+((max-min)*g)/3,yy=y(val).toFixed(1);
+      grid+='<line class="prog-grid" x1="'+PADL+'" y1="'+yy+'" x2="'+(W-PADR)+'" y2="'+yy+'"/>';
+      labels+='<text class="prog-axis" x="4" y="'+(Number(yy)+3.5).toFixed(1)+'">'+val.toFixed(cfg.digits)+'</text>';
     }
-    var first = pts[0].date.slice(5), last = pts[pts.length - 1].date.slice(5);
-    labels += '<text class="prog-axis" x="' + PADL + '" y="' + (H - 6) + '">' + esc(first) + '</text>' +
-      '<text class="prog-axis" x="' + (W - PADR) + '" y="' + (H - 6) + '" text-anchor="end">' + esc(last) + '</text>';
-
-    var dots = pts.map(function (p, i) {
-      return '<circle class="prog-dot" cx="' + x(i).toFixed(1) + '" cy="' + y(p.weight).toFixed(1) + '" r="3"><title>' + esc(p.date + ' · ' + p.weight.toFixed(1) + ' ' + t('kg')) + '</title></circle>';
-    }).join('');
-
-    return '<div class="prog-chart"><svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' +
-      esc(t('chartAria', { n: pts.length })) + '">' + grid + labels +
-      '<path class="prog-avg" d="' + avgLine + '"/>' +
-      '<path class="prog-line" d="' + line + '"/>' + dots + '</svg>' +
-      '<p class="tiny v8-chart-legend">' + esc(t('chartLegend')) + '</p></div>';
+    var first=pts[0].date.slice(5),last=pts[pts.length-1].date.slice(5);
+    labels+='<text class="prog-axis" x="'+PADL+'" y="'+(H-6)+'">'+esc(first)+'</text><text class="prog-axis" x="'+(W-PADR)+'" y="'+(H-6)+'" text-anchor="end">'+esc(last)+'</text>';
+    var dots=pts.map(function(p,i){return'<circle class="prog-dot" cx="'+x(i).toFixed(1)+'" cy="'+y(p[field]).toFixed(1)+'" r="3"><title>'+esc(p.date+' · '+p[field].toFixed(cfg.digits)+' '+cfg.unit)+'</title></circle>';}).join('');
+    return '<div class="prog-chart"><svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(cfg.label+' · '+pts.length)+'">'+grid+labels+'<path class="prog-avg" d="'+avgLine+'"/><path class="prog-line" d="'+line+'"/>'+dots+'</svg><p class="tiny v8-chart-legend">'+esc(cfg.label+' · '+(S.lang==='en'?'solid = entries, dashed = rolling average':'сплошная = записи, пунктир = скользящее среднее'))+'</p></div>';
   }
 
   function renderProgress() {
@@ -3896,7 +3976,7 @@
     var html = '<div class="v8-diary-head">' +
         '<p class="eyebrow v8-m0">' + esc(t('diaryTitle')) + '</p>' + signal(st.state, st.label) +
       '</div>' +
-      progressChart() +
+      progressChartTabsV10() + progressChart() +
       '<div class="prog-deltas">' +
         '<div class="kpi kpi-accent"><span>' + esc(t('diaryAvg7')) + '</span><b>' +
           (avg7 === null ? '—' : avg7.toFixed(1) + ' ' + t('kg')) + '</b></div>' +
@@ -3906,13 +3986,7 @@
         '<div class="kpi"><span>' + esc(t('diaryWaist')) + '</span><b>' + esc(fmtD(waist30, t('cm'))) + '</b></div>' +
       '</div>' +
       '<p class="v8-muted-copy">' + esc(diaryVerdict(d14, waist30)) + '</p>' +
-      coachNote({
-        t: { ru: 'Не меняй план по одному измерению', en: 'Never change a plan on a single measurement' },
-        d: { ru: 'Одна точка на графике почти всегда объясняется водой, солью или содержимым кишечника. Решение принимается по направлению линии за две-три недели.',
-             en: 'One point on the chart is almost always water, salt or gut content. Decisions come from the direction of the line over two or three weeks.' },
-        a: { ru: 'Смотри на среднюю линию — пунктир на графике. Отдельные точки нужны только для того, чтобы её построить.',
-             en: 'Watch the dashed average line. Individual points exist only to build it.' }
-      }, { compact: true }) +
+      progressCoachNoteV10() +
       '<div class="prog-log">' + S.diary.slice(0, 30).map(function (d) {
         var bits = [];
         if (typeof d.weight === 'number') bits.push(d.weight.toFixed(1) + ' ' + t('kg'));
@@ -4157,7 +4231,7 @@
   }
 
   /* ---------- 16.11 УПРАВЛЕНИЕ ДАННЫМИ ----------------------------------- */
-  var DATA_KEYS = ['fav', 'workout', 'lang', 'theme', 'density', 'profile', 'meta', 'history', 'diary', 'kbju', 'tips', 'coach', 'rest'];
+  var DATA_KEYS = ['fav', 'workout', 'lang', 'theme', 'density', 'profile', 'meta', 'history', 'diary', 'kbju', 'tips', 'coach', 'rest', 'plan', 'settings', 'recentSearch', 'recentExercises'];
 
   function exportAll() {
     var payload = { v: 3, kind: 'mmg-backup', at: new Date().toISOString(), data: {} };
@@ -4988,6 +5062,12 @@
       saveDiary(); renderProgress(); renderDashIfVisible();
     });
     $('prog-out').addEventListener('click', function (e) {
+      var metric = e.target.closest('[data-progress-metric]');
+      if (metric) {
+        progressMetric = metric.dataset.progressMetric;
+        renderProgress();
+        return;
+      }
       var del = e.target.closest('[data-diary-del]');
       if (!del) return;
       S.diary = S.diary.filter(function (d) { return d.date !== del.dataset.diaryDel; });
@@ -6224,7 +6304,7 @@
     }
     if(name==='kbju')return(value&&typeof value==='object'&&!Array.isArray(value))?JSON.stringify(value):null;
     if(name==='plan'){var restored=restorePlanV7(value);return restored?JSON.stringify(serialisePlanV7(restored)):JSON.stringify(null);}
-    if(name==='settings')return(value&&typeof value==='object'&&!Array.isArray(value))?JSON.stringify({rir:!!value.rir,rpe:!!value.rpe}):null;
+    if(name==='settings')return(value&&typeof value==='object'&&!Array.isArray(value))?JSON.stringify({rir:!!value.rir,rpe:!!value.rpe,reading:['balanced','comfortable','large'].indexOf(value.reading)!==-1?value.reading:'balanced'}):null;
     return null;
   }
   exportAll = function(){
@@ -6407,9 +6487,48 @@
   function v7DateLabel(){try{return new Intl.DateTimeFormat(S.lang==='en'?'en-GB':'ru-RU',{weekday:'long',day:'numeric',month:'long'}).format(new Date());}catch(e){return todayISO();}}
   function v7PlanSummary(){if(!S.plan||!S.plan.days)return{v:'—',s:v7c('noPlan')};var done=(S.plan.completedDays||[]).length;return{v:done+' / '+S.plan.days.length,s:(S.lang==='en'?'sessions ':'тренировок ')+v7c('completed')};}
   function v7TrendSummary(){if(S.diary.length<2)return{v:'—',s:v7c('noTrend')};var d=diaryDelta('weight',14);if(d===null)return{v:'—',s:v7c('noTrend')};return{v:(d>0?'+':'')+d.toFixed(1)+' '+t('kg'),s:S.lang==='en'?'14-day weight change':'изменение веса за 14 дней'};}
+  function v10WeekStartTime(){var d=new Date(),day=(d.getDay()+6)%7;d.setHours(0,0,0,0);d.setDate(d.getDate()-day);return d.getTime();}
+  function v10RecoverySummary(){
+    var d=S.diary&&S.diary[0];
+    if(!d)return{label:S.lang==='en'?'No check-in':'Нет check-in',state:'none',detail:S.lang==='en'?'Add recovery data':'Добавь данные восстановления'};
+    var score=typeof d.recovery==='number'?d.recovery:null;
+    if(score===null&&typeof d.sleep==='number'){score=d.sleep>=7.5&&Number(d.fatigue||2)<=2?3:(d.sleep<6||Number(d.fatigue||2)>=4?1:2);}
+    if(score===3)return{label:S.lang==='en'?'Good':'Хорошее',state:'ok',detail:S.lang==='en'?'Recovery supports normal training':'Можно тренироваться в обычном режиме'};
+    if(score===1)return{label:S.lang==='en'?'Low':'Низкое',state:'watch',detail:S.lang==='en'?'Keep the session controlled':'Сделай нагрузку управляемой'};
+    return{label:S.lang==='en'?'Normal':'Нормальное',state:'neutral',detail:S.lang==='en'?'No clear recovery warning':'Явных сигналов перегруза нет'};
+  }
+  function renderV10HomePulse(){
+    var host=$('v10-home-pulse');if(!host)return;
+    var wk=v10WeekStartTime();
+    var weekHistory=S.history.filter(function(h){var ts=h&&h.date?Date.parse(h.date+'T12:00:00'):0;return ts>=wk;});
+    var weekSets=weekHistory.reduce(function(sum,h){return sum+totalCompletedHistorySets(h);},0);
+    var recovery=v10RecoverySummary();
+    var trend=v7TrendSummary();
+    var completed=S.plan&&Array.isArray(S.plan.completedDays)?S.plan.completedDays.length:0;
+    var total=S.plan&&Array.isArray(S.plan.days)?S.plan.days.length:0;
+    var next=v7NextPlanDay();
+    var timeline='';
+    if(total){
+      timeline='<div class="v10-week-timeline" aria-label="'+esc(S.lang==='en'?'Programme week':'Неделя программы')+'">'+S.plan.days.map(function(day,i){
+        var done=S.plan.completedDays&&S.plan.completedDays.indexOf(i)!==-1,current=i===next;
+        var label=(S.lang==='en'?'Day ':'День ')+(i+1);
+        return '<button type="button" data-v7-action="planDay" data-v7-day="'+i+'" data-state="'+(done?'done':current?'current':'planned')+'" title="'+esc(label)+'"><i>'+(done?'✓':String(i+1))+'</i><span>'+esc(done?(S.lang==='en'?'Done':'Готово'):(current?(S.lang==='en'?'Next':'Дальше'):(S.lang==='en'?'Plan':'План')))+'</span></button>';
+      }).join('')+'</div>';
+    } else {
+      timeline='<button class="v10-pulse-empty" type="button" data-v7-route="program">'+esc(S.lang==='en'?'Build a programme to see the week here':'Собери программу — здесь появится неделя')+' →</button>';
+    }
+    host.innerHTML='<div class="v10-pulse-head"><div><span class="eyebrow">'+esc(S.lang==='en'?'WEEKLY PULSE':'ПУЛЬС НЕДЕЛИ')+'</span><b>'+esc(S.lang==='en'?'What matters right now':'Что важно прямо сейчас')+'</b></div><span class="signal" data-state="'+esc(recovery.state)+'">'+esc(recovery.label)+'</span></div>'+
+      '<div class="v10-pulse-metrics">'+
+        '<div><span>'+esc(S.lang==='en'?'Programme':'Программа')+'</span><strong>'+(total?completed+' / '+total:'—')+'</strong><small>'+esc(total?(S.lang==='en'?'sessions complete':'тренировок выполнено'):(S.lang==='en'?'not built yet':'ещё не собрана'))+'</small></div>'+
+        '<div><span>'+esc(S.lang==='en'?'Work sets':'Рабочие подходы')+'</span><strong>'+weekSets+'</strong><small>'+esc(S.lang==='en'?'completed this week':'завершено за неделю')+'</small></div>'+
+        '<div><span>'+esc(S.lang==='en'?'14-day trend':'Тренд 14 дней')+'</span><strong>'+esc(trend.v)+'</strong><small>'+esc(trend.s)+'</small></div>'+
+        '<div><span>'+esc(S.lang==='en'?'Recovery':'Восстановление')+'</span><strong>'+esc(recovery.label)+'</strong><small>'+esc(recovery.detail)+'</small></div>'+
+      '</div>'+timeline;
+  }
   function renderV7Home(){var host=$('home');if(!host)return;$('v7-home-kicker').textContent=v7c('home');$('v7-home-sub').textContent=v7c('homeSub');$('v7-home-date').textContent=v7DateLabel();var next=v7NextAction(),title=next.title,why=next.why;var ev=(next.evidence||[]).map(function(x){return'<span class="v7-evidence">'+esc(x)+'</span>';}).join('');var secondary=next.type==='planDay'?'<button class="btn btn-quiet" type="button" data-v7-route="program">'+esc(v7c('program'))+'</button>':'';$('v7-home-next').innerHTML='<span class="v7-next-label">'+esc(v7c('next'))+'</span><h2 class="v7-next-title">'+esc(title)+'</h2><p class="v7-next-copy">'+esc(why)+'</p>'+(ev?'<div class="v7-next-evidence">'+ev+'</div>':'')+'<div class="v7-next-actions"><button class="btn btn-primary" type="button" data-v7-action="'+esc(next.type)+'"'+(next.day!=null?' data-v7-day="'+next.day+'"':'')+'>'+esc(title)+'</button>'+secondary+'</div>';
     var plan=v7PlanSummary(),last=S.history[0],trend=v7TrendSummary();$('v7-home-plan').innerHTML='<span>'+esc(v7c('plan'))+'</span><b>'+(S.plan?esc(S.lang==='en'?'Active programme':'Активная программа'):esc(v7c('noPlan')))+'</b><strong>'+esc(plan.v)+'</strong><small>'+esc(plan.s)+'</small>';$('v7-home-last').innerHTML='<span>'+esc(v7c('last'))+'</span><b>'+esc(last?last.name:v7c('noHistory'))+'</b><strong>'+esc(last?String(last.items.length):'—')+'</strong><small>'+esc(last?(last.date+' · '+totalCompletedHistorySets(last)+' '+v7c('sets')):v7c('noHistory'))+'</small>';$('v7-home-progress').innerHTML='<span>'+esc(v7c('trend'))+'</span><b>'+esc(S.diary.length?(S.lang==='en'?'Feedback is current':'Обратная связь сохранена'):v7c('noTrend'))+'</b><strong>'+esc(trend.v)+'</strong><small>'+esc(trend.s)+'</small>';$('v7-home-nutrition').innerHTML='<span>'+esc(v7c('kcal'))+'</span><b>'+esc(S.kbjuLast?(S.lang==='en'?'Current target':'Текущий ориентир'):v7c('notCalculated'))+'</b><strong>'+esc(S.kbjuLast?String(S.kbjuLast.target):'—')+'</strong><small>'+esc(S.kbjuLast?t('kcal'):v7c('notCalculated'))+'</small>';
     var cmds=[['library','search','quickLibrary','quickLibraryS'],['workout','workout','quickWorkout','quickWorkoutS'],['program','program','quickProgram','quickProgramS'],['progress','progress','quickProgress','quickProgressS']];$('v7-home-quick').innerHTML=cmds.map(function(c){return'<button class="v7-command" type="button" data-v7-route="'+c[0]+'"><i aria-hidden="true">'+premiumIcon(c[1])+'</i><span><b>'+esc(v7c(c[2]))+'</b><small>'+esc(v7c(c[3]))+'</small></span></button>';}).join('');
+    renderV10HomePulse();
   }
   function renderV7More(){
     var host=$('v7-more-grid');if(!host)return;$('v7-more-title').textContent=v7c('more');$('v7-more-sub').textContent=v7c('moreSub');
@@ -6427,11 +6546,35 @@
     ];
     host.innerHTML=groups.map(function(g){return'<section class="v8-more-group"><span class="v8-more-label">'+esc(g[0])+'</span><div class="v8-more-list">'+g[1].map(function(x){return'<button class="v7-more-item" type="button" data-v7-route="'+x[0]+'"><span class="v7-more-icon" aria-hidden="true">'+premiumIcon(x[1])+'</span><span><b>'+esc(v7c(x[0]))+'</b><p>'+esc(x[2])+'</p></span><span aria-hidden="true">→</span></button>';}).join('')+'</div></section>';}).join('');
   }
-  function renderV7Settings(){if(!$('settings'))return;$('v7-settings-sub').textContent=v7c('settingsSub');$('v7-theme-title').textContent=v7c('appearance');$('v7-log-title').textContent=v7c('logging');$('v7-coach-title').textContent=v7c('coach');$('v7-data-title').textContent=v7c('data');$('v7-log-text').textContent=S.lang==='en'?'RIR/RPE stay hidden unless you explicitly enable them.':'RIR/RPE скрыты, пока вы явно их не включите.';$('v7-coach-text').textContent=S.lang==='en'?'Show contextual explanations and guidance.':'Показывать контекстные объяснения и рекомендации.';$('v7-data-text').textContent=v7c('settingsDataText');var themes=[
+  function renderV7Settings(){
+    if(!$('settings'))return;
+    $('v7-settings-sub').textContent=v7c('settingsSub');
+    $('v7-theme-title').textContent=v7c('appearance');
+    $('v7-log-title').textContent=v7c('logging');
+    $('v7-coach-title').textContent=v7c('coach');
+    $('v7-data-title').textContent=v7c('data');
+    if($('v10-reading-title'))$('v10-reading-title').textContent=S.lang==='en'?'Readability':'Читаемость';
+    if($('v10-reading-text'))$('v10-reading-text').textContent=S.lang==='en'?'Choose interface scale without changing the information structure.':'Выбери размер интерфейса без потери структуры и информации.';
+    $('v7-log-text').textContent=S.lang==='en'?'RIR/RPE stay hidden unless you explicitly enable them.':'RIR/RPE скрыты, пока вы явно их не включите.';
+    $('v7-coach-text').textContent=S.lang==='en'?'Show contextual explanations and guidance.':'Показывать контекстные объяснения и рекомендации.';
+    $('v7-data-text').textContent=v7c('settingsDataText');
+    var themes=[
       ['obsidian',S.lang==='en'?'Obsidian':'Обсидиан',S.lang==='en'?'Deep graphite · maximum contrast':'Глубокий графит · максимум контраста'],
       ['soft',S.lang==='en'?'Mist':'Туман',S.lang==='en'?'Cool soft surface · lower visual load':'Холодная мягкая поверхность · меньше визуальной нагрузки'],
       ['ivory',S.lang==='en'?'Ivory':'Слоновая кость',S.lang==='en'?'Clean editorial light · maximum clarity':'Чистая редакционная светлая · максимум ясности']
-    ];$('v7-theme-actions').innerHTML=themes.map(function(x){var active=S.theme===x[0];return'<button class="theme-choice" type="button" data-v7-theme="'+x[0]+'" aria-pressed="'+String(active)+'"><span class="theme-choice-swatch" data-theme-preview="'+x[0]+'" aria-hidden="true"><i></i></span><span class="theme-choice-copy"><b>'+esc(x[1])+'</b><small>'+esc(x[2])+'</small></span><span class="theme-choice-check" aria-hidden="true">'+(active?'✓':'')+'</span></button>';}).join('');$('v7-logging-actions').innerHTML='<button class="v7-setting-toggle" type="button" data-v7-setting="rir" aria-pressed="'+String(!!S.settings.rir)+'"><span>'+esc(v7c('rir'))+'</span><b>'+(S.settings.rir?'ON':'OFF')+'</b></button><button class="v7-setting-toggle" type="button" data-v7-setting="rpe" aria-pressed="'+String(!!S.settings.rpe)+'"><span>'+esc(v7c('rpe'))+'</span><b>'+(S.settings.rpe?'ON':'OFF')+'</b></button>';$('v7-coach-actions').innerHTML='<button class="v7-setting-toggle" type="button" data-v7-coach aria-pressed="'+String(!!S.coachOn)+'"><span>'+esc(v7c('coachOn'))+'</span><b>'+(S.coachOn?'ON':'OFF')+'</b></button>';$('v7-data-actions').innerHTML='<button class="btn btn-solid btn-sm" type="button" data-v7-data="export">'+esc(v7c('export'))+'</button><button class="btn btn-solid btn-sm" type="button" data-v7-data="import">'+esc(v7c('import'))+'</button><button class="btn btn-quiet btn-sm btn-danger" type="button" data-v7-data="clear">'+esc(v7c('clear'))+'</button>';
+    ];
+    $('v7-theme-actions').innerHTML=themes.map(function(x){var active=S.theme===x[0];return'<button class="theme-choice" type="button" data-v7-theme="'+x[0]+'" aria-pressed="'+String(active)+'"><span class="theme-choice-swatch" data-theme-preview="'+x[0]+'" aria-hidden="true"><i></i></span><span class="theme-choice-copy"><b>'+esc(x[1])+'</b><small>'+esc(x[2])+'</small></span><span class="theme-choice-check" aria-hidden="true">'+(active?'✓':'')+'</span></button>';}).join('');
+    if($('v10-reading-actions')){
+      var reading=[
+        ['balanced',S.lang==='en'?'Balanced':'Сбалансировано',S.lang==='en'?'Flagship default':'Оптимальный баланс плотности и чтения'],
+        ['comfortable',S.lang==='en'?'Comfort':'Комфорт',S.lang==='en'?'Slightly larger text and controls':'Крупнее текст и элементы управления'],
+        ['large',S.lang==='en'?'Large':'Крупно',S.lang==='en'?'Maximum readability':'Максимум читаемости']
+      ];
+      $('v10-reading-actions').innerHTML=reading.map(function(x){var active=S.settings.reading===x[0];return'<button class="reading-choice" type="button" data-v10-reading="'+x[0]+'" aria-pressed="'+String(active)+'"><span><b>'+esc(x[1])+'</b><small>'+esc(x[2])+'</small></span><i aria-hidden="true">'+(active?'✓':'')+'</i></button>';}).join('');
+    }
+    $('v7-logging-actions').innerHTML='<button class="v7-setting-toggle" type="button" data-v7-setting="rir" aria-pressed="'+String(!!S.settings.rir)+'"><span>'+esc(v7c('rir'))+'</span><b>'+(S.settings.rir?'ON':'OFF')+'</b></button><button class="v7-setting-toggle" type="button" data-v7-setting="rpe" aria-pressed="'+String(!!S.settings.rpe)+'"><span>'+esc(v7c('rpe'))+'</span><b>'+(S.settings.rpe?'ON':'OFF')+'</b></button>';
+    $('v7-coach-actions').innerHTML='<button class="v7-setting-toggle" type="button" data-v7-coach aria-pressed="'+String(!!S.coachOn)+'"><span>'+esc(v7c('coachOn'))+'</span><b>'+(S.coachOn?'ON':'OFF')+'</b></button>';
+    $('v7-data-actions').innerHTML='<button class="btn btn-solid btn-sm" type="button" data-v7-data="export">'+esc(v7c('export'))+'</button><button class="btn btn-solid btn-sm" type="button" data-v7-data="import">'+esc(v7c('import'))+'</button><button class="btn btn-quiet btn-sm btn-danger" type="button" data-v7-data="clear">'+esc(v7c('clear'))+'</button>';
   }
   function renderV7Nav(){qsa('[data-v7-nav]').forEach(function(el){el.textContent=v7c(el.dataset.v7Nav);});var moreSub={program:S.lang==='en'?'Weekly structure and the next workout':'Структура недели и следующая тренировка',nutrition:S.lang==='en'?'Calories, macros and feedback':'Калории, макросы и обратная связь',knowledge:S.lang==='en'?'Practical contextual guides':'Практические разборы по контексту',method:S.lang==='en'?'Decision framework':'Логика принятия решений',settings:S.lang==='en'?'Interface, logging and data':'Интерфейс, логирование и данные',about:S.lang==='en'?'Author and system boundaries':'Автор и границы системы'};qsa('[data-v7-more]').forEach(function(el){el.textContent=v7c(el.dataset.v7More);});qsa('[data-v7-more-sub]').forEach(function(el){el.textContent=moreSub[el.dataset.v7MoreSub]||'';});var mt=qs('[data-v7-mobile-title]');if(mt)mt.textContent=v7c('moreTitle');}
   function v7FocusRoute(route){var el=$(route==='home'&&!v7Returning()? 'hero-title' : route==='home'?'v7-home-title': route==='more'?'v7-more-title':route==='settings'?'v7-settings-title':route+'-title');if(el){el.setAttribute('tabindex','-1');requestAnimationFrame(function(){try{el.focus({preventScroll:true});}catch(e){}var anchor=el.closest('section')||el;anchor.scrollIntoView({block:'start',behavior:'auto'});});}else window.scrollTo(0,0);}
@@ -6461,10 +6604,31 @@
     else if(route==='program'&&S.plan&&S.plan.days){meta=(S.plan.completedDays||[]).length+' / '+S.plan.days.length+' '+(S.lang==='en'?'sessions this week':'тренировок на этой неделе');}
     return{k:base[0],t:v7c(route)||route,m:meta};
   }
+  function renderV10ContextAction(route){
+    var host=$('v10-context-actions');if(!host)return;
+    var html='';
+    if(route==='home'){
+      var next=v7NextAction();html='<button class="btn btn-primary btn-sm" type="button" data-v7-action="'+esc(next.type)+'"'+(next.day!=null?' data-v7-day="'+next.day+'"':'')+'>'+esc(next.title)+'</button>';
+    }else if(route==='library'){
+      html=S.workout.length?'<button class="btn btn-primary btn-sm" type="button" data-v7-route="workout">'+esc((S.lang==='en'?'Workout':'Тренировка')+' · '+S.workout.length)+'</button>':'<button class="btn btn-primary btn-sm" type="button" data-v10-focus="search">'+esc(S.lang==='en'?'Search exercises':'Найти упражнение')+'</button>';
+    }else if(route==='workout'){
+      var total=S.workout.reduce(function(a,w){return a+(Number(w.sets)||0);},0),done=S.workout.reduce(function(a,w){return a+completedSetCount(w);},0);
+      html=S.workout.length?'<button class="btn btn-primary btn-sm" type="button" data-v7-action="'+(done&&done<total?'resume':'run')+'">'+esc(done&&done<total?(S.lang==='en'?'Resume':'Продолжить'):(S.lang==='en'?'Start Run Mode':'Начать Run Mode'))+'</button>':'<button class="btn btn-primary btn-sm" type="button" data-v7-route="library">'+esc(S.lang==='en'?'Build workout':'Собрать тренировку')+'</button>';
+    }else if(route==='program'){
+      var p=v7NextPlanDay();html=S.plan&&p>=0?'<button class="btn btn-primary btn-sm" type="button" data-v7-action="planDay" data-v7-day="'+p+'">'+esc(S.lang==='en'?'Start next day':'Начать следующий день')+'</button>':'<button class="btn btn-primary btn-sm" type="button" data-v10-focus="p-goal">'+esc(S.lang==='en'?'Build programme':'Собрать программу')+'</button>';
+    }else if(route==='progress'){
+      html='<button class="btn btn-primary btn-sm" type="button" data-v10-focus="g-weight">'+esc(S.lang==='en'?'Add check-in':'Добавить check-in')+'</button>';
+    }else if(route==='nutrition'){
+      html='<button class="btn btn-primary btn-sm" type="button" data-v10-focus="k-weight">'+esc(S.lang==='en'?'Calculate target':'Рассчитать ориентир')+'</button>';
+    }
+    host.innerHTML=html;
+    host.hidden=!html;
+  }
   function renderV8Shell(route,animate){
     route=route||v7RouteFromHash();var returning=v7Returning();document.body.dataset.v8Returning=returning?'true':'false';document.body.dataset.v8Ready='true';
     var meta=v8RouteMeta(route),k=$('v8-context-kicker'),t8=$('v8-context-title'),m8=$('v8-context-meta'),lt=$('v8-context-local-text');
     if(k)k.textContent=meta.k;if(t8)t8.textContent=meta.t;if(m8)m8.textContent=meta.m;if(lt)lt.textContent=S.lang==='en'?'Saved on this device':'Сохранено на устройстве';
+    renderV10ContextAction(route);
     qsa('[data-v8-rail]').forEach(function(a){var on=a.dataset.v8Rail===route||(route!=='home'&&route!=='library'&&route!=='workout'&&route!=='progress'&&a.dataset.v8Rail==='more');if(on)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');});
     if(animate&&!REDUCED_MOTION.matches){var target=route==='home'&&returning?$('home'):(route==='home'?qs('.hero'):$(route));if(target){target.classList.remove('v8-route-enter');requestAnimationFrame(function(){target.classList.add('v8-route-enter');setTimeout(function(){target.classList.remove('v8-route-enter');},280);});}}
   }
@@ -6481,16 +6645,36 @@
     ensureMobileAppNav();renderV7All();initV8Keyboard();
     window.addEventListener('hashchange',function(){applyV7Route(true);track('home_action',{route:v7RouteFromHash()});});
     window.addEventListener('hashchange',function(){var route=v7RouteFromHash();if(dataRouteNeedsLibrary(route))ensureData().then(refreshDataDependentUI);});
-    document.addEventListener('click',function(e){var startRun=e.target.closest('[data-v8-start-run]');if(startRun){e.preventDefault();openRun();return;}var r=e.target.closest('a[data-v7-route],button[data-v7-route]');if(r){e.preventDefault();navigateV7(r.dataset.v7Route,true);return;}var a=e.target.closest('[data-v7-action]');if(a){var type=a.dataset.v7Action;if(type==='resume'||type==='run')openRun();else if(type==='planDay')startPlanDayV7(Number(a.dataset.v7Day)||0,true);else if(type==='profile'){navigateV7('home',false);var panel=qs('.hero-panel');if(panel){panel.scrollIntoView({block:'start'});var first=qs('.console-opt',panel);if(first)first.focus();}}else if(type==='checkin'){navigateV7('progress',true);setTimeout(function(){if($('g-weight'))$('g-weight').focus();},80);}else navigateV7(V7_ROUTE_IDS[type]?type:(type==='program'?'program':'library'),true);track('home_action',{action:type});return;}var th=e.target.closest('[data-v7-theme]');if(th){S.theme=th.dataset.v7Theme;applyTheme();renderV7Settings();return;}var st=e.target.closest('[data-v7-setting]');if(st){var key=st.dataset.v7Setting;S.settings[key]=!S.settings[key];saveSettings();renderV7Settings();if(runOpen())renderRun();return;}if(e.target.closest('[data-v7-coach]')){$('coach-switch').click();renderV7Settings();return;}var data=e.target.closest('[data-v7-data]');if(data){var map={export:'data-export',import:'data-import',clear:'data-clear'};var target=$(map[data.dataset.v7Data]);if(target)target.click();return;}},true);
+    document.addEventListener('click',function(e){var startRun=e.target.closest('[data-v8-start-run]');if(startRun){e.preventDefault();openRun();return;}var r=e.target.closest('a[data-v7-route],button[data-v7-route]');if(r){e.preventDefault();navigateV7(r.dataset.v7Route,true);return;}var a=e.target.closest('[data-v7-action]');if(a){var type=a.dataset.v7Action;if(type==='resume'||type==='run')openRun();else if(type==='planDay')startPlanDayV7(Number(a.dataset.v7Day)||0,true);else if(type==='profile'){navigateV7('home',false);var panel=qs('.hero-panel');if(panel){panel.scrollIntoView({block:'start'});var first=qs('.console-opt',panel);if(first)first.focus();}}else if(type==='checkin'){navigateV7('progress',true);setTimeout(function(){if($('g-weight'))$('g-weight').focus();},80);}else navigateV7(V7_ROUTE_IDS[type]?type:(type==='program'?'program':'library'),true);track('home_action',{action:type});return;}var th=e.target.closest('[data-v7-theme]');if(th){S.theme=th.dataset.v7Theme;applyTheme();renderV7Settings();return;}var rd=e.target.closest('[data-v10-reading]');if(rd){var reading=rd.dataset.v10Reading;if(['balanced','comfortable','large'].indexOf(reading)!==-1){S.settings.reading=reading;saveSettings();applyReadability();renderV7Settings();}return;}var focusTarget=e.target.closest('[data-v10-focus]');if(focusTarget){var focusEl=$(focusTarget.dataset.v10Focus);if(focusEl){focusEl.scrollIntoView({block:'center',behavior:REDUCED_MOTION.matches?'auto':'smooth'});window.setTimeout(function(){try{focusEl.focus({preventScroll:true});}catch(_e){}},REDUCED_MOTION.matches?0:220);}return;}var st=e.target.closest('[data-v7-setting]');if(st){var key=st.dataset.v7Setting;S.settings[key]=!S.settings[key];saveSettings();renderV7Settings();if(runOpen())renderRun();return;}if(e.target.closest('[data-v7-coach]')){$('coach-switch').click();renderV7Settings();return;}var data=e.target.closest('[data-v7-data]');if(data){var map={export:'data-export',import:'data-import',clear:'data-clear'};var target=$(map[data.dataset.v7Data]);if(target)target.click();return;}},true);
     if(window.MutationObserver){var mo=new MutationObserver(function(){renderV7Home();syncV7Floating();});['workout-list','hist','prog-out','plan-out'].forEach(function(id){var el=$(id);if(el)mo.observe(el,{childList:true,subtree:false,attributes:true,attributeFilter:['data-filled']});});}
     applyV7Route(false);window.mmgV7={navigate:navigateV7,get route(){return v7RouteFromHash();},render:renderV7All};window.mmgV8=window.mmgV7;
   }
 
+  function renderV10WorkoutBalance(){
+    var host=$('v10-workout-balance');if(!host)return;
+    var rows=S.workout.map(function(w){return{w:w,ex:BY_ID[w.id]};}).filter(function(r){return !!r.ex;});
+    if(!rows.length){host.hidden=true;host.innerHTML='';return;}
+    var totalSets=rows.reduce(function(a,r){return a+(Number(r.w.sets)||0);},0);
+    var zoneSets=Object.create(null),compound=0;
+    rows.forEach(function(r){zoneSets[r.ex.zone]=(zoneSets[r.ex.zone]||0)+(Number(r.w.sets)||0);if(exKind(r.ex)==='compound')compound++;});
+    var ordered=Object.keys(zoneSets).sort(function(a,b){return zoneSets[b]-zoneSets[a];});
+    var top=ordered[0],topSets=top?zoneSets[top]:0;
+    var high=topSets>14;
+    var focused=ordered.length===1&&rows.length>=4;
+    var status=high?(S.lang==='en'?'Volume concentrated':'Объём сильно сконцентрирован'):(focused?(S.lang==='en'?'Focused session':'Фокусная сессия'):(S.lang==='en'?'Balanced structure':'Сбалансированная структура'));
+    var state=high?'watch':'ok';
+    host.hidden=false;
+    host.innerHTML='<div class="v10-balance-head"><div><span class="eyebrow">'+esc(S.lang==='en'?'SESSION STRUCTURE':'СТРУКТУРА СЕССИИ')+'</span><b>'+esc(status)+'</b></div><span class="signal" data-state="'+state+'">'+esc(totalSets+' '+v7c('sets'))+'</span></div>'+
+      '<div class="v10-balance-metrics"><div><span>'+esc(S.lang==='en'?'Compound':'Составные')+'</span><strong>'+Math.round(compound/rows.length*100)+'%</strong></div><div><span>'+esc(S.lang==='en'?'Body areas':'Зоны тела')+'</span><strong>'+ordered.length+'</strong></div><div><span>'+esc(S.lang==='en'?'Estimated time':'Оценка времени')+'</span><strong>'+Math.max(10,round(totalSets*2.6+rows.length*2))+' '+esc(S.lang==='en'?'min':'мин')+'</strong></div></div>'+
+      '<div class="v10-zone-load">'+ordered.slice(0,4).map(function(z){var pct=Math.round(zoneSets[z]/Math.max(1,totalSets)*100);return'<span><b>'+esc(labelZone(z))+'</b><i><u style="width:'+pct+'%"></u></i><em>'+zoneSets[z]+'</em></span>';}).join('')+'</div>'+
+      (high?'<p class="small">'+esc(S.lang==='en'?'One body area carries more than 14 planned sets. Check whether every exercise is necessary before adding more volume.':'На одну зону приходится больше 14 запланированных подходов. Проверь, действительно ли нужны все упражнения, прежде чем добавлять объём.')+'</p>':'');
+  }
+
   /* Wrap proven renderers instead of duplicating business logic. */
   var _renderSystemV7=renderSystem;renderSystem=function(){_renderSystemV7();if(document.body&&document.body.dataset.v7Ready==='true')applyV7Route(false);};
-  var _renderWorkoutV7=renderWorkout;renderWorkout=function(){_renderWorkoutV7();addProgressionAdviceV7();renderV7Home();};
+  var _renderWorkoutV7=renderWorkout;renderWorkout=function(){_renderWorkoutV7();addProgressionAdviceV7();renderV10WorkoutBalance();renderV7Home();if(document.body&&document.body.dataset.v8Ready==='true')renderV8Shell(v7RouteFromHash(),false);};
   var _renderHistoryV7=renderHistory;renderHistory=function(){_renderHistoryV7();renderV7Home();};
-  var _renderProgressV7=renderProgress;renderProgress=function(){_renderProgressV7();renderV7Home();};
+  var _renderProgressV7=renderProgress;renderProgress=function(){_renderProgressV7();renderV7Home();if(document.body&&document.body.dataset.v8Ready==='true')renderV8Shell(v7RouteFromHash(),false);};
   var _renderRunV7=renderRun;renderRun=function(){_renderRunV7();renderV7RunAdvanced();};
   var _openExerciseProductOSV7=openExercise;openExercise=function(id,trigger,silent){var result=_openExerciseProductOSV7(id,trigger,silent);renderV7ExerciseHistory(id);return result;};
   var _decorateKbjuProductOSV7=decorateKbju;decorateKbju=function(ctx){var result=_decorateKbjuProductOSV7(ctx);renderV7NutritionContext(ctx);renderV7Home();return result;};
@@ -6502,7 +6686,8 @@
 
   async function init() {
     var initialRoute = (location.hash || '#home').slice(1).split('?')[0];
-    var needsData = dataRouteNeedsLibrary(initialRoute);
+    var hasPersistedExerciseState = !!(store.get(K.fav) || store.get(K.workout) || store.get(K.plan));
+    var needsData = dataRouteNeedsLibrary(initialRoute) || hasPersistedExerciseState;
     if (needsData) window.dispatchEvent(new CustomEvent('mmg:stage', { detail: { key: 'data' } }));
     var contentLoaded = await loadContent();
     var dataLoaded = needsData ? await ensureData() : true;

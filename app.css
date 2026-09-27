@@ -4266,3 +4266,152 @@ html[data-theme="ivory"] .modal-media-expand{
 @media(prefers-reduced-motion:reduce){
   .btn,.card,.v7-command,.v7-context-card{transition:none}
 }
+
+
+/* 22. FLAGSHIP 10/10 ---------------------------------------------------------
+   Final product pass: readable information density, decisive context actions,
+   weekly feedback, persistent programme editing and clearer training structure. */
+html[data-reading="balanced"]{font-size:100%}
+html[data-reading="comfortable"]{font-size:104%}
+html[data-reading="large"]{font-size:108%}
+
+.hero h1,.section-head h2,.v7-page-head h1,.v7-next-title,.v8-output-title,
+.modal-head h2,.gym-tool-card h2,.plan-day-head b{text-wrap:balance}
+p,.lede,.small,.tiny,.note,.v7-next-copy,.theme-choice-copy small{text-wrap:pretty}
+
+/* Raise the information floor: nothing important should look like legal copy. */
+.card-target,.card-badge,.card-specs span,.results-insights em,
+.filter-group summary,.workout-kpi span,.workout-fields label,.intel-metric span,
+.modal-section-kicker,.modal-kicker,.run-tech-cues span,.v8-context-kicker,
+.v7-context-card>span,.v7-command small,.theme-choice-copy small,
+.section-brief-meta span,.form-section-label,.v8-more-label,.workout-sub .meta-tag,
+.v10-plan-status,.prog-axis{font-size:max(.64rem,10.25px)}
+.tiny{font-size:max(.69rem,11px)}
+.small{font-size:max(.78rem,12.5px)}
+
+.input,.select,textarea,.btn,.icon-btn{min-height:42px}
+.btn-sm{min-height:38px}
+.filter-btn{font-size:.73rem}
+.card-title{font-size:1rem}
+.card-meta{line-height:1.45}
+
+/* Context bar: status + one useful action, never a dead header. */
+.v8-context-side{gap:10px}
+.v10-context-actions{display:flex;align-items:center;justify-content:flex-end;min-width:0}
+.v10-context-actions[hidden]{display:none}
+.v10-context-actions .btn{white-space:nowrap;box-shadow:none}
+
+/* Weekly pulse on Today. */
+.v10-home-pulse{
+  display:grid;
+  gap:14px;
+  margin:18px 0 20px;
+  padding:16px;
+  border:1px solid var(--v8-line);
+  border-radius:var(--premium-radius-panel);
+  background:var(--premium-panel);
+  box-shadow:var(--premium-shadow-card);
+}
+.v10-pulse-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+.v10-pulse-head>div{display:grid;gap:3px}
+.v10-pulse-head .eyebrow{margin:0;color:var(--v8-text-3);font-size:.64rem}
+.v10-pulse-head b{font-size:1rem;letter-spacing:-.02em}
+.v10-pulse-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border:1px solid var(--v8-line);border-radius:12px;overflow:hidden}
+.v10-pulse-metrics>div{display:grid;gap:4px;min-width:0;padding:12px;border-right:1px solid var(--v8-line);background:color-mix(in srgb,var(--v8-surface) 64%,transparent)}
+.v10-pulse-metrics>div:last-child{border-right:0}
+.v10-pulse-metrics span{color:var(--v8-text-3);font-size:.66rem;font-weight:720}
+.v10-pulse-metrics strong{color:var(--v8-text);font-size:1.08rem;font-weight:830;letter-spacing:-.025em}
+.v10-pulse-metrics small{min-width:0;color:var(--v8-text-2);font-size:.67rem;line-height:1.35}
+.v10-week-timeline{display:grid;grid-template-columns:repeat(auto-fit,minmax(72px,1fr));gap:7px}
+.v10-week-timeline button,.v10-pulse-empty{
+  min-height:48px;border:1px solid var(--v8-line);border-radius:10px;background:color-mix(in srgb,var(--v8-surface) 72%,transparent);color:var(--v8-text-2);font:inherit;cursor:pointer
+}
+.v10-week-timeline button{display:grid;grid-template-columns:24px 1fr;align-items:center;gap:7px;padding:7px 9px;text-align:left}
+.v10-week-timeline i{display:grid;place-items:center;width:24px;height:24px;border-radius:7px;background:var(--v8-workspace);color:var(--v8-text);font-size:.65rem;font-style:normal;font-weight:820}
+.v10-week-timeline span{font-size:.65rem;font-weight:720}
+.v10-week-timeline button[data-state="current"]{border-color:color-mix(in srgb,var(--v8-signal) 45%,var(--v8-line));background:var(--v8-signal-soft);color:var(--v8-text)}
+.v10-week-timeline button[data-state="current"] i{background:var(--v8-signal);color:var(--color-accent-ink)}
+.v10-week-timeline button[data-state="done"]{color:var(--v8-text-3)}
+.v10-week-timeline button[data-state="done"] i{background:color-mix(in srgb,var(--color-success) 18%,var(--v8-surface));color:var(--color-success)}
+.v10-pulse-empty{padding:0 12px;text-align:left;width:100%}
+
+/* Workout balance: volume distribution is visible before pressing Start. */
+.v10-workout-balance{
+  display:grid;gap:12px;margin:0 0 16px;padding:14px;border:1px solid var(--v8-line);border-radius:14px;background:var(--premium-panel);box-shadow:var(--premium-shadow-card)
+}
+.v10-workout-balance[hidden]{display:none}
+.v10-balance-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}
+.v10-balance-head>div{display:grid;gap:2px}.v10-balance-head .eyebrow{margin:0;font-size:.62rem;color:var(--v8-text-3)}
+.v10-balance-head b{font-size:.92rem}
+.v10-balance-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+.v10-balance-metrics>div{display:grid;gap:4px;padding:9px 10px;border:1px solid var(--v8-line);border-radius:9px;background:color-mix(in srgb,var(--v8-surface) 70%,transparent)}
+.v10-balance-metrics span{font-size:.63rem;color:var(--v8-text-3);font-weight:700}.v10-balance-metrics strong{font-size:.86rem}
+.v10-zone-load{display:grid;gap:7px}
+.v10-zone-load>span{display:grid;grid-template-columns:minmax(90px,160px) minmax(80px,1fr) 28px;align-items:center;gap:9px}
+.v10-zone-load b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--v8-text-2);font-size:.66rem;font-weight:700}
+.v10-zone-load i{height:5px;overflow:hidden;border-radius:99px;background:color-mix(in srgb,var(--v8-line-strong) 58%,transparent)}
+.v10-zone-load u{display:block;height:100%;border-radius:inherit;background:var(--v8-signal);text-decoration:none}
+.v10-zone-load em{font-size:.65rem;color:var(--v8-text-3);font-style:normal;font-variant-numeric:tabular-nums;text-align:right}
+.v10-empty-actions{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:12px}
+
+/* Programme: persistent, status-driven and directly editable. */
+.v10-plan-hero{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:18px;align-items:end;margin-bottom:16px}
+.v10-plan-progress{display:grid;grid-template-columns:auto auto;gap:2px 8px;align-items:baseline;min-width:170px}
+.v10-plan-progress strong{font-size:1.25rem;font-weight:850;color:var(--v8-text)}
+.v10-plan-progress span{font-size:.65rem;color:var(--v8-text-3)}
+.v10-plan-progress i{grid-column:1/-1;position:relative;height:5px;margin-top:5px;overflow:hidden;border-radius:99px;background:var(--v8-line)}
+.v10-plan-progress i::after{content:"";position:absolute;inset:0 auto 0 0;width:var(--v10-plan-progress);border-radius:inherit;background:var(--v8-signal)}
+.v10-plan-day{overflow:hidden;border-color:var(--v8-line)!important;background:color-mix(in srgb,var(--v8-surface) 68%,transparent)}
+.v10-plan-day[data-state="current"]{border-color:color-mix(in srgb,var(--v8-signal) 42%,var(--v8-line))!important;background:color-mix(in srgb,var(--v8-signal-soft) 70%,var(--v8-surface))}
+.v10-plan-day[data-state="done"]{opacity:.78}
+.v10-plan-day .plan-day-head>div{display:flex;align-items:center;gap:8px;min-width:0}
+.v10-plan-status{display:inline-flex;align-items:center;min-height:22px;padding:2px 6px;border:1px solid var(--v8-line);border-radius:999px;color:var(--v8-text-3);font-weight:760;white-space:nowrap}
+.v10-plan-day[data-state="current"] .v10-plan-status{border-color:color-mix(in srgb,var(--v8-signal) 32%,var(--v8-line));background:var(--v8-signal-soft);color:var(--v8-signal-hi)}
+.v10-plan-day[data-state="done"] .v10-plan-status{color:var(--color-success)}
+.v10-plan-exercises{display:grid}
+.v10-plan-guidance{display:grid;gap:8px;margin-top:14px}
+.v10-plan-actions{margin-top:14px;display:flex;flex-wrap:wrap;gap:8px}
+.plan-ex-tools{opacity:.78}.plan-ex:hover .plan-ex-tools,.plan-ex:focus-within .plan-ex-tools{opacity:1}
+
+/* Progress chart is now a multi-signal view, not a weight-only widget. */
+.v10-progress-tabs{display:inline-flex;gap:4px;margin:0 0 10px;padding:3px;border:1px solid var(--v8-line);border-radius:10px;background:color-mix(in srgb,var(--v8-surface) 68%,transparent)}
+.v10-progress-tabs button{min-height:32px;padding:0 10px;border:0;border-radius:7px;background:transparent;color:var(--v8-text-2);font:700 .68rem/1 var(--font-ui);cursor:pointer}
+.v10-progress-tabs button[aria-pressed="true"]{background:var(--v8-raised);color:var(--v8-text);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.v10-chart-empty{display:grid;place-items:start;gap:4px;min-height:118px;padding:18px;border:1px dashed var(--v8-line-strong);border-radius:12px;background:color-mix(in srgb,var(--v8-surface) 50%,transparent)}
+
+/* Readability preferences are explicit and immediately previewable. */
+#v10-reading-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+.reading-choice{min-height:66px;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px;padding:8px 9px;border:1px solid var(--v8-line);border-radius:10px;background:color-mix(in srgb,var(--v8-surface) 72%,transparent);color:var(--v8-text);font:inherit;text-align:left;cursor:pointer}
+.reading-choice>span{min-width:0;display:grid;gap:3px}
+.reading-choice>i{font-style:normal;color:var(--v8-signal);font-weight:850}
+.reading-choice:hover{border-color:color-mix(in srgb,var(--v8-signal) 28%,var(--v8-line));background:var(--premium-panel-raised)}
+.reading-choice[aria-pressed="true"]{border-color:color-mix(in srgb,var(--v8-signal) 42%,var(--v8-line));background:var(--v8-signal-soft)}
+.reading-choice b{font-size:.74rem}.reading-choice small{color:var(--v8-text-3);font-size:.63rem;line-height:1.35}
+
+@media(max-width:1024px){
+  .v10-pulse-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .v10-pulse-metrics>div:nth-child(2){border-right:0}.v10-pulse-metrics>div:nth-child(-n+2){border-bottom:1px solid var(--v8-line)}
+  .v10-plan-hero{grid-template-columns:1fr}.v10-plan-progress{max-width:280px}
+}
+@media(max-width:840px){
+  html[data-reading="comfortable"]{font-size:102%}
+  html[data-reading="large"]{font-size:105%}
+  .v10-context-actions{display:none}
+  .v10-home-pulse{padding:12px;margin-block:12px 16px}
+  .v10-pulse-metrics{grid-template-columns:1fr 1fr}
+  .v10-week-timeline{grid-template-columns:repeat(auto-fit,minmax(64px,1fr))}
+  .v10-week-timeline button{grid-template-columns:1fr;justify-items:center;text-align:center;gap:4px}
+  .v10-balance-metrics{grid-template-columns:1fr 1fr 1fr}
+  .v10-plan-day .plan-day-head>div{align-items:flex-start;flex-direction:column}
+  #v10-reading-actions{grid-template-columns:1fr}
+  .reading-choice{min-height:56px}
+}
+@media(max-width:520px){
+  .v10-pulse-head,.v10-balance-head{align-items:flex-start}
+  .v10-pulse-metrics{grid-template-columns:1fr}
+  .v10-pulse-metrics>div{border-right:0;border-bottom:1px solid var(--v8-line)}
+  .v10-pulse-metrics>div:last-child{border-bottom:0}
+  .v10-balance-metrics{grid-template-columns:1fr 1fr}.v10-balance-metrics>div:last-child{grid-column:1/-1}
+  .v10-zone-load>span{grid-template-columns:minmax(80px,120px) minmax(60px,1fr) 24px}
+  .v10-plan-actions .btn{flex:1 1 calc(50% - 4px)}
+}
