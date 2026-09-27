@@ -111,9 +111,9 @@ export function proteinTarget({ weightKg, goal = 'maintain', leanMassKg = null }
   const lean = positive(leanMassKg);
   if (!weight) return null;
   const basis = lean || weight;
-  const low = goal === 'loss' ? 2.0 : 1.6;
-  const high = goal === 'loss' ? 2.4 : 2.2;
-  return { lowGrams: round(basis * low), highGrams: round(basis * high), basis: lean ? 'lean-mass' : 'body-weight' };
+  const low = goal === 'loss' ? (lean ? 2.3 : 1.8) : 1.4;
+  const high = goal === 'loss' ? (lean ? 3.1 : 2.7) : 2.0;
+  return { lowGrams: round(basis * low), highGrams: round(basis * high), basis: lean ? 'lean-mass' : 'body-weight', gramsPerKg: [low, high] };
 }
 
 export function macroPlan({ calories, proteinGrams, fatGrams } = {}) {
