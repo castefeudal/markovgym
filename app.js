@@ -1210,7 +1210,7 @@
     if (!preset) return;
     resetFilters(false);
     if (preset.zones) S.zones = preset.zones.slice();
-    if (preset.equipment) S.equipment = preset.equipment.slice();
+    if (preset.equipment) S.equipment = preset.equipment.filter(function (value) { return EQUIPMENT.indexOf(value) !== -1; });
     if (preset.favOnly) S.favOnly = true;
     renderFilters(); renderResults(); scrollToLibrary();
   }
