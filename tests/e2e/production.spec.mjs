@@ -231,6 +231,7 @@ test('readability choice persists and progress supports multiple chart signals',
     ]));
   });
   await page.goto('/index.html#progress');
+  await page.reload();
   await expect(page.locator('#mmg-boot')).toHaveCount(0);
   await expect(page.locator('[data-progress-metric="weight"]')).toHaveAttribute('aria-pressed', 'true');
   await page.locator('[data-progress-metric="waist"]').click();
