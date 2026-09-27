@@ -9,8 +9,8 @@ const structuredData = {
   operatingSystem: 'Web',
   isAccessibleForFree: true,
   inLanguage: ['ru', 'en'],
-  description: 'Локальный тренировочный журнал с библиотекой упражнений, Run Mode, прогрессом, программой и инструментами расчёта нагрузки.',
-  featureList: ['Библиотека упражнений', 'Конструктор тренировки', 'Run Mode и таймер отдыха', 'КБЖУ', 'Прогресс', 'Инструменты зала'],
+  description: 'Local-first система тренировок, прогрессии, питания, Run Mode, аналитики и MARKOV MADE LAB.',
+  featureList: ['Сегодня и Next Best Action', 'Библиотека 1324 упражнений', 'Конструктор тренировки', 'Run Mode и таймер отдыха', 'Программа', 'Прогресс', 'Питание', 'MARKOV MADE LAB'],
 };
 
 const bootCss = `
