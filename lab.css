@@ -4,3 +4,8 @@
 .run-progression span{color:var(--text-secondary,#aeb8c5);font-size:.8rem}
 .run-progression b{font-variant-numeric:tabular-nums;font-size:1rem}
 .run-progression p{margin:6px 0 0;color:var(--text-secondary,#aeb8c5);font-size:.82rem;line-height:1.45}
+
+#run .run-current-inputs{grid-template-columns:repeat(auto-fit,minmax(108px,1fr))}
+#run .run-current-inputs input{min-height:48px;font-variant-numeric:tabular-nums}
+#run .run-set-type{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:10px;color:var(--text-secondary,#aeb8c5);font-size:.8rem}
+#run .run-set-type select{min-height:44px;min-width:138px;padding:0 10px;border:1px solid var(--border-subtle,rgba(255,255,255,.12));border-radius:10px;background:var(--bg-elevated,#151b22);color:var(--text-primary,#f5f7fa);font:inherit}
