@@ -26,7 +26,7 @@ test('exercise GIF media uses a fresh revision and cache write failures stay non
   const sw = await read('sw.js');
   assert.match(app, /MEDIA_REVISION = '20260927-media4'/);
   assert.match(app, /\.gif\?v=' \+ MEDIA_REVISION/);
-  assert.match(sw, /2026\.09-r3-media4/);
+  assert.match(sw, /2026\.09-r5-lab1/);
   assert.match(sw, /Cache Storage is an optimisation only/);
   assert.match(sw, /ignoreSearch: true/);
 });
@@ -46,12 +46,15 @@ test('GIF previews are not gated by fine-pointer detection', async () => {
   assert.match(app, /GIF-превью работают на мыши, стилусе и гибридных\/сенсорных устройствах/);
 });
 
-test('stale markovgym service workers are reset once and shell assets are network-first', async () => {
+test('PWA update lifecycle is controlled and shell assets are network-first', async () => {
   const index = await read('index.html');
   const sw = await read('sw.js');
-  assert.match(index, /var marker = 'media4'/);
-  assert.match(index, /getRegistration\('\.\/'\)/);
-  assert.match(index, /registration\.unregister\(\)/);
+  const bootstrap = await read('bootstrap.js');
+  assert.doesNotMatch(index, /_mmgsw|registration\.unregister\(\)/);
+  assert.doesNotMatch(sw, /cache\.addAll\(PRECACHE\)\)\.then\(\(\) => self\.skipWaiting\(\)\)/);
+  assert.match(sw, /SKIP_WAITING/);
+  assert.match(bootstrap, /mmg-update/);
+  assert.match(bootstrap, /controllerchange/);
   assert.match(sw, /fetch\(request, \{ cache: 'no-store' \}\)/);
 });
 
@@ -79,8 +82,8 @@ test('exercise detail view keeps full-frame media and structured guidance', asyn
 
 test('detail assets use a cache-busting revision', async () => {
   const index = await read('index.html');
-  assert.match(index, /app\.css\?v=20260927-flagship2/);
-  assert.match(index, /app\.js\?v=20260927-flagship2/);
+  assert.match(index, /app\.css\?v=2026\.09-r5-lab1/);
+  assert.match(index, /app\.js\?v=2026\.09-r5-lab1/);
 });
 
 test('detail media box itself stays inside the visual frame and step counter increments once', async () => {
@@ -110,7 +113,7 @@ test('saved theme is hydrated before stylesheet and runtime keeps theme metadata
   const index = await read('index.html');
   const app = await read('app.js');
   const hydrate = index.indexOf("localStorage.getItem('mmg.theme.v2')");
-  const stylesheet = index.indexOf('app.css?v=20260927-flagship2');
+  const stylesheet = index.indexOf('app.css?v=2026.09-r5-lab1');
   assert.ok(hydrate >= 0 && stylesheet > hydrate, 'saved theme must resolve before stylesheet paint');
   assert.match(app, /document\.documentElement\.style\.colorScheme = S\.theme === 'obsidian' \? 'dark' : 'light'/);
   assert.match(app, /obsidian: '#070A0E', soft: '#EAF0F6', ivory: '#F6F5F1'/);
@@ -195,7 +198,7 @@ test('first paint restores readability preference before flagship stylesheet', a
   const hydration = index.indexOf("localStorage.getItem('mmg.settings.v1')");
   const stylesheet = index.indexOf('app.css?v=20260927-flagship2');
   assert.ok(hydration >= 0 && stylesheet > hydration, 'reading preference must hydrate before stylesheet paint');
-  assert.match(index, /data-app-version="2026\.09-r4"/);
+  assert.match(index, /data-app-version="2026\.09-r5-lab1"/);
 });
 
 
@@ -218,6 +221,6 @@ test('in-library quick scenarios reuse preset state and session balance flags du
   const block = css.slice(css.lastIndexOf('/* 23. FLAGSHIP LIBRARY REFINEMENT'));
   assert.match(block, /\.v10-library-quick\{/);
   assert.match(block, /\.v10-library-quick-btn\[aria-pressed="true"\]/);
-  assert.match(index, /app\.css\?v=20260927-flagship2/);
-  assert.match(index, /app\.js\?v=20260927-flagship2/);
+  assert.match(index, /app\.css\?v=2026\.09-r5-lab1/);
+  assert.match(index, /app\.js\?v=2026\.09-r5-lab1/);
 });
