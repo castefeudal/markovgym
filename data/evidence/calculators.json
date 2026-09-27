@@ -53,6 +53,35 @@
       "source": "Common submaximal-load e1RM model retained from the existing MARKOV MADE GYM calculator.",
       "evidenceLevel": "estimation-model",
       "limitations": "Accuracy varies by exercise, repetition count, proximity to failure and individual profile."
+    },
+    {
+      "id": "issn-protein-exercise-2017",
+      "name": "Protein intake for healthy exercising individuals",
+      "formulaVersion": "ISSN-2017-position",
+      "source": "Jäger R et al. International Society of Sports Nutrition Position Stand: protein and exercise. JISSN. 2017;14:20.",
+      "doi": "10.1186/s12970-017-0177-8",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/28642676/",
+      "evidenceLevel": "position-stand-review",
+      "limitations": "General athlete guidance; needs vary with total energy intake, training status, age and individual context."
+    },
+    {
+      "id": "protein-energy-restriction-helms-2014",
+      "name": "Protein during caloric restriction in resistance-trained lean athletes",
+      "formulaVersion": "2.3-3.1-g-per-kg-FFM",
+      "source": "Helms ER et al. A systematic review of dietary protein during caloric restriction in resistance trained lean athletes. Int J Sport Nutr Exerc Metab. 2014;24(2):127-138.",
+      "doi": "10.1123/ijsnem.2013-0054",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/24092765/",
+      "evidenceLevel": "systematic-review",
+      "limitations": "The FFM-based range is specifically framed for energy-restricted, resistance-trained, relatively lean athletes and should not be generalized to every user."
+    },
+    {
+      "id": "protein-weight-loss-athletes-2014",
+      "name": "Protein intake while managing athlete weight loss",
+      "formulaVersion": "1.8-2.7-g-per-kg-BW",
+      "source": "Hector AJ, Phillips SM. Protein recommendations for weight loss in elite athletes: a focus on body composition and performance. Eur J Sport Sci. 2018 guidance lineage / 2014 review evidence.",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/25014731/",
+      "evidenceLevel": "narrative-review",
+      "limitations": "Body-weight range depends on deficit severity, body composition and training; it is a planning range rather than an individual requirement."
     }
   ]
 }
