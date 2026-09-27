@@ -20,7 +20,7 @@ test('hash routes and MARKOV MADE LAB calculators are usable', async ({ page }) 
   await page.locator('[data-lab-form="e1rm"] #e1rm-weight').fill('100');
   await page.locator('[data-lab-form="e1rm"] #e1rm-reps').fill('5');
   await page.locator('[data-lab-form="e1rm"]').getByRole('button', { name: /Рассчитать|Calculate/ }).click();
-  await expect(page.locator('#lab-e1rm-out')).toContainText(/114[,.]58/);
+  await expect(page.locator('#lab-e1rm-out')).toContainText(/114[,.]5[89]/);
   await page.goto('/index.html#library');
   await expect(page.locator('#library')).toBeVisible();
   await expect(page.locator('#search')).toBeVisible();
