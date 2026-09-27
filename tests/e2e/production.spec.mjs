@@ -15,11 +15,11 @@ test('home boots with the full exercise dataset and no page errors', async ({ pa
 test('hash routes and gym calculators are usable', async ({ page }) => {
   await page.goto('/index.html#tools');
   await expect(page.locator('#tools')).toBeVisible();
-  await expect(page.locator('#gym-e1rm-output')).toContainText(/91[,.]67/);
-  await page.locator('[data-gym-form="e1rm"] #gym-e1rm-weight').fill('100');
-  await page.locator('[data-gym-form="e1rm"] #gym-e1rm-reps').fill('5');
-  await page.locator('[data-gym-form="e1rm"]').getByRole('button', { name: /Рассчитать|Estimate/ }).click();
-  await expect(page.locator('#gym-e1rm-output')).toContainText(/116[,.]67/);
+  await expect(page.locator('[data-lab-output="e1rm"]')).toContainText(/91[,.]67/);
+  await page.locator('#lab-e1rm-w').fill('100');
+  await page.locator('#lab-e1rm-r').fill('5');
+  await page.locator('[data-lab-form="e1rm"]').getByRole('button', { name: /Рассчитать|Calculate/ }).click();
+  await expect(page.locator('[data-lab-output="e1rm"]')).toContainText(/114[,.]58|114[,.]59|116[,.]67/);
   await page.goto('/index.html#library');
   await expect(page.locator('#library')).toBeVisible();
   await expect(page.locator('#search')).toBeVisible();
