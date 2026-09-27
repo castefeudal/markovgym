@@ -12,6 +12,7 @@ const PRECACHE = [
   './gym-tools.js',
   './tools/gym-calculators.mjs',
   './tools/lab-calculators.mjs',
+  './tools/progression.mjs',
   './data/content.json',
   './data/exercises-compact.json',
   './manifest.webmanifest',
