@@ -187,3 +187,24 @@ test('all three themes resolve coherent tokens, persist and keep library informa
     expect(resolved.cardText).not.toBe('');
   }
 });
+
+
+test('flagship library presets and workout intelligence stay actionable', async ({ page }) => {
+  await page.goto('/index.html#library');
+  await expect(page.locator('#mmg-boot')).toHaveCount(0);
+
+  await expect(page.locator('#library-quick-presets')).toBeVisible();
+  const home = page.locator('#library-quick-presets [data-preset="home"]');
+  await home.click();
+  await expect(home).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#results-count')).toContainText(/из|of|показ/i);
+
+  const context = page.locator('#v8-context-action');
+  await expect(context).toBeVisible();
+
+  await page.locator('#grid [data-add]').first().click();
+  await page.goto('/index.html#workout');
+  await expect(page.locator('#workout-intelligence')).toBeVisible();
+  await expect(page.locator('#workout-intelligence')).toContainText(/Аналитика сессии|Session intelligence/);
+  await expect(page.locator('#v8-context-action')).toContainText(/Начать тренировку|Start workout/);
+});
