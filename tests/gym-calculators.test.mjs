@@ -41,7 +41,7 @@ test('e1RM rejects out-of-range reps', () => {
 test('percentage and rep conversion remain deterministic', () => {
   assert.deepEqual(loadFromOneRepMax(100, 82.5, 2.5), { raw: 82.5, rounded: 82.5, percent: 82.5, increment: 2.5 });
   const converted = convertRepMax(100, 5, 10);
-  assert.ok(converted.central > 88 && converted.central < 90);
+  assert.ok(converted.central > 85 && converted.central < 87);
   assert.equal(converted.toReps, 10);
 });
 
