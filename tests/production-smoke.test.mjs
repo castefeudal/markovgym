@@ -10,6 +10,7 @@ test('canonical shell does not use payload bootstrap or document.write', async (
   assert.match(index, /app\.css/);
   assert.match(index, /app\.js/);
   assert.match(index, /gym-tools\.js/);
+  assert.match(index, /lab\.css/);
 });
 
 test('bootstrap subscribes before the app can emit ready', async () => {
