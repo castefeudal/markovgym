@@ -12,14 +12,15 @@ test('home boots with the full exercise dataset and no page errors', async ({ pa
   expect(failed).toEqual([]);
 });
 
-test('hash routes and gym calculators are usable', async ({ page }) => {
+test('hash routes and MARKOV MADE LAB calculators are usable', async ({ page }) => {
   await page.goto('/index.html#tools');
   await expect(page.locator('#tools')).toBeVisible();
-  await expect(page.locator('#gym-e1rm-output')).toContainText(/91[,.]67/);
-  await page.locator('[data-gym-form="e1rm"] #gym-e1rm-weight').fill('100');
-  await page.locator('[data-gym-form="e1rm"] #gym-e1rm-reps').fill('5');
-  await page.locator('[data-gym-form="e1rm"]').getByRole('button', { name: /Рассчитать|Estimate/ }).click();
-  await expect(page.locator('#gym-e1rm-output')).toContainText(/116[,.]67/);
+  await expect(page.locator('#gym-tools-title')).toContainText(/Расчёты|Calculations/);
+  await expect(page.locator('#lab-e1rm-out')).toContainText(/91[,.]67/);
+  await page.locator('[data-lab-form="e1rm"] #e1rm-weight').fill('100');
+  await page.locator('[data-lab-form="e1rm"] #e1rm-reps').fill('5');
+  await page.locator('[data-lab-form="e1rm"]').getByRole('button', { name: /Рассчитать|Calculate/ }).click();
+  await expect(page.locator('#lab-e1rm-out')).toContainText(/114[,.]58/);
   await page.goto('/index.html#library');
   await expect(page.locator('#library')).toBeVisible();
   await expect(page.locator('#search')).toBeVisible();
