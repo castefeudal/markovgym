@@ -149,3 +149,30 @@ test('backward-compatible local storage keys remain in application code', async 
   const app = await read('app.js');
   for (const key of ['mmg.favorites.v8', 'mmg.workout.v2', 'mmg.history.v1', 'mmg.lang.v2', 'mmg.theme.v2']) assert.match(app, new RegExp(key.replaceAll('.', '\\.')));
 });
+
+
+test('flagship product pass exposes contextual actions, quick presets and session intelligence', async () => {
+  const body = await read('app-body.html');
+  const index = await read('index.html');
+  const app = await read('app.js');
+  const css = await read('app.css');
+
+  for (const html of [body, index]) {
+    assert.match(html, /id="v8-context-action"/);
+    assert.match(html, /id="library-quick-presets"/);
+    assert.match(html, /id="workout-intelligence"/);
+  }
+
+  assert.match(app, /function renderV8ContextAction\(route\)/);
+  assert.match(app, /function renderLibraryQuickPresets\(\)/);
+  assert.match(app, /function renderWorkoutIntelligence\(\)/);
+  assert.match(app, /data-v8-focus-search/);
+
+  const block = css.slice(css.lastIndexOf('/* 22. FLAGSHIP PRODUCT PASS'));
+  assert.match(block, /\.tiny\{font-size:\.75rem/);
+  assert.match(block, /\.library-quick-row\{/);
+  assert.match(block, /\.workout-intelligence\{/);
+  assert.match(block, /\.v8-context-action\{/);
+  assert.match(index, /app\.css\?v=20260927-flagship1/);
+  assert.match(index, /app\.js\?v=20260927-flagship1/);
+});
