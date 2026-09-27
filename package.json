@@ -7,7 +7,8 @@
     "syntax": "node --check app.js && node --check bootstrap.js && node --check gym-tools.js",
     "build:index": "node scripts/build-index.mjs",
     "e2e": "playwright test",
-    "visual": "playwright test tests/e2e/visual.spec.mjs --project=desktop --workers=1"
+    "visual": "playwright test tests/e2e/visual.spec.mjs --project=desktop --workers=1",
+    "quality": "npm run syntax && npm test && npm run build:index && npm run e2e"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.10.2",
