@@ -510,6 +510,22 @@ function syncRoute() {
   if (route === 'tools') renderHistoryInsights();
 }
 
+function openLab(query = '') {
+  location.hash = '#tools';
+  const needle = String(query || '').trim().toLowerCase();
+  if (needle) {
+    search = needle;
+    const hit = qa('[data-lab-card]').find((cardEl) => cardEl.dataset.search.includes(needle));
+    if (hit) category = hit.dataset.category;
+    const input = q('#lab-search');
+    if (input) input.value = query;
+  }
+  filterCards();
+  requestAnimationFrame(() => q('#gym-tools-title')?.focus?.({ preventScroll: false }));
+}
+
+window.mmgLabOpen = openLab;
+
 function init() {
   section = document.createElement('section');
   section.id = 'tools';
