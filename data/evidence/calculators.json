@@ -78,10 +78,11 @@
       "id": "protein-weight-loss-athletes-2014",
       "name": "Protein intake while managing athlete weight loss",
       "formulaVersion": "1.8-2.7-g-per-kg-BW",
-      "source": "Hector AJ, Phillips SM. Protein recommendations for weight loss in elite athletes: a focus on body composition and performance. Eur J Sport Sci. 2018 guidance lineage / 2014 review evidence.",
+      "source": "Hector AJ, Phillips SM. Considerations for protein intake in managing weight loss in athletes. Eur J Sport Sci. 2015;15(1):21-28.",
       "url": "https://pubmed.ncbi.nlm.nih.gov/25014731/",
       "evidenceLevel": "narrative-review",
-      "limitations": "Body-weight range depends on deficit severity, body composition and training; it is a planning range rather than an individual requirement."
+      "limitations": "Body-weight range depends on deficit severity, body composition and training; it is a planning range rather than an individual requirement.",
+      "doi": "10.1080/17461391.2014.936325"
     }
   ]
 }
