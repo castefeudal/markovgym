@@ -3866,6 +3866,7 @@
     var date = $('g-date').value || todayISO();
     var weight = $('g-weight').value === '' ? null : Number($('g-weight').value);
     var waist = $('g-waist').value === '' ? null : Number($('g-waist').value);
+    var calories = $('g-calories') && $('g-calories').value !== '' ? Number($('g-calories').value) : null;
     var ok = true;
 
     if (weight !== null && (!isFinite(weight) || weight < 30 || weight > 300)) {
@@ -3874,12 +3875,15 @@
     if (waist !== null && (!isFinite(waist) || waist < 40 || waist > 200)) {
       setFieldError('g-waist', t('errRange', { min: 40, max: 200 })); ok = false;
     } else setFieldError('g-waist', '');
+    if (calories !== null && (!isFinite(calories) || calories < 500 || calories > 10000)) {
+      setFieldError('g-calories', t('errRange', { min: 500, max: 10000 })); ok = false;
+    } else if ($('g-calories')) setFieldError('g-calories', '');
     if (!ok) { showToast(t('formHasErrors')); return; }
-    if (weight === null && waist === null) { showToast(t('diaryNeedValue')); return; }
+    if (weight === null && waist === null && calories === null) { showToast(t('diaryNeedValue')); return; }
 
     var entry = {
       date: date,
-      weight:weight, waist:waist,
+      weight:weight, waist:waist, calories:calories,
       recovery:$('g-recovery-v7')?Number($('g-recovery-v7').value):null,
       sleep:$('g-sleep').value===''?null:Number($('g-sleep').value),
       mood: Number($('g-mood').value),
@@ -3896,7 +3900,7 @@
     renderProgress();
     renderDashIfVisible();
     showToast(t('diarySaved'));
-    track('progress_checkin', { has: { w: weight !== null, waist: waist !== null } });
+    track('progress_checkin', { has: { w: weight !== null, waist: waist !== null, calories: calories !== null } });
   }
 
   function diaryDelta(field, days) {
@@ -4022,6 +4026,7 @@
         var bits = [];
         if (typeof d.weight === 'number') bits.push(d.weight.toFixed(1) + ' ' + t('kg'));
         if (typeof d.waist === 'number') bits.push(d.waist.toFixed(1) + ' ' + t('cm'));
+        if (typeof d.calories === 'number') bits.push(Math.round(d.calories) + ' kcal');
         if (typeof d.sleep === 'number') bits.push(d.sleep + ' ' + t('hrs'));
         if (d.lift) bits.push(d.lift);
         return '<div class="prog-row"><span class="num">' + esc(d.date) + '</span>' +
@@ -4457,7 +4462,7 @@
     /* прогресс */
     'prog.eyebrow': 'Feedback', 'prog.title': 'My progress',
     'prog.text': 'An optional diary: weight, waist, sleep and how you feel. Entries live in this browser only — no sign-up, nothing is sent anywhere.',
-    'prog.date': 'Date', 'prog.weight': 'Weight, kg', 'prog.waist': 'Waist, cm', 'prog.sleep': 'Sleep, hours',
+    'prog.date': 'Date', 'prog.weight': 'Weight, kg', 'prog.waist': 'Waist, cm', 'prog.calories': 'Calories eaten, kcal', 'prog.sleep': 'Sleep, hours',
     'prog.mood': 'How you feel', 'prog.m5': 'Great', 'prog.m4': 'Good', 'prog.m3': 'Normal', 'prog.m2': 'Not great', 'prog.m1': 'Bad',
     'prog.hunger': 'Hunger', 'prog.hun1': 'Calm', 'prog.hun2': 'Moderate', 'prog.hun3': 'Strong',
     'prog.fatigue': 'Fatigue', 'prog.f1': 'Low', 'prog.f2': 'Medium', 'prog.f3': 'High',
@@ -5075,6 +5080,7 @@
           date: d.date.slice(0, 10),
           weight: typeof d.weight === 'number' ? d.weight : null,
           waist: typeof d.waist === 'number' ? d.waist : null,
+          calories: typeof d.calories === 'number' ? d.calories : null,
           recovery:typeof d.recovery==='number'?d.recovery:null,
           sleep:typeof d.sleep==='number'?d.sleep:null,
           mood:Number(d.mood)||3,hunger:Number(d.hunger)||2,fatigue:Number(d.fatigue)||2,
@@ -5994,7 +6000,7 @@
   }
 
   function decorateUnitInputs() {
-    var defs = { 'k-age':t('unitYears'),'k-height':t('cm'),'k-weight':t('kg'),'k-fat':t('unitPercent'),'k-waist':t('cm'),'g-weight':t('kg'),'g-waist':t('cm'),'g-sleep':t('hrs'),'c-prev':t('kg'),'c-now':t('kg') };
+    var defs = { 'k-age':t('unitYears'),'k-height':t('cm'),'k-weight':t('kg'),'k-fat':t('unitPercent'),'k-waist':t('cm'),'g-weight':t('kg'),'g-waist':t('cm'),'g-calories':'kcal','g-sleep':t('hrs'),'c-prev':t('kg'),'c-now':t('kg') };
     Object.keys(defs).forEach(function(id){
       var input=$(id); if(!input) return; var wrap=input.parentElement;
       if(!wrap.classList.contains('input-unit')){
