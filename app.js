@@ -1592,7 +1592,9 @@
 
   function cleanSetRecord(raw) {
     raw = raw && typeof raw === 'object' ? raw : {};
-    return { reps:String(raw.reps==null?'':raw.reps).slice(0,24), weight:String(raw.weight==null?'':raw.weight).slice(0,40), rir:String(raw.rir==null?'':raw.rir).slice(0,8), rpe:String(raw.rpe==null?'':raw.rpe).slice(0,8), completed:!!raw.completed, completedAt:Number(raw.completedAt)>0?Number(raw.completedAt):0 };
+    var setTypes=['warmup','working','drop','failure','backoff','amrap'];
+    var type=setTypes.indexOf(String(raw.type||'working'))!==-1?String(raw.type||'working'):'working';
+    return { reps:String(raw.reps==null?'':raw.reps).slice(0,24), weight:String(raw.weight==null?'':raw.weight).slice(0,40), rir:String(raw.rir==null?'':raw.rir).slice(0,8), rpe:String(raw.rpe==null?'':raw.rpe).slice(0,8), type:type, completed:!!raw.completed, completedAt:Number(raw.completedAt)>0?Number(raw.completedAt):0 };
   }
   function ensureSetLog(item) {
     if (!item) return [];
@@ -3390,17 +3392,17 @@
   function completeCurrentSet(){
     var item=S.workout[runState.ex]; if(!item) return false;
     var log=ensureSetLog(item), row=log[Math.max(0,runState.set-1)]; if(!row) return false;
-    var stage=$('run-stage'),repsInput=qs('[data-run-field="reps"]',stage),weightInput=qs('[data-run-field="weight"]',stage),rirInput=qs('[data-run-field="rir"]',stage),rpeInput=qs('[data-run-field="rpe"]',stage);
+    var stage=$('run-stage'),repsInput=qs('[data-run-field="reps"]',stage),weightInput=qs('[data-run-field="weight"]',stage),rirInput=qs('[data-run-field="rir"]',stage),rpeInput=qs('[data-run-field="rpe"]',stage),typeInput=qs('[data-run-set-type]',stage);
     row.reps=String(repsInput?repsInput.value:(row.reps||item.reps||'')).slice(0,24);
     row.weight=String(weightInput?weightInput.value:(row.weight||item.weight||'')).slice(0,40);
-    if(rirInput)row.rir=String(rirInput.value||'').slice(0,4); if(rpeInput)row.rpe=String(rpeInput.value||'').slice(0,4);
+    if(rirInput)row.rir=String(rirInput.value||'').slice(0,4); if(rpeInput)row.rpe=String(rpeInput.value||'').slice(0,4); if(typeInput)row.type=String(typeInput.value||'working').slice(0,12);
     row.completed=true; row.completedAt=Date.now(); item.reps=row.reps||item.reps; item.weight=row.weight||item.weight; item.done=log.every(function(x){return x.completed;}); saveWorkout(); track('set_complete',{id:item.id,set:runState.set}); return true;
   }
 
   function saveCurrentSetDraft(){
     var item=S.workout[runState.ex],stage=$('run-stage'); if(!item||!stage)return;
-    var reps=qs('[data-run-field="reps"]',stage),weight=qs('[data-run-field="weight"]',stage),rir=qs('[data-run-field="rir"]',stage),rpe=qs('[data-run-field="rpe"]',stage),log=ensureSetLog(item),row=log[Math.max(0,runState.set-1)];
-    if(!row)return; if(reps){row.reps=String(reps.value||'').slice(0,24);item.reps=row.reps||item.reps;} if(weight){row.weight=String(weight.value||'').slice(0,40);item.weight=row.weight||item.weight;} if(rir)row.rir=String(rir.value||'').slice(0,4); if(rpe)row.rpe=String(rpe.value||'').slice(0,4); saveWorkout();saveRunSession();
+    var reps=qs('[data-run-field="reps"]',stage),weight=qs('[data-run-field="weight"]',stage),rir=qs('[data-run-field="rir"]',stage),rpe=qs('[data-run-field="rpe"]',stage),type=qs('[data-run-set-type]',stage),log=ensureSetLog(item),row=log[Math.max(0,runState.set-1)];
+    if(!row)return; if(reps){row.reps=String(reps.value||'').slice(0,24);item.reps=row.reps||item.reps;} if(weight){row.weight=String(weight.value||'').slice(0,40);item.weight=row.weight||item.weight;} if(rir)row.rir=String(rir.value||'').slice(0,4); if(rpe)row.rpe=String(rpe.value||'').slice(0,4); if(type)row.type=String(type.value||'working').slice(0,12); saveWorkout();saveRunSession();
   }
   function runReferenceForCurrent(){
     var item=S.workout[runState.ex];if(!item)return null;var log=ensureSetLog(item),idx=Math.max(0,runState.set-1);
@@ -3449,6 +3451,11 @@
     var runPrimary=runTechnique.cues[0]||runTechnique.control;
     var progression=progressionCopy(progressionForItem(item));
     var progressionHtml=progression?'<div class="run-progression"><div><span>'+esc(progression.title)+'</span><b>'+esc(progression.value)+'</b></div><p>'+esc(progression.why)+'</p></div>':'';
+    var advancedInputs='';
+    if(S.settings&&S.settings.rir)advancedInputs+='<label>RIR<input type="number" inputmode="decimal" min="0" max="10" step=".5" data-run-field="rir" value="'+esc(currentSet.rir||'')+'"></label>';
+    if(S.settings&&S.settings.rpe)advancedInputs+='<label>RPE<input type="number" inputmode="decimal" min="1" max="10" step=".5" data-run-field="rpe" value="'+esc(currentSet.rpe||'')+'"></label>';
+    var setTypeLabels={warmup:S.lang==='en'?'Warm-up':'Разминка',working:S.lang==='en'?'Working':'Рабочий',drop:'Drop',failure:S.lang==='en'?'Failure':'Отказ',backoff:'Back-off',amrap:'AMRAP'};
+    var setTypeSelect='<label class="run-set-type">'+esc(S.lang==='en'?'Set type':'Тип подхода')+'<select data-run-set-type>'+Object.keys(setTypeLabels).map(function(key){return'<option value="'+key+'"'+(currentSet.type===key?' selected':'')+'>'+esc(setTypeLabels[key])+'</option>';}).join('')+'</select></label>';
     stage.innerHTML = '<div class="run-shell">' +
       '<div class="run-media-frame"><img class="run-media" src="' + esc(exMotion(ex)) + '" data-still="' + esc(exStill(ex)) + '" data-ex-media alt="" decoding="async"><span class="run-media-badge">' + esc(labelZone(ex.zone)) + '</span></div>' +
       '<div class="run-context"><div><div class="run-submeta"><span class="meta-tag">' + esc(labelMu(ex.target)) + '</span><span class="meta-tag">' + premiumIcon('equipment') + esc(labelEq(ex.equip)) + '</span></div>' +
@@ -3456,7 +3463,7 @@
       '<div class="run-tech-cues"><div><span>'+esc(detailText('Ключ','Key cue'))+'</span><p>'+esc(runPrimary)+'</p></div><div><span>'+esc(detailText('Дыхание','Breathing'))+'</span><p>'+esc(runTechnique.breathing)+'</p></div></div>' +
       '<div class="run-current"><div class="run-setline"><b>' + esc(t('runSetLabel', { i: runState.set, n: item.sets })) + '</b><span>' + esc(t('runElapsed')) + ' · ' + elapsed + '</span></div>' +
       '<div class="run-current-inputs"><label>' + esc(ex.zone==='cardio'?t('runVolume'):t('wReps')) + '<input type="text" inputmode="' + (ex.zone==='cardio'?'text':'numeric') + '" data-run-field="reps" value="' + esc(currentSet.reps || item.reps || '') + '"></label>' +
-      '<label>' + esc(t('wWeight')) + '<input type="text" inputmode="decimal" data-run-field="weight" value="' + esc(currentSet.weight || item.weight || '') + '"></label></div>' +
+      '<label>' + esc(t('wWeight')) + '<input type="text" inputmode="decimal" data-run-field="weight" value="' + esc(currentSet.weight || item.weight || '') + '"></label>'+advancedInputs+'</div>'+setTypeSelect +
       '<div class="run-prev-record"><b>' + esc(t('runPrevPerformance')) + ':</b> ' + esc(prevText) + '</div>' + progressionHtml + usePrev + '<div class="run-set-strip" aria-label="' + esc(t('workoutSetsDone',{done:completedSetCount(item),total:item.sets})) + '">' + setStrip + '</div></div>' +
       '<div class="run-session-meta"><div><span>' + esc(t('sessionExercises')) + '</span><b>' + (runState.ex + 1) + ' / ' + S.workout.length + '</b></div>' +
       '<div><span>' + esc(t('sessionSets')) + '</span><b>' + runDoneSets() + ' / ' + total + '</b></div>' +
@@ -5047,10 +5054,18 @@
     $('run-prev').addEventListener('click', runPrev);
     $('run-rest').addEventListener('click', function () { startTimer(S.rest); });
     $('run-stage').addEventListener('change', function (e) {
-      var field = e.target.closest('[data-run-field]');
       var item = S.workout[runState.ex];
-      if (!field || !item) return;
-      var value=String(field.value||'').slice(0,field.dataset.runField==='reps'?24:40); item[field.dataset.runField]=value;
+      if (!item) return;
+      var type = e.target.closest('[data-run-set-type]');
+      if (type) {
+        var typeLog=ensureSetLog(item),typeSet=typeLog[Math.max(0,runState.set-1)];
+        if(typeSet)typeSet.type=String(type.value||'working').slice(0,12);
+        saveWorkout(); saveRunSession(); return;
+      }
+      var field = e.target.closest('[data-run-field]');
+      if (!field) return;
+      var value=String(field.value||'').slice(0,field.dataset.runField==='reps'?24:40);
+      if(field.dataset.runField==='reps'||field.dataset.runField==='weight')item[field.dataset.runField]=value;
       var log=ensureSetLog(item),set=log[Math.max(0,runState.set-1)]; if(set)set[field.dataset.runField]=value;
       saveWorkout(); renderWorkout(); saveRunSession();
     });
