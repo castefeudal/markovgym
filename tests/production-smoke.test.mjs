@@ -196,7 +196,7 @@ test('progress view can switch between weight waist and sleep', async () => {
 test('first paint restores readability preference before flagship stylesheet', async () => {
   const index = await read('index.html');
   const hydration = index.indexOf("localStorage.getItem('mmg.settings.v1')");
-  const stylesheet = index.indexOf('app.css?v=20260927-flagship2');
+  const stylesheet = index.indexOf('app.css?v=2026.09-r5-lab1');
   assert.ok(hydration >= 0 && stylesheet > hydration, 'reading preference must hydrate before stylesheet paint');
   assert.match(index, /data-app-version="2026\.09-r5-lab1"/);
 });
