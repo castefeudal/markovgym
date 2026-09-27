@@ -84,7 +84,7 @@ function renderShell() {
         </aside>
       </div>
 
-      <div class="lab-tabs" role="tablist" aria-label="${t('Категории лаборатории', 'Lab categories')}">
+      <div class="lab-tabs" role="group" aria-label="${t('Категории лаборатории', 'Lab categories')}">
         ${categories.map(([id, label]) => `<button class="lab-tab" type="button" data-lab-tab="${id}" aria-pressed="${id === activeCategory}">${label}</button>`).join('')}
       </div>
 
