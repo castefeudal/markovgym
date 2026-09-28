@@ -16,6 +16,8 @@ MARKOV MADE GYM is a browser-first fitness operating system for planning trainin
 - **Nutrition** — calorie and macro planning integrated with the rest of the system.
 - **MARKOV MADE LAB** — strength, training, nutrition, body-composition, cardio and conversion calculators with uncertainty and limitations surfaced.
 - **Local-first data** — settings, workouts, history and other user data stay in the browser by default.
+- **All-time workout history** — existing saved sessions migrate from the legacy local-storage key into IndexedDB; the legacy key remains a recent-session compatibility mirror.
+- **Versioned backup** — exports use the `markov-made-gym` schema envelope and preserve the complete workout history.
 - **PWA / offline shell** — installable static web application with controlled caching and update lifecycle.
 - **RU / EN interface** plus 9-language exercise instruction data.
 
@@ -67,6 +69,7 @@ scripts/build-index.mjs       deterministic index builder
 index.html                    generated production entry
 app.js                        current core application runtime
 app.css                       current core styles
+src/persistence/              versioned IndexedDB workout-history repository
 gym-tools.js                  MARKOV MADE LAB UI integration
 lab.css                       Lab presentation layer
 tools/gym-calculators.mjs     original pure gym calculations
@@ -102,7 +105,7 @@ The Playwright matrix covers Chromium desktop, Chromium mobile, Firefox and WebK
 
 ## CI
 
-`.github/workflows/quality.yml` runs on pushes and pull requests to `main`:
+`.github/workflows/quality.yml` runs on pushes and pull requests to `main`. `.github/workflows/pages.yml` publishes the exact commit only after its `Quality` push workflow succeeds; GitHub Pages must use **GitHub Actions** as its source:
 
 ```text
 install
@@ -111,6 +114,7 @@ install
 → production index build
 → Chromium / Firefox / WebKit E2E
 → accessibility checks contained in the E2E suite
+→ GitHub Pages deploy after green Quality
 ```
 
 A production change is not considered healthy merely because the page renders; calculator correctness, stored-state flows, responsive behaviour and browser compatibility are part of the quality gate.

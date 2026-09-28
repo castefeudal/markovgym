@@ -53,6 +53,9 @@
   /* ---------- 2. ХРАНИЛИЩЕ ------------------------------------------------ */
   var memoryStore = {};
   var storageWarnings = [];
+  var historyRepository = null;
+  var databaseHistory = null;
+  var historyVisibleCount = 20;
   var storageOk = (function () {
     try {
       var k = '__mmg_probe__';
@@ -1013,10 +1016,9 @@
     var label = $('v10-library-quick-label');
     if (!host) return;
     if (label) label.textContent = S.lang === 'en' ? 'Quick selection' : 'Быстрый выбор';
-    var gymEquip = ['barbell', 'cable', 'leverage machine', 'smith machine', 'ez barbell'];
     var defs = [
-      ['home', S.lang === 'en' ? 'Home' : 'Дом', sameStringSetV10(S.equipment, HOME_EQUIP)],
-      ['gym', S.lang === 'en' ? 'Gym' : 'Зал', sameStringSetV10(S.equipment, gymEquip)],
+      ['home', S.lang === 'en' ? 'Home' : 'Дом', sameStringSetV10(S.equipment, PRESETS.home.equipment)],
+      ['gym', S.lang === 'en' ? 'Gym' : 'Зал', sameStringSetV10(S.equipment, PRESETS.gym.equipment)],
       ['chest', S.lang === 'en' ? 'Chest' : 'Грудь', S.zones.length === 1 && S.zones[0] === 'chest'],
       ['back', S.lang === 'en' ? 'Back' : 'Спина', S.zones.length === 1 && S.zones[0] === 'back'],
       ['legs', S.lang === 'en' ? 'Legs' : 'Ноги', sameStringSetV10(S.zones, ['upper legs', 'lower legs'])],
@@ -2377,7 +2379,15 @@
 
   function saveProfile() { store.set(K.profile, JSON.stringify(S.profile)); }
   function saveMeta() { store.set(K.meta, JSON.stringify(S.meta)); }
-  function saveHistory() { store.set(K.history, JSON.stringify(S.history.slice(0, 20))); }
+  function saveHistory() {
+    store.set(K.history, JSON.stringify(historyRepository ? S.history.slice(0, 20) : S.history));
+    databaseHistory = S.history.slice();
+    if (historyRepository) {
+      historyRepository.replaceAll(databaseHistory).catch(function () {
+        storageWarnings.push({ key: K.history, type: 'indexeddb-write', at: Date.now() });
+      });
+    }
+  }
   function saveDiary() { store.set(K.diary, JSON.stringify(S.diary.slice(0, 400))); }
   function saveTips() { store.set(K.tips, JSON.stringify(S.tips)); }
   function saveSettings() { store.set(K.settings, JSON.stringify(S.settings)); }
@@ -2437,7 +2447,8 @@
     } : { name:'', date:'', note:'', planDay:null };
 
     var h = store.json(K.history, []);
-    S.history = Array.isArray(h) ? h.filter(function (x) { return x && Array.isArray(x.items); }).slice(0, 20) : [];
+    var fallbackHistory = Array.isArray(h) ? h.filter(function (x) { return x && Array.isArray(x.items); }) : [];
+    S.history = Array.isArray(databaseHistory) ? databaseHistory : fallbackHistory;
 
     var d = store.json(K.diary, []);
     S.diary = Array.isArray(d) ? d.filter(function (x) { return x && x.date; }).slice(0, 400) : [];
@@ -3569,11 +3580,12 @@
     var host = $('hist');
     if (!host) return;
     if (!S.history.length) { host.innerHTML = '<p class="tiny">' + esc(t('histEmpty')) + '</p>'; return; }
-    host.innerHTML = S.history.slice(0, 8).map(function (h) {
+    var visible = S.history.slice(0, historyVisibleCount);
+    host.innerHTML = visible.map(function (h) {
       var done=h.items.filter(function(i){return i.done;}).length, doneSets=totalCompletedHistorySets(h), totalSets=totalHistorySets(h);
       var duration=Number(h.durationSec)>0?Math.max(1,Math.round(Number(h.durationSec)/60)):0;
       return '<div class="hist-item"><span><b class="hist-name">' + esc(h.name) + '</b><span class="hist-meta">' + esc(h.date) + ' · ' + esc(t('histMeta', { n: h.items.length, d: done })) + '</span><span class="hist-evidence"><b>'+esc(t('histSetsDone',{done:doneSets,total:totalSets}))+'</b>'+(duration?'<span>'+esc(t('histDuration',{v:duration}))+'</span>':'')+'</span></span><span class="hist-actions"><button class="btn btn-quiet btn-sm" type="button" data-hist-detail="'+esc(h.id)+'" aria-expanded="false" aria-controls="hist-detail-'+esc(h.id)+'">'+esc(t('histDetails'))+'</button><button class="btn btn-quiet btn-sm" type="button" data-hist-repeat="' + esc(h.id) + '">' + esc(t('histRepeat')) + '</button><button class="btn btn-quiet btn-sm btn-danger" type="button" data-hist-del="' + esc(h.id) + '" aria-label="' + esc(t('histDelete')) + '">×</button></span>'+historyDetailHtml(h)+'</div>';
-    }).join('');
+    }).join('') + (visible.length < S.history.length ? '<button class="btn btn-quiet btn-sm" type="button" data-history-more>' + esc(t('histMore', { shown: visible.length, total: S.history.length })) + '</button>' : '');
   }
 
   function repeatWorkout(id) {
@@ -4761,6 +4773,7 @@
 
     /* история */
     histSaved: { ru: 'Тренировка сохранена в историю', en: 'Session saved to history' },
+    histMore: { ru: 'Показать ещё · {shown} из {total}', en: 'Show more · {shown} of {total}' },
     histEmpty: { ru: 'Сохранённых тренировок пока нет. Завершённая сессия попадёт сюда и её можно будет повторить.',
                  en: 'No saved sessions yet. A finished session lands here and can be repeated.' },
     histMeta: { ru: '{n} упражнений, выполнено {d}', en: '{n} exercises, {d} done' },
@@ -5117,6 +5130,7 @@
 
     /* --- история --- */
     $('hist').addEventListener('click', function (e) {
+      if (e.target.closest('[data-history-more]')) { historyVisibleCount += 20; renderHistory(); return; }
       var detail=e.target.closest('[data-hist-detail]');
       if(detail){var panel=$(detail.getAttribute('aria-controls'));var open=detail.getAttribute('aria-expanded')==='true';detail.setAttribute('aria-expanded',String(!open));detail.textContent=open?t('histDetails'):t('histHideDetails');if(panel)panel.hidden=open;return;}
       var rep = e.target.closest('[data-hist-repeat]');
@@ -6239,8 +6253,8 @@
      Correctness -> data integrity -> usability -> accessibility -> performance.
      This layer deliberately preserves the proven V4 business logic and contracts.
      ======================================================================== */
-  var APP_VERSION = '2026.08-v8';
-  var BACKUP_SCHEMA = 4;
+  var APP_VERSION = '2026.09-r6-history';
+  var BACKUP_SCHEMA = 5;
   K.restTimer = 'mmg.restTimer.v2';
   K.lastBackup = 'mmg.lastBackup.v1';
   K.rollbackBackup = 'mmg.backup.rollback.v1';
@@ -6388,7 +6402,7 @@
   function backupLabel(name){var pair=BACKUP_LABELS[name];return pair?(S.lang==='en'?pair.en:pair.ru):name;}
   function jsonValue(raw){ try{return JSON.parse(raw);}catch(e){return null;} }
   function validateBackupValue(name, raw){
-    if (typeof raw !== 'string' || raw.length > 5000000) return null;
+    if (typeof raw !== 'string' || raw.length > 50000000) return null;
     if (name==='lang') return (raw==='ru'||raw==='en') ? raw : null;
     if (name==='theme') return ['obsidian','soft','ivory'].indexOf(raw)!==-1 ? raw : null;
     if (name==='density') return ['compact','default','roomy'].indexOf(raw)!==-1 ? raw : null;
@@ -6407,7 +6421,7 @@
       if (!value||typeof value!=='object'||Array.isArray(value)) return null;
       return JSON.stringify({name:String(value.name||'').slice(0,80),date:String(value.date||'').slice(0,10),note:String(value.note||'').slice(0,600),planDay:Number.isInteger(Number(value.planDay))?Number(value.planDay):null});
     }
-    if (name==='history') return JSON.stringify(Array.isArray(value)?value.filter(function(x){return x&&Array.isArray(x.items);}).slice(0,20):[]);
+    if (name==='history') return JSON.stringify(Array.isArray(value)?value.filter(function(x){return x&&Array.isArray(x.items);}):[]);
     if (name==='diary') return JSON.stringify(Array.isArray(value)?value.filter(function(x){return x&&typeof x.date==='string';}).slice(0,400):[]);
     if (name==='tips') return JSON.stringify(Array.isArray(value)?value.map(String).slice(0,200):[]);
     if (name==='recentSearch') return JSON.stringify(Array.isArray(value)?value.map(String).filter(Boolean).slice(0,8):[]);
@@ -6422,15 +6436,15 @@
     return null;
   }
   exportAll = function(){
-    var payload={v:BACKUP_SCHEMA,kind:'mmg-backup',app:'MARKOV MADE GYM',appVersion:APP_VERSION,exportedAt:new Date().toISOString(),data:{}};
-    DATA_KEYS.forEach(function(name){var raw=store.get(K[name]);if(raw!=null)payload.data[name]=raw;});
+    var payload={app:'markov-made-gym',schemaVersion:BACKUP_SCHEMA,createdAt:new Date().toISOString(),v:BACKUP_SCHEMA,kind:'mmg-backup',appVersion:APP_VERSION,exportedAt:new Date().toISOString(),data:{}};
+    DATA_KEYS.forEach(function(name){var raw=name==='history'?JSON.stringify(S.history):store.get(K[name]);if(raw!=null)payload.data[name]=raw;});
     return JSON.stringify(payload,null,2);
   };
   function analyzeBackup(raw){
     var parsed;
     try{parsed=JSON.parse(raw);}catch(e){return{ok:false,code:'json'};}
     if(!parsed||parsed.kind!=='mmg-backup'||!parsed.data||typeof parsed.data!=='object'||Array.isArray(parsed.data))return{ok:false,code:'shape'};
-    if(Number(parsed.v||0)>BACKUP_SCHEMA)return{ok:false,code:'future'};
+    if(Number(parsed.schemaVersion||parsed.v||0)>BACKUP_SCHEMA)return{ok:false,code:'future'};
     var staged={},changed=[],invalid=[];
     DATA_KEYS.forEach(function(name){
       if(!Object.prototype.hasOwnProperty.call(parsed.data,name))return;
@@ -6449,6 +6463,18 @@
     if(S.lang==='en')return 'Backup validated. Changes: '+report.changed.length+'\n\n'+(list||'No values differ.')+(more?'\n• +'+more+' more':'')+'\n\nA rollback snapshot will be kept on this device. Import now?';
     return 'Резервная копия проверена. Изменений: '+report.changed.length+'\n\n'+(list||'Значения не отличаются.')+(more?'\n• ещё '+more:'')+'\n\nПеред импортом сохранится локальная точка отката. Импортировать?';
   }
+  function writeBackupValues(values){
+    var failed=[];
+    Object.keys(values).forEach(function(name){
+      var raw=values[name];
+      if(name==='history'&&historyRepository){
+        var parsed=jsonValue(raw);
+        raw=JSON.stringify(Array.isArray(parsed)?parsed.slice(0,20):[]);
+      }
+      if(store.set(K[name],raw)===false)failed.push(name);
+    });
+    return failed;
+  }
   importAll = function(raw){
     var report=analyzeBackup(raw);
     if(!report.ok){
@@ -6458,15 +6484,27 @@
     if(!report.changed.length){showToast(S.lang==='en'?'Backup is valid; nothing to change.':'Копия корректна; изменений нет.');return true;}
     if(!window.confirm(backupPreviewText(report)))return false;
     var rollback=exportAll(); store.set(K.rollbackBackup,rollback);
-    var failed=[];
-    Object.keys(report.staged).forEach(function(name){if(store.set(K[name],report.staged[name])===false)failed.push(name);});
+    var failed=writeBackupValues(report.staged);
     if(failed.length){
-      var rb=analyzeBackup(rollback); if(rb.ok)Object.keys(rb.staged).forEach(function(name){store.set(K[name],rb.staged[name]);});
+      var rb=analyzeBackup(rollback); if(rb.ok)writeBackupValues(rb.staged);
       showToast(S.lang==='en'?'Import could not be written safely; previous data was restored.':'Не удалось безопасно записать импорт; предыдущие данные восстановлены.');
       return false;
     }
     showToast(t('ioRestored',{n:Object.keys(report.staged).length}));
-    window.setTimeout(function(){window.location.reload();},650); return true;
+    var importedHistory = report.staged.history ? jsonValue(report.staged.history) : null;
+    if (report.staged.history && historyRepository) {
+      historyRepository.replaceAll(importedHistory).then(function () {
+        window.setTimeout(function(){window.location.reload();},650);
+      }).catch(function () {
+        var previous = analyzeBackup(rollback);
+        if (previous.ok) writeBackupValues(previous.staged);
+        if (previous.ok && previous.staged.history) historyRepository.replaceAll(jsonValue(previous.staged.history)).catch(function(){});
+        showToast(S.lang==='en'?'History could not be imported safely; the previous backup was restored.':'Не удалось безопасно импортировать историю; предыдущая копия восстановлена.');
+      });
+    } else {
+      window.setTimeout(function(){window.location.reload();},650);
+    }
+    return true;
   };
   clearAll = function(){
     if(!window.confirm(t('dataConfirm')))return;
@@ -6474,7 +6512,14 @@
     [K.restTimer,K.lastBackup,K.rollbackBackup,K.legacyFav,K.legacyWorkout,K.legacyLang,K.legacyTheme].forEach(function(key){if(key)store.remove(key);});
     Object.keys(memoryStore).filter(function(key){return key.indexOf('mmg.recovery.')===0;}).forEach(function(key){store.remove(key);});
     if(storageOk){try{for(var i=window.localStorage.length-1;i>=0;i--){var key=window.localStorage.key(i);if(key&&key.indexOf('mmg.recovery.')===0)window.localStorage.removeItem(key);}}catch(e){}}
-    showToast(t('dataCleared')); window.setTimeout(function(){window.location.reload();},550);
+    var cleared = historyRepository ? historyRepository.replaceAll([]) : Promise.resolve();
+    cleared.then(function(){
+      showToast(t('dataCleared'));
+      window.setTimeout(function(){window.location.reload();},550);
+    }).catch(function(){
+      storageWarnings.push({ key: K.history, type: 'indexeddb-clear', at: Date.now() });
+      showToast(S.lang==='en'?'Workout history could not be cleared from this device.':'Не удалось удалить историю тренировок с этого устройства.');
+    });
   };
 
   function downloadBackup(){
@@ -6488,7 +6533,7 @@
     input=document.createElement('input'); input.type='file'; input.id='data-import-file'; input.accept='.json,application/json'; input.hidden=true; document.body.appendChild(input);
     input.addEventListener('change',function(){
       var file=input.files&&input.files[0]; if(!file)return;
-      if(file.size>5000000){showToast(S.lang==='en'?'Backup is too large.':'Файл резервной копии слишком большой.');input.value='';return;}
+      if(file.size>50000000){showToast(S.lang==='en'?'Backup is too large.':'Файл резервной копии слишком большой.');input.value='';return;}
       var reader=new FileReader(); reader.onload=function(){importAll(String(reader.result||''));input.value='';}; reader.onerror=function(){showToast(S.lang==='en'?'Could not read the file.':'Не удалось прочитать файл.');input.value='';}; reader.readAsText(file);
     });
     return input;
@@ -6560,7 +6605,7 @@
     [minus,plus].forEach(function(btn){if(btn)btn.addEventListener('click',function(){if(restTimer.running){restTimer.endsAt=Date.now()+Math.max(0,restTimer.left)*1000;persistRestTimer();}});});
     document.addEventListener('visibilitychange',function(){tickRestTimer();persistRestTimer();},{passive:true});
     window.addEventListener('pageshow',tickRestTimer,{passive:true});
-    window.mmgDiagnostics={version:APP_VERSION,storagePersistent:storageOk,get storageWarnings(){return storageWarnings.slice();},exerciseCount:EX.length,backupSchema:BACKUP_SCHEMA};
+    window.mmgDiagnostics={version:APP_VERSION,storagePersistent:storageOk,get storageWarnings(){return storageWarnings.slice();},exerciseCount:EX.length,backupSchema:BACKUP_SCHEMA,get historySchema(){return historyRepository?historyRepository.schemaVersion:0;},get historyCount(){return Array.isArray(databaseHistory)?databaseHistory.length:S.history.length;}};
   }
 
 
@@ -6812,6 +6857,15 @@
 
 
   async function init() {
+    try {
+      var persistence = await import('./src/persistence/history-repository.mjs');
+      historyRepository = await persistence.createHistoryRepository();
+      databaseHistory = await historyRepository.migrateLegacy(store.json(K.history, []));
+    } catch (error) {
+      historyRepository = null;
+      databaseHistory = null;
+      storageWarnings.push({ key: K.history, type: 'indexeddb-unavailable', at: Date.now() });
+    }
     var initialRoute = (location.hash || '#home').slice(1).split('?')[0];
     var hasPersistedExerciseState = !!(store.get(K.fav) || store.get(K.workout) || store.get(K.plan));
     var needsData = dataRouteNeedsLibrary(initialRoute) || hasPersistedExerciseState;

@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { readFile } from 'node:fs/promises';
 
 test('home boots with the full exercise dataset and no page errors', async ({ page }) => {
   const errors = [];
@@ -12,11 +13,68 @@ test('home boots with the full exercise dataset and no page errors', async ({ pa
   expect(failed).toEqual([]);
 });
 
+test('first service worker install does not reload the active page', async ({ page }) => {
+  let documentNavigations = 0;
+  page.on('request', (request) => {
+    if (request.isNavigationRequest() && request.frame() === page.mainFrame()) documentNavigations += 1;
+  });
+  await page.goto('/index.html#home');
+  await expect(page.locator('#mmg-boot')).toHaveCount(0);
+  await page.evaluate(() => navigator.serviceWorker.ready);
+  await page.waitForTimeout(300);
+  expect(documentNavigations).toBe(1);
+});
+
+test('legacy workout history migrates to IndexedDB without a 20-session cap', async ({ page }) => {
+  const sessions = Array.from({ length: 28 }, (_, index) => ({
+    id: `legacy-${index}`,
+    name: `Session ${index}`,
+    date: `2026-09-${String(28 - (index % 28)).padStart(2, '0')}`,
+    items: [{ id: '0001', done: true, setLog: [{ completed: true, reps: 8, weight: 40 }] }],
+  }));
+  await page.addInitScript((history) => {
+    localStorage.setItem('mmg.history.v1', JSON.stringify(history));
+  }, sessions);
+  await page.goto('/index.html#home');
+  await expect(page.locator('#mmg-boot')).toHaveCount(0);
+  await expect.poll(() => page.evaluate(() => window.mmgDiagnostics?.historyCount)).toBe(28);
+  const persistedCount = await page.evaluate(async () => {
+    const db = await new Promise((resolve, reject) => {
+      const request = indexedDB.open('markov-made-gym', 1);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    const count = await new Promise((resolve, reject) => {
+      const request = db.transaction('history', 'readonly').objectStore('history').count();
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    db.close();
+    return count;
+  });
+  expect(persistedCount).toBe(28);
+  await page.reload();
+  await expect.poll(() => page.evaluate(() => window.mmgDiagnostics?.historyCount)).toBe(28);
+
+  await page.goto('/index.html#settings');
+  const downloadPromise = page.waitForEvent('download');
+  await page.locator('#data-export').click();
+  const download = await downloadPromise;
+  const backup = JSON.parse(await readFile(await download.path(), 'utf8'));
+  expect(backup.app).toBe('markov-made-gym');
+  expect(backup.schemaVersion).toBe(5);
+  expect(JSON.parse(backup.data.history)).toHaveLength(28);
+  await page.goto('/index.html#workout');
+  await expect(page.locator('#hist .hist-item')).toHaveCount(20);
+  await page.locator('#hist [data-history-more]').click();
+  await expect(page.locator('#hist .hist-item')).toHaveCount(28);
+});
+
 test('hash routes and MARKOV MADE LAB calculators are usable', async ({ page }) => {
   await page.goto('/index.html#tools');
   await expect(page.locator('#tools')).toBeVisible();
   await expect(page.locator('#gym-tools-title')).toContainText(/Расчёты|Calculations/);
-  await expect(page.locator('#lab-e1rm-out')).toContainText(/91[,.]67/);
+  await expect(page.locator('#lab-e1rm-out')).toContainText(/114[,.]58/);
   await page.locator('[data-lab-form="e1rm"] #e1rm-weight').fill('100');
   await page.locator('[data-lab-form="e1rm"] #e1rm-reps').fill('5');
   await page.locator('[data-lab-form="e1rm"]').getByRole('button', { name: /Рассчитать|Calculate/ }).click();
@@ -54,8 +112,8 @@ test('exercise detail shows complete GIF and structured technique guidance', asy
   }));
   expect(media.fit).toBe('contain');
   expect(media.src).toContain('.gif?v=');
-  expect(media.naturalWidth).toBeGreaterThan(0);
-  expect(media.naturalHeight).toBeGreaterThan(0);
+  await expect.poll(() => page.locator('#modal-img').evaluate((img) => img.naturalWidth)).toBeGreaterThan(0);
+  await expect.poll(() => page.locator('#modal-img').evaluate((img) => img.naturalHeight)).toBeGreaterThan(0);
 
   const geometry = await page.locator('#modal-media').evaluate((frame) => {
     const img = frame.querySelector('#modal-img');
@@ -63,13 +121,16 @@ test('exercise detail shows complete GIF and structured technique guidance', asy
     const i = img.getBoundingClientRect();
     return {
       contained: i.left >= f.left - 1 && i.top >= f.top - 1 && i.right <= f.right + 1 && i.bottom <= f.bottom + 1,
-      numbers: [...document.querySelectorAll('#modal-steps li')].slice(0, 3).map((node) =>
-        getComputedStyle(node, '::before').content.replaceAll('"', '')
+      stepsTag: document.querySelector('#modal-steps').tagName,
+      markers: [...document.querySelectorAll('#modal-steps li')].slice(0, 3).map((node) =>
+        getComputedStyle(node, '::before').content
       ),
     };
   });
   expect(geometry.contained).toBe(true);
-  expect(geometry.numbers).toEqual(['01', '02', '03']);
+  expect(geometry.stepsTag).toBe('OL');
+  expect(geometry.markers).toHaveLength(3);
+  expect(geometry.markers.every((content) => content.includes('counter('))).toBe(true);
   expect(errors).toEqual([]);
 });
 
@@ -78,14 +139,13 @@ test('run mode keeps full exercise media visible and surfaces execution cues', a
   await expect(page.locator('#mmg-boot')).toHaveCount(0);
   await page.locator('#grid [data-add]').first().click();
   await page.goto('/index.html#workout');
-  await page.locator('#w-run').click();
+  await page.locator('[data-v8-start-run]:visible, #w-run:visible').first().click();
 
   await expect(page.locator('#run')).toHaveAttribute('data-open', 'true');
   await expect(page.locator('.run-tech-cues')).toBeVisible();
   await expect(page.locator('[data-run-set-type]')).toHaveValue('working');
   await expect(page.locator('[data-run-field="rir"]')).toHaveCount(0);
-  const fit = await page.locator('.run-media').evaluate((img) => getComputedStyle(img).objectFit);
-  expect(fit).toBe('contain');
+  await expect(page.locator('.run-media')).toHaveCSS('object-fit', 'contain');
 });
 
 test('run mode exposes RIR and RPE only when advanced logging is enabled', async ({ page }) => {
@@ -96,7 +156,7 @@ test('run mode exposes RIR and RPE only when advanced logging is enabled', async
   await expect(page.locator('#mmg-boot')).toHaveCount(0);
   await page.locator('#grid [data-add]').first().click();
   await page.goto('/index.html#workout');
-  await page.locator('#w-run').click();
+  await page.locator('[data-v8-start-run]:visible, #w-run:visible').first().click();
   await expect(page.locator('[data-run-field="rir"]')).toBeVisible();
   await expect(page.locator('[data-run-field="rpe"]')).toBeVisible();
   await page.locator('[data-run-field="rir"]').fill('2');
@@ -234,6 +294,12 @@ test('flagship restores saved programme on home and exposes the weekly pulse', a
 });
 
 test('readability choice persists and progress supports multiple chart signals', async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem('mmg.diary.v1', JSON.stringify([
+      { date: '2026-09-26', weight: 108.2, waist: 85.0, sleep: 7.5, recovery: 3, mood: 3, hunger: 2, fatigue: 2 },
+      { date: '2026-09-20', weight: 109.0, waist: 85.8, sleep: 6.8, recovery: 2, mood: 3, hunger: 2, fatigue: 3 },
+    ]));
+  });
   await page.goto('/index.html#settings');
   await expect(page.locator('#mmg-boot')).toHaveCount(0);
   await page.locator('[data-v10-reading="comfortable"]').click();
@@ -241,12 +307,6 @@ test('readability choice persists and progress supports multiple chart signals',
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('data-reading', 'comfortable');
 
-  await page.evaluate(() => {
-    localStorage.setItem('mmg.diary.v1', JSON.stringify([
-      { date: '2026-09-26', weight: 108.2, waist: 85.0, sleep: 7.5, recovery: 3, mood: 3, hunger: 2, fatigue: 2 },
-      { date: '2026-09-20', weight: 109.0, waist: 85.8, sleep: 6.8, recovery: 2, mood: 3, hunger: 2, fatigue: 3 },
-    ]));
-  });
   await page.goto('/index.html#progress');
   await expect(page.locator('[data-progress-metric="weight"]')).toHaveAttribute('aria-pressed', 'true');
   await page.locator('[data-progress-metric="waist"]').click();

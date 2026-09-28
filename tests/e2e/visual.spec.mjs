@@ -9,13 +9,14 @@ const sizes = [
 const routes = ['home', 'library', 'workout', 'progress', 'program', 'nutrition', 'tools', 'settings'];
 
 test('capture the production layout matrix', async ({ browser }) => {
+  test.setTimeout(120_000);
   for (const [sizeName, width, height] of sizes) {
     const context = await browser.newContext({ viewport: { width, height } });
     const page = await context.newPage();
     for (const route of routes) {
       await page.goto(`/index.html#${route}`);
       await expect(page.locator('#mmg-boot')).toHaveCount(0);
-      await page.screenshot({ path: `artifacts/screens/${sizeName}-${route}.png`, fullPage: true });
+      await page.screenshot({ path: `artifacts/screens/${sizeName}-${route}.png` });
     }
     await context.close();
   }

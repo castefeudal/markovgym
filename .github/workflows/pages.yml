@@ -1,0 +1,45 @@
+name: Deploy Pages
+
+on:
+  workflow_run:
+    workflows: [Quality]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  actions: read
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - uses: actions/configure-pages@v5
+
+      - name: Assemble the static production site
+        run: |
+          mkdir -p site
+          cp index.html app.css lab.css app.js bootstrap.js gym-tools.js sw.js manifest.webmanifest setup.html legacy-base.html site/
+          cp -R data images src tools videos site/
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - name: Deploy the quality-checked commit
+        id: deployment
+        uses: actions/deploy-pages@v4
