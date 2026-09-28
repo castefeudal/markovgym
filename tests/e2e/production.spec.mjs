@@ -32,15 +32,24 @@ test('legacy workout history migrates to IndexedDB without a 20-session cap', as
     date: `2026-09-${String(28 - (index % 28)).padStart(2, '0')}`,
     items: [{ id: '0001', done: true, setLog: [{ completed: true, reps: 8, weight: 40 }] }],
   }));
-  await page.addInitScript((history) => {
+  const customExercise = {
+    id: 'custom-legacy-example', nameRu: 'Старое пользовательское упражнение', nameEn: 'Legacy custom exercise',
+    zone: 'chest', target: 'pectorals', secondary: ['triceps'], equip: 'dumbbell',
+    movementPattern: 'horizontal-push', trackingType: 'weight-reps', laterality: 'bilateral', compound: true,
+    defaultSets: 3, defaultRepRange: '8–12', defaultRest: 90, loadIncrement: 2.5,
+    notes: 'Контролируемая амплитуда', createdAt: '2026-09-01T00:00:00.000Z', updatedAt: '2026-09-01T00:00:00.000Z',
+  };
+  await page.addInitScript(({ history, custom }) => {
     localStorage.setItem('mmg.history.v1', JSON.stringify(history));
-  }, sessions);
+    localStorage.setItem('mmg.customExercises.v1', JSON.stringify([custom]));
+  }, { history: sessions, custom: customExercise });
   await page.goto('/index.html#home');
   await expect(page.locator('#mmg-boot')).toHaveCount(0);
   await expect.poll(() => page.evaluate(() => window.mmgDiagnostics?.historyCount)).toBe(28);
+  await expect.poll(() => page.evaluate(() => window.mmgDiagnostics?.customExerciseCount)).toBe(1);
   const persistedCount = await page.evaluate(async () => {
     const db = await new Promise((resolve, reject) => {
-      const request = indexedDB.open('markov-made-gym', 1);
+      const request = indexedDB.open('markov-made-gym');
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
     });
@@ -49,10 +58,15 @@ test('legacy workout history migrates to IndexedDB without a 20-session cap', as
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
     });
+    const customCount = await new Promise((resolve, reject) => {
+      const request = db.transaction('customExercises', 'readonly').objectStore('customExercises').count();
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
     db.close();
-    return count;
+    return { count, customCount };
   });
-  expect(persistedCount).toBe(28);
+  expect(persistedCount).toEqual({ count: 28, customCount: 1 });
   await page.reload();
   await expect.poll(() => page.evaluate(() => window.mmgDiagnostics?.historyCount)).toBe(28);
 
@@ -62,12 +76,70 @@ test('legacy workout history migrates to IndexedDB without a 20-session cap', as
   const download = await downloadPromise;
   const backup = JSON.parse(await readFile(await download.path(), 'utf8'));
   expect(backup.app).toBe('markov-made-gym');
-  expect(backup.schemaVersion).toBe(5);
+  expect(backup.schemaVersion).toBe(6);
   expect(JSON.parse(backup.data.history)).toHaveLength(28);
+  expect(JSON.parse(backup.data.customExercises)).toHaveLength(1);
   await page.goto('/index.html#workout');
   await expect(page.locator('#hist .hist-item')).toHaveCount(20);
   await page.locator('#hist [data-history-more]').click();
   await expect(page.locator('#hist .hist-item')).toHaveCount(28);
+});
+
+test('custom exercise joins the Library, saved workout, Run Mode and schema v6 backup', async ({ page }) => {
+  await page.goto('/index.html#library');
+  await expect(page.locator('#mmg-boot')).toHaveCount(0);
+  await page.locator('#custom-exercise-open').click();
+  await page.locator('#custom-name-ru').fill('Мой жим гантели');
+  await page.locator('#custom-name-en').fill('My dumbbell press');
+  await page.locator('#custom-zone').selectOption('chest');
+  await page.locator('#custom-target').selectOption('pectorals');
+  await page.locator('#custom-secondary').selectOption(['triceps']);
+  await page.locator('#custom-equipment').selectOption('dumbbell');
+  await page.locator('#custom-pattern').selectOption('horizontal-push');
+  await page.locator('#custom-tracking').selectOption('weight-reps');
+  await page.locator('#custom-laterality').selectOption('unilateral');
+  await page.locator('#custom-compound').check();
+  await page.locator('#custom-sets').fill('1');
+  await page.locator('#custom-reps').fill('8–12');
+  await page.locator('#custom-rest').fill('90');
+  await page.locator('#custom-increment').fill('2.5');
+  await page.locator('#custom-notes').fill('Опускай гантель под контролем.');
+  await page.locator('#custom-exercise-save').click();
+
+  const card = page.locator('.card[data-id^="custom-"]');
+  await expect(card).toContainText('Мой жим гантели');
+  await expect.poll(() => page.evaluate(() => window.mmgDiagnostics?.customExerciseCount)).toBe(1);
+  await card.locator('[data-add]').click();
+  await expect(page.locator('.workout-item')).toContainText('Мой жим гантели');
+
+  await page.reload();
+  await expect.poll(() => page.evaluate(() => window.mmgDiagnostics?.customExerciseCount)).toBe(1);
+  await page.goto('/index.html#workout');
+  const startRun = page.locator('[data-v8-start-run]:visible').first();
+  if (await startRun.count()) await startRun.click();
+  else await page.locator('#w-run:visible').click();
+  await expect(page.locator('#run-stage')).toContainText('Мой жим гантели');
+  await expect(page.locator('#run-stage [data-run-field="weight"]')).toBeVisible();
+  await page.locator('#run-next').click();
+  await expect(page.locator('#run-stage')).toContainText(/Все упражнения|All exercises/);
+  await page.locator('#run-next').click();
+  await expect(page.locator('#run')).toHaveAttribute('data-open', 'false');
+  await page.goto('/index.html#workout');
+  await expect(page.locator('#hist .hist-item')).toContainText('Мой жим гантели');
+  await expect.poll(() => page.evaluate(() => window.mmgDiagnostics?.historyCount)).toBe(1);
+
+  await page.goto('/index.html#settings');
+  const downloadPromise = page.waitForEvent('download');
+  await page.locator('#data-export').click();
+  const download = await downloadPromise;
+  const backup = JSON.parse(await readFile(await download.path(), 'utf8'));
+  const customExercises = JSON.parse(backup.data.customExercises);
+  expect(backup.schemaVersion).toBe(6);
+  expect(customExercises).toHaveLength(1);
+  expect(customExercises[0]).toMatchObject({
+    nameRu: 'Мой жим гантели', nameEn: 'My dumbbell press',
+    trackingType: 'weight-reps', laterality: 'unilateral', loadIncrement: 2.5,
+  });
 });
 
 test('hash routes and MARKOV MADE LAB calculators are usable', async ({ page }) => {

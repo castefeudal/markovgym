@@ -10,6 +10,7 @@ MARKOV MADE GYM is a browser-first fitness operating system for planning trainin
 
 - **Today** — the next relevant action instead of a dashboard full of noise.
 - **Library** — 1,324 exercises with multilingual instructions, search, filters, body map, media, technique guidance and substitutions.
+- **Custom exercises** — add bilingual movements with muscle, equipment, movement, laterality, tracking, default dose, load increment, notes and an optional local image; they participate in search, workout, programme, history and backup flows.
 - **Workout / Run Mode** — workout building, sets/reps/load, RPE/RIR, rest flow and session history.
 - **Program** — persistent weekly training structure.
 - **Progress** — training and body signals from locally recorded data.
@@ -70,7 +71,7 @@ index.html                    generated production entry
 app.js                        current core application runtime
 app.css                       current core styles
 src/features/today/           pure Today next-action decision rules
-src/persistence/              versioned IndexedDB workout-history repository
+src/persistence/              versioned IndexedDB workout-history and custom-exercise repositories
 gym-tools.js                  MARKOV MADE LAB UI integration
 lab.css                       Lab presentation layer
 tools/gym-calculators.mjs     original pure gym calculations

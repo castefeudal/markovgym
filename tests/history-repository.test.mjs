@@ -1,9 +1,48 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { cleanHistory, HISTORY_SCHEMA_VERSION, newestFirst } from '../src/persistence/history-repository.mjs';
+import { cleanCustomExercises, cleanHistory, HISTORY_SCHEMA_VERSION, newestFirst } from '../src/persistence/history-repository.mjs';
 
 test('history schema is explicitly versioned', () => {
-  assert.equal(HISTORY_SCHEMA_VERSION, 1);
+  assert.equal(HISTORY_SCHEMA_VERSION, 2);
+});
+
+test('custom exercise records are typed, bounded, and retain all supported tracking modes', () => {
+  const source = ['weight-reps', 'reps-only', 'duration', 'distance-duration', 'weight-duration', 'assisted-weight', 'bodyweight-added-weight']
+    .map((trackingType, index) => ({
+      id: `custom-${index}`,
+      nameRu: `Своё ${index}`,
+      nameEn: `Custom ${index}`,
+      zone: 'chest',
+      target: 'pectorals',
+      secondary: ['triceps', 'triceps'],
+      equip: 'dumbbell',
+      trackingType,
+      laterality: 'bilateral',
+      compound: true,
+      defaultSets: 4,
+      defaultRepRange: '6–10',
+      defaultRest: 120,
+      loadIncrement: 2.5,
+      notes: 'Controlled reps',
+      createdAt: '2026-09-28T00:00:00.000Z',
+    }));
+  const clean = cleanCustomExercises(source);
+  assert.equal(clean.length, 7);
+  assert.deepEqual(clean.map((entry) => entry.trackingType), source.map((entry) => entry.trackingType));
+  assert.deepEqual(clean[0].secondary, ['triceps']);
+  assert.equal(clean[0].defaultSets, 4);
+  assert.equal(clean[0].updatedAt, clean[0].createdAt);
+});
+
+test('custom exercise migration rejects malformed or duplicate identities', () => {
+  const valid = { id: 'custom-a', nameRu: 'Тяга', nameEn: 'Row', zone: 'back', target: 'lats', equip: 'cable' };
+  const clean = cleanCustomExercises([
+    valid,
+    { ...valid },
+    { ...valid, id: 'built-in-id' },
+    { ...valid, id: 'custom-b', trackingType: 'invented' },
+  ]);
+  assert.deepEqual(clean.map((entry) => entry.id), ['custom-a']);
 });
 
 test('history migration drops malformed rows, assigns stable ids, and preserves records', () => {

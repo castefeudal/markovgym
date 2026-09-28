@@ -40,8 +40,8 @@
     } catch (_) {}
   })();
   </script>
-  <link rel="stylesheet" href="./app.css?v=2026.09-r7-decisions">
-  <link rel="stylesheet" href="./lab.css?v=2026.09-r7-decisions">
+  <link rel="stylesheet" href="./app.css?v=2026.09-r8-custom-exercises">
+  <link rel="stylesheet" href="./lab.css?v=2026.09-r8-custom-exercises">
   <style>
   :root {
     --mmg-boot-bg:#070a0e;
@@ -89,7 +89,7 @@
 </style>
   <script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"MARKOV MADE GYM","applicationCategory":"HealthApplication","operatingSystem":"Web","isAccessibleForFree":true,"inLanguage":["ru","en"],"description":"Local-first система тренировок, прогрессии, питания, состава тела и прозрачных fitness-расчётов.","featureList":["Библиотека упражнений","Конструктор тренировки","Run Mode и таймер отдыха","Прогресс","Питание","MARKOV MADE LAB"]}</script>
 </head>
-<body data-app-version="2026.09-r7-decisions">
+<body data-app-version="2026.09-r8-custom-exercises">
   <div id="mmg-boot" role="status" aria-live="polite" aria-label="Загрузка MARKOV MADE GYM">
     <div class="mmg-boot-card">
       <div class="mmg-boot-mark"><svg viewBox="0 0 40 40" aria-hidden="true"><rect x="1" y="1" width="38" height="38" rx="9" fill="none" stroke="currentColor" stroke-opacity=".20"/><path d="M9 29V11h4.4l6.6 10.2L26.6 11H31v18h-4.3V18.9l-5.9 9.1h-1.6l-5.9-9.1V29z" fill="var(--mmg-boot-accent)"/><path d="M9 33h22" stroke="var(--mmg-boot-accent)" stroke-width="1.5" stroke-linecap="round" stroke-dasharray="1.5 3.5" opacity=".7"/></svg><div class="mmg-boot-brand">MARKOV MADE<span>GYM</span></div></div>
@@ -588,6 +588,7 @@
                 <input class="input" id="search" type="search" placeholder="Название, мышца или оборудование…" data-i18n-ph="library.searchPh" autocomplete="off">
                 <button class="search-clear" id="search-clear" type="button" aria-label="Очистить поиск" data-i18n-aria="aria.searchClear">×</button>
               </div>
+              <button class="btn btn-quiet btn-sm" id="custom-exercise-open" type="button" data-i18n="custom.create">Создать своё упражнение</button>
               <label class="sr-only" for="sort" data-i18n="library.sortLabel">Сортировка</label>
               <select class="select sort-select" id="sort">
                 <option value="recommended" data-i18n="sort.recommended">Сначала базовые</option>
@@ -1479,6 +1480,44 @@
   </div>
 </div>
 
+<div class="modal custom-exercise-dialog" id="custom-exercise-dialog" data-open="false" role="dialog" aria-modal="true" aria-labelledby="custom-exercise-title" aria-hidden="true" inert>
+  <div class="modal-backdrop" data-close="custom-exercise-dialog"></div>
+  <div class="modal-box" role="document">
+    <div class="modal-head">
+      <div><p class="modal-kicker" id="custom-exercise-kicker"></p><h2 id="custom-exercise-title"></h2></div>
+      <button class="icon-btn" id="custom-exercise-close" type="button" aria-label="Закрыть" data-i18n-aria="aria.close">×</button>
+    </div>
+    <div class="custom-exercise-scroll">
+      <p class="small" id="custom-exercise-intro"></p>
+      <p class="custom-exercise-error" id="custom-exercise-error" role="status" aria-live="polite" hidden></p>
+      <form id="custom-exercise-form">
+        <div class="custom-exercise-grid">
+          <div class="field"><label for="custom-name-ru" id="custom-name-ru-label"></label><input class="input" id="custom-name-ru" name="nameRu" maxlength="120" required></div>
+          <div class="field"><label for="custom-name-en" id="custom-name-en-label"></label><input class="input" id="custom-name-en" name="nameEn" maxlength="120" required></div>
+          <div class="field"><label for="custom-zone" id="custom-zone-label"></label><select class="select" id="custom-zone" name="zone" required></select></div>
+          <div class="field"><label for="custom-target" id="custom-target-label"></label><select class="select" id="custom-target" name="target" required></select></div>
+          <div class="field"><label for="custom-secondary" id="custom-secondary-label"></label><select class="select custom-secondary-select" id="custom-secondary" name="secondary" multiple size="4"></select></div>
+          <div class="field"><label for="custom-equipment" id="custom-equipment-label"></label><select class="select" id="custom-equipment" name="equip" required></select></div>
+          <div class="field"><label for="custom-pattern" id="custom-pattern-label"></label><select class="select" id="custom-pattern" name="movementPattern"></select></div>
+          <div class="field"><label for="custom-tracking" id="custom-tracking-label"></label><select class="select" id="custom-tracking" name="trackingType"></select></div>
+          <div class="field"><label for="custom-laterality" id="custom-laterality-label"></label><select class="select" id="custom-laterality" name="laterality"></select></div>
+          <label class="custom-compound"><input id="custom-compound" name="compound" type="checkbox"><span id="custom-compound-label"></span></label>
+          <div class="field"><label for="custom-sets" id="custom-sets-label"></label><input class="input" id="custom-sets" name="defaultSets" type="number" min="1" max="20" value="3" required></div>
+          <div class="field"><label for="custom-reps" id="custom-reps-label"></label><input class="input" id="custom-reps" name="defaultRepRange" maxlength="24" value="8–12" required></div>
+          <div class="field"><label for="custom-rest" id="custom-rest-label"></label><input class="input" id="custom-rest" name="defaultRest" type="number" min="15" max="900" step="5" value="90" required></div>
+          <div class="field"><label for="custom-increment" id="custom-increment-label"></label><input class="input" id="custom-increment" name="loadIncrement" type="number" min="0.1" max="100" step="0.1" value="2.5" required></div>
+          <div class="field custom-notes-field"><label for="custom-notes" id="custom-notes-label"></label><textarea class="textarea" id="custom-notes" name="notes" maxlength="1000"></textarea></div>
+          <div class="field custom-image-field"><label for="custom-image" id="custom-image-label"></label><input class="input" id="custom-image" name="image" type="file" accept="image/png,image/jpeg,image/webp"></div>
+        </div>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-quiet" id="custom-exercise-cancel" type="button"></button>
+      <button class="btn btn-primary" id="custom-exercise-save" type="submit" form="custom-exercise-form"></button>
+    </div>
+  </div>
+</div>
+
 <div class="cmdk" id="cmdk" data-open="false">
   <div class="cmdk-backdrop" data-close-cmdk></div>
   <div class="cmdk-box" role="dialog" aria-modal="true" aria-label="Быстрый поиск" data-i18n-aria="aria.cmdk">
@@ -1553,7 +1592,7 @@
 <!-- ДАННЫЕ: 1324 упражнения (RU + EN). Отделены от UI-логики и разбираются один раз при старте. -->
 
   <script src="./bootstrap.js" defer></script>
-  <script src="./app.js?v=2026.09-r7-decisions" defer></script>
+  <script src="./app.js?v=2026.09-r8-custom-exercises" defer></script>
   <script type="module" src="./gym-tools.js"></script>
 </body>
 </html>

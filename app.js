@@ -55,6 +55,8 @@
   var storageWarnings = [];
   var historyRepository = null;
   var databaseHistory = null;
+  var databaseCustomExercises = [];
+  var cleanCustomExercises = function (rows) { return Array.isArray(rows) ? rows.filter(function (row) { return row && typeof row === 'object'; }) : []; };
   var historyVisibleCount = 20;
   var todayDecisionEngine = null;
   var storageOk = (function () {
@@ -354,6 +356,7 @@
 
 
   Object.assign(EN, {
+    'custom.create': 'Create custom exercise',
     'v3.timerAdjust': 'Rest timer adjustment',
     'v3.timerMinus': 'Reduce rest timer by 15 seconds',
     'v3.timerPlus': 'Increase rest timer by 15 seconds',
@@ -692,6 +695,24 @@
   var DATA_READY = false;
   var DATA_PROMISE = null;
 
+  function customExerciseRuntimeRecord(record, index) {
+    var secondary = Array.isArray(record.secondary) ? record.secondary.slice() : [];
+    var ex = {
+      id: String(record.id), nameEn: record.nameEn, nameRu: record.nameRu,
+      zone: record.zone, equip: record.equip, target: record.target, group: record.target,
+      secondary: secondary, slug: '', stepsEn: [], stepsRu: [], idx: index,
+      custom: true, image: record.image || null, movementPattern: record.movementPattern,
+      trackingType: record.trackingType, laterality: record.laterality,
+      compound: !!record.compound, defaultSets: record.defaultSets,
+      defaultRepRange: record.defaultRepRange, defaultRest: record.defaultRest,
+      loadIncrement: record.loadIncrement, notes: record.notes || '',
+      createdAt: record.createdAt, updatedAt: record.updatedAt
+    };
+    ex.score = (ex.compound ? 10 : 4) + secondary.length * 2 + (EQUIP_WEIGHT[ex.equip] || 1);
+    ex.search = norm([ex.id, ex.nameEn, ex.nameRu, ex.zone, ex.equip, ex.target, ex.group, secondary.join(' '), ex.movementPattern || '', ex.notes, translitRu([ex.nameRu, ex.nameEn, ex.target, secondary.join(' ')].join(' '))].join(' '));
+    return ex;
+  }
+
   var EQUIP_WEIGHT = {
     'barbell': 5, 'olympic barbell': 5, 'trap bar': 5, 'ez barbell': 4,
     'dumbbell': 4, 'body weight': 4, 'kettlebell': 4, 'smith machine': 3,
@@ -732,6 +753,13 @@
       ].join(' '));
       BY_ID[ex.id] = ex;
       return ex;
+    });
+
+    databaseCustomExercises.forEach(function (record) {
+      if (!record || BY_ID[record.id]) return;
+      var ex = customExerciseRuntimeRecord(record, EX.length);
+      BY_ID[ex.id] = ex;
+      EX.push(ex);
     });
 
     EX.forEach(function (ex) {
@@ -780,14 +808,15 @@
 
   function exName(ex) { return S.lang === 'en' ? (ex.nameEn || ex.nameRu) : (ex.nameRu || ex.nameEn); }
   function exSteps(ex) {
+    if (ex.custom && ex.notes) return ex.notes.split(/\r?\n/).map(function (step) { return step.trim(); }).filter(Boolean);
     var primary = S.lang === 'en' ? ex.stepsEn : ex.stepsRu;
     return (primary && primary.length) ? primary : (ex.stepsRu.length ? ex.stepsRu : ex.stepsEn);
   }
   var MEDIA_PLACEHOLDER = 'images/exercise-placeholder.svg';
   var MEDIA_INLINE_FALLBACK = 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 420"><rect width="640" height="420" fill="#101318"/><g fill="none" stroke="#6f7782" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" opacity=".74"><circle cx="320" cy="120" r="34"/><path d="M320 154v92M268 202l52-32 52 32M286 344l34-98 34 98M250 244h140"/></g><path d="M70 360h500" stroke="#d8a431" stroke-width="4" opacity=".55"/><text x="320" y="395" text-anchor="middle" font-family="Arial,sans-serif" font-size="18" letter-spacing="4" fill="#8d949e">MARKOV MADE GYM</text></svg>');
   var MEDIA_REVISION = '20260927-media4';
-  function exStill(ex) { return 'images/' + ex.slug + '.jpg'; }
-  function exMotion(ex) { return 'videos/' + ex.slug + '.gif?v=' + MEDIA_REVISION; }
+  function exStill(ex) { return ex.custom ? (ex.image || MEDIA_PLACEHOLDER) : 'images/' + ex.slug + '.jpg'; }
+  function exMotion(ex) { return ex.custom ? exStill(ex) : 'videos/' + ex.slug + '.gif?v=' + MEDIA_REVISION; }
   function mediaFallback(img) {
     if (!img || img.dataset.mediaFailed === 'inline') return;
     if (img.dataset.mediaFailed === 'final') { img.dataset.mediaFailed='inline'; img.src=MEDIA_INLINE_FALLBACK; img.classList.add('media-fallback','media-fallback-inline'); img.removeAttribute('data-motion'); return; }
@@ -1392,7 +1421,7 @@
     var secondary = ex.secondary.length ? ex.secondary.map(labelMu).join(', ') : detailText('нет выраженных вторичных', 'no major secondary muscles');
 
     $('modal-head-sub').textContent = detailText('Полный разбор техники, контроля и прогрессии', 'Complete technique, control and progression breakdown');
-    $('modal-media-status').textContent = detailText('GIF · полный кадр', 'GIF · full frame');
+    $('modal-media-status').textContent = ex.custom ? detailText('Свое изображение', 'Custom image') : detailText('GIF · полный кадр', 'GIF · full frame');
     $('modal-media-expand-label').textContent = detailText('Развернуть', 'Expand');
     $('modal-media-expand').setAttribute('aria-label', detailText('Развернуть демонстрацию упражнения', 'Expand exercise demonstration'));
 
@@ -1587,6 +1616,7 @@
 
   /* ---------- 9. ТЕКУЩАЯ ТРЕНИРОВКА --------------------------------------- */
   function defaultDose(ex) {
+    if (ex.custom) return { sets: ex.defaultSets || 3, reps: ex.defaultRepRange || '8–12' };
     if (ex.zone === 'cardio') return { sets: 1, reps: '10–20 мин' };
     if (ex.zone === 'waist') return { sets: 3, reps: '12–20' };
     if (ex.score >= 9) return { sets: 4, reps: '6–10' };
@@ -2363,6 +2393,7 @@
   K.profile = 'mmg.profile.v1';
   K.meta = 'mmg.workoutMeta.v1';
   K.history = 'mmg.history.v1';
+  K.customExercises = 'mmg.customExercises.v1';
   K.diary = 'mmg.diary.v1';
   K.kbju = 'mmg.kbju.v1';
   K.tips = 'mmg.tips.v1';
@@ -2388,6 +2419,15 @@
         storageWarnings.push({ key: K.history, type: 'indexeddb-write', at: Date.now() });
       });
     }
+  }
+  async function saveCustomExerciseRecords(records) {
+    var clean = cleanCustomExercises(records);
+    if (historyRepository) await historyRepository.replaceCustomExercises(clean);
+    databaseCustomExercises = clean;
+    if (store.set(K.customExercises, JSON.stringify(clean)) === false && !historyRepository) {
+      throw new Error('Custom exercises could not be saved in browser storage');
+    }
+    return clean;
   }
   function saveDiary() { store.set(K.diary, JSON.stringify(S.diary.slice(0, 400))); }
   function saveTips() { store.set(K.tips, JSON.stringify(S.tips)); }
@@ -2528,6 +2568,7 @@
   var HOME_EQUIP = ['body weight', 'band', 'dumbbell', 'resistance band', 'medicine ball', 'stability ball', 'rope'];
 
   function exKind(ex) {
+    if (ex.custom && typeof ex.compound === 'boolean') return ex.compound ? 'compound' : (ex.secondary.length ? 'accessory' : 'isolation');
     var n = ex.secondary.length;
     if (n >= 3) return 'compound';
     if (n >= 1) return 'accessory';
@@ -3504,6 +3545,17 @@
     $('run-prev').disabled = runState.ex === 0 && runState.set === 1;
 
     var currentLog=ensureSetLog(item), currentSet=currentLog[Math.max(0,runState.set-1)]||cleanSetRecord(null);
+    var tracking=ex.custom?ex.trackingType:(ex.zone==='cardio'?'duration':'weight-reps');
+    var trackingLabels={
+      'weight-reps':{value:t('wReps'),load:t('wWeight')},
+      'reps-only':{value:S.lang==='en'?'Reps':'Повторы',load:''},
+      duration:{value:S.lang==='en'?'Duration':'Время',load:''},
+      'distance-duration':{value:S.lang==='en'?'Distance and duration':'Дистанция и время',load:''},
+      'weight-duration':{value:S.lang==='en'?'Duration':'Время',load:t('wWeight')},
+      'assisted-weight':{value:S.lang==='en'?'Reps':'Повторы',load:S.lang==='en'?'Assisted weight':'Вес с поддержкой'},
+      'bodyweight-added-weight':{value:S.lang==='en'?'Reps':'Повторы',load:S.lang==='en'?'Added weight':'Дополнительный вес'}
+    };
+    var trackingLabel=trackingLabels[tracking]||trackingLabels['weight-reps'];
     var prev=runReferenceForCurrent();
     var prevText=prev&&(prev.reps||prev.weight)?((prev.weight?prev.weight+' × ':'')+(prev.reps||'—')):t('runNoPrev');
     var setStrip=currentLog.map(function(row,idx){var state=row.completed?'done':(idx===runState.set-1?'current':'pending');return '<button class="run-set-chip" type="button" data-state="'+state+'" data-run-set="'+(idx+1)+'" aria-pressed="'+String(state==='current')+'" aria-label="'+esc(t('runJumpSet',{i:idx+1}))+'">'+(idx+1)+'</button>';}).join('');
@@ -3523,8 +3575,8 @@
       '<h3 class="run-name">' + esc(exName(ex)) + '</h3></div>' +
       '<div class="run-tech-cues"><div><span>'+esc(detailText('Ключ','Key cue'))+'</span><p>'+esc(runPrimary)+'</p></div><div><span>'+esc(detailText('Дыхание','Breathing'))+'</span><p>'+esc(runTechnique.breathing)+'</p></div></div>' +
       '<div class="run-current"><div class="run-setline"><b>' + esc(t('runSetLabel', { i: runState.set, n: item.sets })) + '</b><span>' + esc(t('runElapsed')) + ' · ' + elapsed + '</span></div>' +
-      '<div class="run-current-inputs"><label>' + esc(ex.zone==='cardio'?t('runVolume'):t('wReps')) + '<input type="text" inputmode="' + (ex.zone==='cardio'?'text':'numeric') + '" data-run-field="reps" value="' + esc(currentSet.reps || item.reps || '') + '"></label>' +
-      '<label>' + esc(t('wWeight')) + '<input type="text" inputmode="decimal" data-run-field="weight" value="' + esc(currentSet.weight || item.weight || '') + '"></label>'+advancedInputs+'</div>'+setTypeSelect +
+      '<div class="run-current-inputs"><label>' + esc(ex.zone==='cardio'&&!ex.custom?t('runVolume'):trackingLabel.value) + '<input type="text" inputmode="' + (tracking==='duration'||tracking==='distance-duration'||(ex.zone==='cardio'&&!ex.custom)?'text':'decimal') + '" data-run-field="reps" value="' + esc(currentSet.reps || item.reps || '') + '"></label>' +
+      (trackingLabel.load?'<label>' + esc(trackingLabel.load) + '<input type="text" inputmode="decimal" data-run-field="weight" value="' + esc(currentSet.weight || item.weight || '') + '"></label>':'')+advancedInputs+'</div>'+setTypeSelect +
       '<div class="run-prev-record"><b>' + esc(t('runPrevPerformance')) + ':</b> ' + esc(prevText) + '</div>' + progressionHtml + usePrev + '<div class="run-set-strip" aria-label="' + esc(t('workoutSetsDone',{done:completedSetCount(item),total:item.sets})) + '">' + setStrip + '</div></div>' +
       '<div class="run-session-meta"><div><span>' + esc(t('sessionExercises')) + '</span><b>' + (runState.ex + 1) + ' / ' + S.workout.length + '</b></div>' +
       '<div><span>' + esc(t('sessionSets')) + '</span><b>' + runDoneSets() + ' / ' + total + '</b></div>' +
@@ -4372,7 +4424,7 @@
   }
 
   /* ---------- 16.11 УПРАВЛЕНИЕ ДАННЫМИ ----------------------------------- */
-  var DATA_KEYS = ['fav', 'workout', 'lang', 'theme', 'density', 'profile', 'meta', 'history', 'diary', 'kbju', 'tips', 'coach', 'rest', 'plan', 'settings', 'recentSearch', 'recentExercises'];
+  var DATA_KEYS = ['fav', 'workout', 'lang', 'theme', 'density', 'profile', 'meta', 'history', 'customExercises', 'diary', 'kbju', 'tips', 'coach', 'rest', 'plan', 'settings', 'recentSearch', 'recentExercises'];
 
   function exportAll() {
     var payload = { v: 3, kind: 'mmg-backup', at: new Date().toISOString(), data: {} };
@@ -5491,6 +5543,120 @@
     });
   }
 
+  function customExerciseCopy() {
+    return S.lang === 'en' ? {
+      kicker:'YOUR MOVEMENT', title:'Create a custom exercise', intro:'The exercise is saved on this device and joins the same Library, workout, plan and history flows. Add only details you know.',
+      nameRu:'Name in Russian', nameEn:'Name in English', zone:'Body area', target:'Primary muscle', secondary:'Secondary muscles (optional)', equipment:'Equipment', pattern:'Movement pattern', tracking:'How to track it', laterality:'Sides', compound:'Compound exercise', sets:'Default sets', reps:'Default rep range', rest:'Default rest (seconds)', increment:'Load increment (kg)', notes:'Technique notes (one cue per line)', image:'Optional image (stored on this device)', cancel:'Cancel', save:'Save exercise', choose:'Choose…', customError:'The exercise could not be saved on this device.', imageError:'Choose a PNG, JPEG or WebP image under 2 MB.',
+      trackingOptions:{'weight-reps':'Weight + reps','reps-only':'Reps only','duration':'Duration','distance-duration':'Distance + duration','weight-duration':'Weight + duration','assisted-weight':'Assisted weight','bodyweight-added-weight':'Bodyweight + added weight'},
+      sideOptions:{bilateral:'Both sides',unilateral:'One side',alternating:'Alternating',none:'Not applicable'},
+      patternOptions:{'':'Not specified','horizontal-push':'Horizontal push','horizontal-pull':'Horizontal pull','vertical-push':'Vertical push','vertical-pull':'Vertical pull',squat:'Squat',hinge:'Hip hinge',lunge:'Lunge',carry:'Carry',rotation:'Rotation',flexion:'Flexion',extension:'Extension',locomotion:'Locomotion',other:'Other'}
+    } : {
+      kicker:'СВОЁ ДВИЖЕНИЕ', title:'Создать упражнение', intro:'Упражнение сохранится на этом устройстве и появится в общей библиотеке, тренировке, программе и истории. Указывай только то, что знаешь.',
+      nameRu:'Название на русском', nameEn:'Название на английском', zone:'Зона тела', target:'Основная мышца', secondary:'Вторичные мышцы (необязательно)', equipment:'Оборудование', pattern:'Паттерн движения', tracking:'Как записывать результат', laterality:'Стороны', compound:'Составное упражнение', sets:'Подходы по умолчанию', reps:'Диапазон повторов', rest:'Отдых по умолчанию (сек.)', increment:'Шаг нагрузки (кг)', notes:'Подсказки по технике (каждая с новой строки)', image:'Изображение (необязательно, хранится на устройстве)', cancel:'Отмена', save:'Сохранить упражнение', choose:'Выбрать…', customError:'Не удалось сохранить упражнение на этом устройстве.', imageError:'Выбери PNG, JPEG или WebP до 2 МБ.',
+      trackingOptions:{'weight-reps':'Вес + повторы','reps-only':'Только повторы','duration':'Время','distance-duration':'Дистанция + время','weight-duration':'Вес + время','assisted-weight':'Вес с поддержкой','bodyweight-added-weight':'Свой вес + отягощение'},
+      sideOptions:{bilateral:'Обе стороны',unilateral:'Одна сторона',alternating:'Попеременно',none:'Не применимо'},
+      patternOptions:{'':'Не указан','horizontal-push':'Горизонтальный жим','horizontal-pull':'Горизонтальная тяга','vertical-push':'Вертикальный жим','vertical-pull':'Вертикальная тяга',squat:'Приседание',hinge:'Наклон / тазобедренный шарнир',lunge:'Выпад',carry:'Перенос',rotation:'Вращение',flexion:'Сгибание',extension:'Разгибание',locomotion:'Передвижение',other:'Другое'}
+    };
+  }
+
+  function renderCustomExerciseForm() {
+    var copy=customExerciseCopy();
+    $('custom-exercise-kicker').textContent=copy.kicker;
+    $('custom-exercise-title').textContent=copy.title;
+    $('custom-exercise-intro').textContent=copy.intro;
+    var labels={nameRu:copy.nameRu,nameEn:copy.nameEn,zone:copy.zone,target:copy.target,secondary:copy.secondary,equipment:copy.equipment,movementPattern:copy.pattern,trackingType:copy.tracking,laterality:copy.laterality,defaultSets:copy.sets,defaultRepRange:copy.reps,defaultRest:copy.rest,loadIncrement:copy.increment,notes:copy.notes,image:copy.image};
+    Object.keys(labels).forEach(function(key){var el=$('custom-'+({'nameRu':'name-ru','nameEn':'name-en','movementPattern':'pattern','trackingType':'tracking','defaultSets':'sets','defaultRepRange':'reps','defaultRest':'rest','loadIncrement':'increment','notes':'notes','image':'image','secondary':'secondary','equipment':'equipment','laterality':'laterality','zone':'zone','target':'target'}[key])+'-label');if(el)el.textContent=labels[key];});
+    $('custom-compound-label').textContent=copy.compound;
+    $('custom-exercise-cancel').textContent=copy.cancel;
+    $('custom-exercise-save').textContent=copy.save;
+    function fill(id,rows,placeholder){
+      var select=$(id),current=select.multiple?Array.from(select.selectedOptions).map(function(option){return option.value;}):[select.value];
+      select.innerHTML=(placeholder?'<option value="">'+esc(copy.choose)+'</option>':'')+rows.map(function(row){return'<option value="'+esc(row.value)+'">'+esc(row.label)+'</option>';}).join('');
+      if(select.multiple){Array.from(select.options).forEach(function(option){option.selected=current.indexOf(option.value)!==-1;});}
+      else if(rows.some(function(row){return row.value===current[0];}))select.value=current[0];
+    }
+    fill('custom-zone',ZONES.map(function(value){return{value:value,label:labelZone(value)};}),true);
+    fill('custom-target',MUSCLES.map(function(value){return{value:value,label:labelMu(value)};}),true);
+    fill('custom-secondary',MUSCLES.map(function(value){return{value:value,label:labelMu(value)};}),false);
+    fill('custom-equipment',EQUIPMENT.map(function(value){return{value:value,label:labelEq(value)};}),true);
+    fill('custom-pattern',Object.keys(copy.patternOptions).map(function(value){return{value:value,label:copy.patternOptions[value]};}),false);
+    fill('custom-tracking',Object.keys(copy.trackingOptions).map(function(value){return{value:value,label:copy.trackingOptions[value]};}),false);
+    fill('custom-laterality',Object.keys(copy.sideOptions).map(function(value){return{value:value,label:copy.sideOptions[value]};}),false);
+  }
+
+  function openCustomExerciseEditor() {
+    var open=function(){
+      renderCustomExerciseForm();
+      $('custom-exercise-form').reset();
+      $('custom-exercise-error').hidden=true;
+      renderCustomExerciseForm();
+      openOverlay($('custom-exercise-dialog'),$('custom-name-ru'));
+    };
+    if(DATA_READY)open();
+    else ensureData().then(function(ready){if(ready)open();else showToast(S.lang==='en'?'Exercise data is unavailable right now.':'Библиотека упражнений сейчас недоступна.','warn');});
+  }
+
+  function readCustomExerciseImage(file) {
+    if(!file)return Promise.resolve(null);
+    if(!/^image\/(png|jpeg|webp)$/.test(file.type)||file.size>1450000)return Promise.reject(new Error(customExerciseCopy().imageError));
+    return new Promise(function(resolve,reject){
+      var reader=new FileReader();
+      reader.onload=function(){var value=String(reader.result||'');if(value.length>2000000)reject(new Error(customExerciseCopy().imageError));else resolve(value);};
+      reader.onerror=function(){reject(new Error(customExerciseCopy().imageError));};
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function closeCustomExerciseEditor() {
+    closeOverlay($('custom-exercise-dialog'),$('custom-exercise-open'));
+    $('custom-exercise-form').reset();
+    $('custom-exercise-error').hidden=true;
+  }
+
+  async function createCustomExerciseFromForm() {
+    var form=$('custom-exercise-form'),copy=customExerciseCopy(),data=new FormData(form),now=new Date().toISOString();
+    var file=$('custom-image').files&&$('custom-image').files[0];
+    var image=await readCustomExerciseImage(file);
+    var randomId=window.crypto&&typeof window.crypto.randomUUID==='function'?window.crypto.randomUUID():Date.now().toString(36)+'-'+Math.random().toString(36).slice(2);
+    var candidate={
+      id:'custom-'+randomId,
+      nameRu:String(data.get('nameRu')||'').trim(),nameEn:String(data.get('nameEn')||'').trim(),
+      zone:String(data.get('zone')||''),target:String(data.get('target')||''),
+      secondary:Array.from($('custom-secondary').selectedOptions).map(function(option){return option.value;}),
+      equip:String(data.get('equip')||''),movementPattern:String(data.get('movementPattern')||''),
+      trackingType:String(data.get('trackingType')||'weight-reps'),laterality:String(data.get('laterality')||'bilateral'),
+      compound:$('custom-compound').checked,defaultSets:Number(data.get('defaultSets')),
+      defaultRepRange:String(data.get('defaultRepRange')||''),defaultRest:Number(data.get('defaultRest')),
+      loadIncrement:Number(data.get('loadIncrement')),notes:String(data.get('notes')||''),image:image,
+      createdAt:now,updatedAt:now
+    };
+    var record=cleanCustomExercises([candidate])[0];
+    if(!record)throw new Error(copy.customError);
+    databaseCustomExercises=await saveCustomExerciseRecords(databaseCustomExercises.concat([record]));
+    var ex=customExerciseRuntimeRecord(record,EX.length);
+    BY_ID[ex.id]=ex;EX.push(ex);
+    COUNT_ZONE[ex.zone]=(COUNT_ZONE[ex.zone]||0)+1;COUNT_MU[ex.target]=(COUNT_MU[ex.target]||0)+1;COUNT_EQ[ex.equip]=(COUNT_EQ[ex.equip]||0)+1;
+    ZONES=Object.keys(COUNT_ZONE);MUSCLES=Object.keys(COUNT_MU);EQUIPMENT=Object.keys(COUNT_EQ);
+    $('stat-total').textContent=String(EX.length);
+    $('search').value=exName(ex);S.query=exName(ex);S.zones=[];S.muscles=[];S.equipment=[];S.favOnly=false;S.limit=PAGE;
+    renderFilters();renderResults();
+    closeCustomExerciseEditor();
+    showToast(S.lang==='en'?'Custom exercise saved to your Library.':'Своё упражнение сохранено в библиотеке.','success');
+  }
+
+  function bindCustomExerciseEditor() {
+    $('custom-exercise-open').addEventListener('click',openCustomExerciseEditor);
+    $('custom-exercise-close').addEventListener('click',closeCustomExerciseEditor);
+    $('custom-exercise-cancel').addEventListener('click',closeCustomExerciseEditor);
+    qs('[data-close="custom-exercise-dialog"]').addEventListener('click',closeCustomExerciseEditor);
+    $('custom-exercise-form').addEventListener('submit',function(event){
+      event.preventDefault();
+      var save=$('custom-exercise-save'),error=$('custom-exercise-error');
+      save.disabled=true;error.hidden=true;
+      createCustomExerciseFromForm().catch(function(cause){error.textContent=cause&&cause.message?cause.message:customExerciseCopy().customError;error.hidden=false;}).finally(function(){save.disabled=false;});
+    });
+  }
+
   function bindLibrary() {
     var onSearch = debounce(function (value) {
       S.query = value;
@@ -6276,8 +6442,8 @@
      Correctness -> data integrity -> usability -> accessibility -> performance.
      This layer deliberately preserves the proven V4 business logic and contracts.
      ======================================================================== */
-  var APP_VERSION = '2026.09-r7-decisions';
-  var BACKUP_SCHEMA = 5;
+  var APP_VERSION = '2026.09-r8-custom-exercises';
+  var BACKUP_SCHEMA = 6;
   K.restTimer = 'mmg.restTimer.v2';
   K.lastBackup = 'mmg.lastBackup.v1';
   K.rollbackBackup = 'mmg.backup.rollback.v1';
@@ -6418,9 +6584,9 @@
   migrateEco = function(){ _migrateEcoV5(); restoreRestTimer(); };
 
   /* Production backup format: versioned, staged, validated, previewed, rollback-capable. */
-  DATA_KEYS=['fav','workout','lang','theme','density','profile','meta','history','diary','kbju','tips','coach','rest','recentSearch','recentExercises','runSession','plan','settings','schema','workoutSchema','historySchema'];
+  DATA_KEYS=['customExercises','fav','workout','lang','theme','density','profile','meta','history','diary','kbju','tips','coach','rest','recentSearch','recentExercises','runSession','plan','settings','schema','workoutSchema','historySchema'];
   var BACKUP_LABELS = {
-    fav:{ru:'избранное',en:'favorites'},workout:{ru:'тренировка',en:'workout'},lang:{ru:'язык',en:'language'},theme:{ru:'тема',en:'theme'},density:{ru:'плотность сетки',en:'grid density'},profile:{ru:'профиль',en:'profile'},meta:{ru:'данные тренировки',en:'workout meta'},history:{ru:'история',en:'history'},diary:{ru:'дневник прогресса',en:'progress diary'},kbju:{ru:'питание',en:'nutrition'},tips:{ru:'сохранённые материалы',en:'saved knowledge'},coach:{ru:'режим тренера',en:'coach mode'},rest:{ru:'настройка отдыха',en:'rest timer preset'},recentSearch:{ru:'недавние поиски',en:'recent searches'},recentExercises:{ru:'недавние упражнения',en:'recent exercises'},runSession:{ru:'активная сессия',en:'active session'},plan:{ru:'активная программа',en:'active programme'},settings:{ru:'настройки логирования',en:'logging settings'},schema:{ru:'схема данных',en:'schema'},workoutSchema:{ru:'схема тренировки',en:'workout schema'},historySchema:{ru:'схема истории',en:'history schema'}
+    customExercises:{ru:'свои упражнения',en:'custom exercises'},fav:{ru:'избранное',en:'favorites'},workout:{ru:'тренировка',en:'workout'},lang:{ru:'язык',en:'language'},theme:{ru:'тема',en:'theme'},density:{ru:'плотность сетки',en:'grid density'},profile:{ru:'профиль',en:'profile'},meta:{ru:'данные тренировки',en:'workout meta'},history:{ru:'история',en:'history'},diary:{ru:'дневник прогресса',en:'progress diary'},kbju:{ru:'питание',en:'nutrition'},tips:{ru:'сохранённые материалы',en:'saved knowledge'},coach:{ru:'режим тренера',en:'coach mode'},rest:{ru:'настройка отдыха',en:'rest timer preset'},recentSearch:{ru:'недавние поиски',en:'recent searches'},recentExercises:{ru:'недавние упражнения',en:'recent exercises'},runSession:{ru:'активная сессия',en:'active session'},plan:{ru:'активная программа',en:'active programme'},settings:{ru:'настройки логирования',en:'logging settings'},schema:{ru:'схема данных',en:'schema'},workoutSchema:{ru:'схема тренировки',en:'workout schema'},historySchema:{ru:'схема истории',en:'history schema'}
   };
   function backupLabel(name){var pair=BACKUP_LABELS[name];return pair?(S.lang==='en'?pair.en:pair.ru):name;}
   function jsonValue(raw){ try{return JSON.parse(raw);}catch(e){return null;} }
@@ -6454,13 +6620,14 @@
       return JSON.stringify(value);
     }
     if(name==='kbju')return(value&&typeof value==='object'&&!Array.isArray(value))?JSON.stringify(value):null;
+    if(name==='customExercises')return Array.isArray(value)?JSON.stringify(cleanCustomExercises(value)):null;
     if(name==='plan'){var restored=restorePlanV7(value);return restored?JSON.stringify(serialisePlanV7(restored)):JSON.stringify(null);}
     if(name==='settings')return(value&&typeof value==='object'&&!Array.isArray(value))?JSON.stringify({rir:!!value.rir,rpe:!!value.rpe,reading:['balanced','comfortable','large'].indexOf(value.reading)!==-1?value.reading:'balanced'}):null;
     return null;
   }
   exportAll = function(){
     var payload={app:'markov-made-gym',schemaVersion:BACKUP_SCHEMA,createdAt:new Date().toISOString(),v:BACKUP_SCHEMA,kind:'mmg-backup',appVersion:APP_VERSION,exportedAt:new Date().toISOString(),data:{}};
-    DATA_KEYS.forEach(function(name){var raw=name==='history'?JSON.stringify(S.history):store.get(K[name]);if(raw!=null)payload.data[name]=raw;});
+    DATA_KEYS.forEach(function(name){var raw=name==='history'?JSON.stringify(S.history):(name==='customExercises'?JSON.stringify(databaseCustomExercises):store.get(K[name]));if(raw!=null)payload.data[name]=raw;});
     return JSON.stringify(payload,null,2);
   };
   function analyzeBackup(raw){
@@ -6468,14 +6635,30 @@
     try{parsed=JSON.parse(raw);}catch(e){return{ok:false,code:'json'};}
     if(!parsed||parsed.kind!=='mmg-backup'||!parsed.data||typeof parsed.data!=='object'||Array.isArray(parsed.data))return{ok:false,code:'shape'};
     if(Number(parsed.schemaVersion||parsed.v||0)>BACKUP_SCHEMA)return{ok:false,code:'future'};
-    var staged={},changed=[],invalid=[];
+    var staged={},changed=[],invalid=[],temporaryCustomIds=[];
+    if(Object.prototype.hasOwnProperty.call(parsed.data,'customExercises')){
+      var customRaw=validateBackupValue('customExercises',parsed.data.customExercises);
+      if(customRaw===null)invalid.push('customExercises');
+      else{
+        staged.customExercises=customRaw;
+        jsonValue(customRaw).forEach(function(record){
+          if(!BY_ID[record.id]){
+            BY_ID[record.id]=customExerciseRuntimeRecord(record,EX.length+temporaryCustomIds.length);
+            temporaryCustomIds.push(record.id);
+          }
+        });
+        if(store.get(K.customExercises)!==customRaw)changed.push('customExercises');
+      }
+    }
     DATA_KEYS.forEach(function(name){
+      if(name==='customExercises'||invalid.indexOf(name)!==-1)return;
       if(!Object.prototype.hasOwnProperty.call(parsed.data,name))return;
       var clean=validateBackupValue(name,parsed.data[name]);
       if(clean===null){invalid.push(name);return;}
       staged[name]=clean;
       if(store.get(K[name])!==clean)changed.push(name);
     });
+    temporaryCustomIds.forEach(function(id){delete BY_ID[id];});
     if(!Object.keys(staged).length)return{ok:false,code:'empty'};
     if(invalid.length)return{ok:false,code:'invalid',invalid:invalid};
     return{ok:true,staged:staged,changed:changed,sourceVersion:String(parsed.appVersion||parsed.v||'legacy')};
@@ -6513,20 +6696,29 @@
       showToast(S.lang==='en'?'Import could not be written safely; previous data was restored.':'Не удалось безопасно записать импорт; предыдущие данные восстановлены.');
       return false;
     }
-    showToast(t('ioRestored',{n:Object.keys(report.staged).length}));
     var importedHistory = report.staged.history ? jsonValue(report.staged.history) : null;
-    if (report.staged.history && historyRepository) {
-      historyRepository.replaceAll(importedHistory).then(function () {
-        window.setTimeout(function(){window.location.reload();},650);
-      }).catch(function () {
-        var previous = analyzeBackup(rollback);
-        if (previous.ok) writeBackupValues(previous.staged);
-        if (previous.ok && previous.staged.history) historyRepository.replaceAll(jsonValue(previous.staged.history)).catch(function(){});
-        showToast(S.lang==='en'?'History could not be imported safely; the previous backup was restored.':'Не удалось безопасно импортировать историю; предыдущая копия восстановлена.');
-      });
-    } else {
+    var importedCustomExercises = report.staged.customExercises ? jsonValue(report.staged.customExercises) : null;
+    var indexedWrites = [];
+    if (report.staged.history && historyRepository) indexedWrites.push(historyRepository.replaceAll(importedHistory));
+    if (report.staged.customExercises && historyRepository) indexedWrites.push(historyRepository.replaceCustomExercises(importedCustomExercises));
+    Promise.all(indexedWrites).then(function () {
+      if (Array.isArray(importedHistory)) databaseHistory = importedHistory;
+      if (Array.isArray(importedCustomExercises)) databaseCustomExercises = cleanCustomExercises(importedCustomExercises);
+      showToast(t('ioRestored',{n:Object.keys(report.staged).length}));
       window.setTimeout(function(){window.location.reload();},650);
-    }
+    }).catch(function () {
+      var previous = analyzeBackup(rollback);
+      if (previous.ok) {
+        writeBackupValues(previous.staged);
+        var restores = [];
+        if (historyRepository && previous.staged.history) restores.push(historyRepository.replaceAll(jsonValue(previous.staged.history)));
+        if (historyRepository && previous.staged.customExercises) restores.push(historyRepository.replaceCustomExercises(jsonValue(previous.staged.customExercises)));
+        Promise.all(restores).then(function () {
+          if (previous.staged.customExercises) databaseCustomExercises = cleanCustomExercises(jsonValue(previous.staged.customExercises));
+        }).catch(function () {});
+      }
+      showToast(S.lang==='en'?'Import could not be verified; the previous backup was restored.':'Импорт не удалось проверить; прежняя резервная копия восстановлена.');
+    });
     return true;
   };
   clearAll = function(){
@@ -6535,7 +6727,7 @@
     [K.restTimer,K.lastBackup,K.rollbackBackup,K.legacyFav,K.legacyWorkout,K.legacyLang,K.legacyTheme].forEach(function(key){if(key)store.remove(key);});
     Object.keys(memoryStore).filter(function(key){return key.indexOf('mmg.recovery.')===0;}).forEach(function(key){store.remove(key);});
     if(storageOk){try{for(var i=window.localStorage.length-1;i>=0;i--){var key=window.localStorage.key(i);if(key&&key.indexOf('mmg.recovery.')===0)window.localStorage.removeItem(key);}}catch(e){}}
-    var cleared = historyRepository ? historyRepository.replaceAll([]) : Promise.resolve();
+    var cleared = historyRepository ? Promise.all([historyRepository.replaceAll([]), historyRepository.replaceCustomExercises([])]) : Promise.resolve();
     cleared.then(function(){
       showToast(t('dataCleared'));
       window.setTimeout(function(){window.location.reload();},550);
@@ -6628,7 +6820,7 @@
     [minus,plus].forEach(function(btn){if(btn)btn.addEventListener('click',function(){if(restTimer.running){restTimer.endsAt=Date.now()+Math.max(0,restTimer.left)*1000;persistRestTimer();}});});
     document.addEventListener('visibilitychange',function(){tickRestTimer();persistRestTimer();},{passive:true});
     window.addEventListener('pageshow',tickRestTimer,{passive:true});
-    window.mmgDiagnostics={version:APP_VERSION,storagePersistent:storageOk,get storageWarnings(){return storageWarnings.slice();},exerciseCount:EX.length,backupSchema:BACKUP_SCHEMA,get historySchema(){return historyRepository?historyRepository.schemaVersion:0;},get historyCount(){return Array.isArray(databaseHistory)?databaseHistory.length:S.history.length;}};
+    window.mmgDiagnostics={version:APP_VERSION,storagePersistent:storageOk,get storageWarnings(){return storageWarnings.slice();},exerciseCount:EX.length,get customExerciseCount(){return databaseCustomExercises.length;},backupSchema:BACKUP_SCHEMA,get historySchema(){return historyRepository?historyRepository.schemaVersion:0;},get historyCount(){return Array.isArray(databaseHistory)?databaseHistory.length:S.history.length;}};
   }
 
 
@@ -6764,7 +6956,7 @@
   function navigateV7(route,focus){route=V7_ROUTE_IDS[route]?route:'home';if(location.hash!=='#'+route)location.hash=route;else{applyV7Route(focus!==false);}}
   function syncV7Floating(){var route=v7RouteFromHash(),bar=$('mfb');if(bar){var show=MOBILE_MQ.matches&&route==='library';bar.setAttribute('data-open',String(show));}var sticky=$('mobile-rest-timer');if(sticky)sticky.classList.toggle('is-raised',!!(bar&&bar.getAttribute('data-open')==='true'));}
   function startPlanDayV7(dayIndex,startRun){if(!S.plan||!S.plan.days)return;v7EnsurePlanWeek();var day=S.plan.days[dayIndex];if(!day)return;S.workout=day.items.map(function(it){return normalizeWorkoutRecord({id:it.ex.id,sets:it.sets,reps:it.reps,weight:'',done:false,setLog:[]});});S.meta.name=(S.lang==='en'?'Day ':'День ')+(dayIndex+1)+' · '+(DAY_NAMES[day.key]?(DAY_NAMES[day.key][S.lang]||DAY_NAMES[day.key].ru):day.key);S.meta.date=todayISO();S.meta.note='';S.meta.planDay=dayIndex;saveWorkout();saveMeta();renderWorkout();renderResults();track('program_day_start',{day:dayIndex+1});navigateV7('workout',true);showToast(t('planDayAdded',{n:dayIndex+1}));if(startRun)setTimeout(openRun,80);}
-  function progressionIncrementForExercise(ex){var lower=ex&&['upper legs','lower legs'].indexOf(ex.zone)!==-1,compound=ex&&exKind(ex)==='compound';return lower?2.5:(compound?2:1);}
+  function progressionIncrementForExercise(ex){if(ex&&ex.custom&&Number(ex.loadIncrement)>0)return Number(ex.loadIncrement);var lower=ex&&['upper legs','lower legs'].indexOf(ex.zone)!==-1,compound=ex&&exKind(ex)==='compound';return lower?2.5:(compound?2:1);}
   function progressionAdviceV7(id,item){
     if(!progressionEngine||!item)return null;
     var previous=previousPerformance(id);
@@ -6888,15 +7080,20 @@
     }
     try {
       var persistence = await import('./src/persistence/history-repository.mjs');
+      cleanCustomExercises = persistence.cleanCustomExercises;
+      databaseCustomExercises = cleanCustomExercises(store.json(K.customExercises, []));
       historyRepository = await persistence.createHistoryRepository();
       databaseHistory = await historyRepository.migrateLegacy(store.json(K.history, []));
+      databaseCustomExercises = await historyRepository.migrateLegacyCustomExercises(databaseCustomExercises);
+      store.set(K.customExercises, JSON.stringify(databaseCustomExercises));
     } catch (error) {
       historyRepository = null;
       databaseHistory = null;
+      databaseCustomExercises = cleanCustomExercises(store.json(K.customExercises, []));
       storageWarnings.push({ key: K.history, type: 'indexeddb-unavailable', at: Date.now() });
     }
     var initialRoute = (location.hash || '#home').slice(1).split('?')[0];
-    var hasPersistedExerciseState = !!(store.get(K.fav) || store.get(K.workout) || store.get(K.plan));
+    var hasPersistedExerciseState = !!(store.get(K.fav) || store.get(K.workout) || store.get(K.plan) || databaseCustomExercises.length);
     var needsData = dataRouteNeedsLibrary(initialRoute) || hasPersistedExerciseState;
     if (needsData) window.dispatchEvent(new CustomEvent('mmg:stage', { detail: { key: 'data' } }));
     var contentLoaded = await loadContent();
@@ -6926,6 +7123,7 @@
 
     bindHeader();
     bindLibrary();
+    bindCustomExerciseEditor();
     bindModal();
     bindWorkout();
     bindTools();
