@@ -1,9 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { cleanCustomExercises, cleanEquipmentProfiles, cleanHistory, HISTORY_SCHEMA_VERSION, newestFirst } from '../src/persistence/history-repository.mjs';
+import { cleanCustomExercises, cleanEquipmentProfiles, cleanExercisePreferences, cleanHistory, HISTORY_SCHEMA_VERSION, newestFirst } from '../src/persistence/history-repository.mjs';
 
 test('history schema is explicitly versioned', () => {
-  assert.equal(HISTORY_SCHEMA_VERSION, 3);
+  assert.equal(HISTORY_SCHEMA_VERSION, 4);
+});
+
+test('exercise preferences are bounded, normalized and drop neutral entries', () => {
+  assert.deepEqual(cleanExercisePreferences({
+    '0001': 'prefer', 'custom-row': 'discomfort', '0002': 'neutral', bad: 'medical-diagnosis', '': 'avoid', [ 'x'.repeat(81) ]: 'avoid',
+  }), { '0001': 'prefer', 'custom-row': 'discomfort' });
+  assert.deepEqual(cleanExercisePreferences([]), {});
 });
 
 test('equipment profiles keep named, deduplicated local equipment selections', () => {

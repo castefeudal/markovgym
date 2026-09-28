@@ -57,6 +57,8 @@
   var databaseHistory = null;
   var databaseCustomExercises = [];
   var databaseEquipmentProfiles = [];
+  var databaseExercisePreferences = {};
+  var cleanIdbExercisePreferences = function (value) { return value && typeof value === 'object' && !Array.isArray(value) ? value : {}; };
   var cleanEquipmentProfiles = function (rows) { return Array.isArray(rows) ? rows.filter(function (row) { return row && typeof row === 'object'; }) : []; };
   var activeEquipmentProfileId = '';
   var cleanCustomExercises = function (rows) { return Array.isArray(rows) ? rows.filter(function (row) { return row && typeof row === 'object'; }) : []; };
@@ -879,7 +881,13 @@
     var labels = S.lang === 'en' ? {neutral:'No preference',prefer:'Prefer',lessOften:'Less often',avoid:'Avoid',unavailable:'Unavailable',discomfort:'Does not suit me / discomfort'} : {neutral:'Без предпочтения',prefer:'Предпочитаю',lessOften:'Реже',avoid:'Избегать',unavailable:'Недоступно',discomfort:'Не подходит / дискомфорт'};
     return labels[value] || labels.neutral;
   }
-  function saveExercisePreferences() { store.set(K.exercisePreferences, JSON.stringify(S.exercisePreferences)); }
+  function saveExercisePreferences() {
+    var serialized = JSON.stringify(S.exercisePreferences);
+    store.set(K.exercisePreferences, serialized);
+    if (historyRepository) historyRepository.replaceExercisePreferences(S.exercisePreferences).then(function () {
+      databaseExercisePreferences = cleanIdbExercisePreferences(S.exercisePreferences);
+    }).catch(function () { storageWarnings.push({ key: K.exercisePreferences, type: 'indexeddb-write', at: Date.now() }); });
+  }
   function cleanExercisePreferences(value) {
     var clean = {};
     if (!value || typeof value !== 'object' || Array.isArray(value)) return clean;
@@ -6607,7 +6615,7 @@
      Correctness -> data integrity -> usability -> accessibility -> performance.
      This layer deliberately preserves the proven V4 business logic and contracts.
      ======================================================================== */
-  var APP_VERSION = '2026.09-r11-exercise-preferences';
+  var APP_VERSION = '2026.09-r12-indexed-preferences';
   var BACKUP_SCHEMA = 9;
   K.restTimer = 'mmg.restTimer.v2';
   K.lastBackup = 'mmg.lastBackup.v1';
@@ -6882,14 +6890,17 @@
     var importedHistory = report.staged.history ? jsonValue(report.staged.history) : null;
     var importedCustomExercises = report.staged.customExercises ? jsonValue(report.staged.customExercises) : null;
     var importedEquipmentProfiles = report.staged.equipmentProfiles ? jsonValue(report.staged.equipmentProfiles) : null;
+    var importedExercisePreferences = report.staged.exercisePreferences ? cleanIdbExercisePreferences(jsonValue(report.staged.exercisePreferences)) : null;
     var indexedWrites = [];
     if (report.staged.history && historyRepository) indexedWrites.push(historyRepository.replaceAll(importedHistory));
     if (report.staged.customExercises && historyRepository) indexedWrites.push(historyRepository.replaceCustomExercises(importedCustomExercises));
     if (report.staged.equipmentProfiles && historyRepository) indexedWrites.push(historyRepository.replaceEquipmentProfiles(importedEquipmentProfiles));
+    if (report.staged.exercisePreferences && historyRepository) indexedWrites.push(historyRepository.replaceExercisePreferences(importedExercisePreferences));
     Promise.all(indexedWrites).then(function () {
       if (Array.isArray(importedHistory)) databaseHistory = importedHistory;
       if (Array.isArray(importedCustomExercises)) databaseCustomExercises = cleanCustomExercises(importedCustomExercises);
       if (Array.isArray(importedEquipmentProfiles)) databaseEquipmentProfiles = cleanEquipmentProfiles(importedEquipmentProfiles);
+      if (importedExercisePreferences) { databaseExercisePreferences = importedExercisePreferences; S.exercisePreferences = importedExercisePreferences; }
       showToast(t('ioRestored',{n:Object.keys(report.staged).length}));
       window.setTimeout(function(){window.location.reload();},650);
     }).catch(function () {
@@ -6900,9 +6911,11 @@
         if (historyRepository && previous.staged.history) restores.push(historyRepository.replaceAll(jsonValue(previous.staged.history)));
         if (historyRepository && previous.staged.customExercises) restores.push(historyRepository.replaceCustomExercises(jsonValue(previous.staged.customExercises)));
         if (historyRepository && previous.staged.equipmentProfiles) restores.push(historyRepository.replaceEquipmentProfiles(jsonValue(previous.staged.equipmentProfiles)));
+        if (historyRepository && previous.staged.exercisePreferences) restores.push(historyRepository.replaceExercisePreferences(cleanIdbExercisePreferences(jsonValue(previous.staged.exercisePreferences))));
         Promise.all(restores).then(function () {
           if (previous.staged.customExercises) databaseCustomExercises = cleanCustomExercises(jsonValue(previous.staged.customExercises));
           if (previous.staged.equipmentProfiles) databaseEquipmentProfiles = cleanEquipmentProfiles(jsonValue(previous.staged.equipmentProfiles));
+          if (previous.staged.exercisePreferences) { databaseExercisePreferences = cleanIdbExercisePreferences(jsonValue(previous.staged.exercisePreferences)); S.exercisePreferences = databaseExercisePreferences; }
         }).catch(function () {});
       }
       showToast(S.lang==='en'?'Import could not be verified; the previous backup was restored.':'Импорт не удалось проверить; прежняя резервная копия восстановлена.');
@@ -6915,7 +6928,7 @@
     [K.restTimer,K.lastBackup,K.rollbackBackup,K.legacyFav,K.legacyWorkout,K.legacyLang,K.legacyTheme].forEach(function(key){if(key)store.remove(key);});
     Object.keys(memoryStore).filter(function(key){return key.indexOf('mmg.recovery.')===0;}).forEach(function(key){store.remove(key);});
     if(storageOk){try{for(var i=window.localStorage.length-1;i>=0;i--){var key=window.localStorage.key(i);if(key&&key.indexOf('mmg.recovery.')===0)window.localStorage.removeItem(key);}}catch(e){}}
-    var cleared = historyRepository ? Promise.all([historyRepository.replaceAll([]), historyRepository.replaceCustomExercises([]), historyRepository.replaceEquipmentProfiles([])]) : Promise.resolve();
+    var cleared = historyRepository ? Promise.all([historyRepository.replaceAll([]), historyRepository.replaceCustomExercises([]), historyRepository.replaceEquipmentProfiles([]), historyRepository.replaceExercisePreferences({})]) : Promise.resolve();
     cleared.then(function(){
       showToast(t('dataCleared'));
       window.setTimeout(function(){window.location.reload();},550);
@@ -7270,12 +7283,14 @@
       var persistence = await import('./src/persistence/history-repository.mjs');
       cleanCustomExercises = persistence.cleanCustomExercises;
       cleanEquipmentProfiles = persistence.cleanEquipmentProfiles;
+      cleanIdbExercisePreferences = persistence.cleanExercisePreferences;
       databaseCustomExercises = cleanCustomExercises(store.json(K.customExercises, []));
       databaseEquipmentProfiles = cleanEquipmentProfiles(store.json(K.equipmentProfiles, []));
       historyRepository = await persistence.createHistoryRepository();
       databaseHistory = await historyRepository.migrateLegacy(store.json(K.history, []));
       databaseCustomExercises = await historyRepository.migrateLegacyCustomExercises(databaseCustomExercises);
       databaseEquipmentProfiles = await historyRepository.migrateLegacyEquipmentProfiles(databaseEquipmentProfiles);
+      databaseExercisePreferences = await historyRepository.migrateLegacyExercisePreferences(cleanIdbExercisePreferences(store.json(K.exercisePreferences, {})));
       activeEquipmentProfileId = store.get(K.equipmentProfileActive) || '';
       store.set(K.customExercises, JSON.stringify(databaseCustomExercises));
       store.set(K.equipmentProfiles, JSON.stringify(databaseEquipmentProfiles));
@@ -7284,10 +7299,11 @@
       databaseHistory = null;
       databaseCustomExercises = cleanCustomExercises(store.json(K.customExercises, []));
       databaseEquipmentProfiles = cleanEquipmentProfiles(store.json(K.equipmentProfiles, []));
+      databaseExercisePreferences = cleanIdbExercisePreferences(store.json(K.exercisePreferences, {}));
       storageWarnings.push({ key: K.history, type: 'indexeddb-unavailable', at: Date.now() });
     }
     var initialRoute = (location.hash || '#home').slice(1).split('?')[0];
-    var hasPersistedExerciseState = !!(store.get(K.fav) || store.get(K.workout) || store.get(K.plan) || databaseCustomExercises.length);
+    var hasPersistedExerciseState = !!(store.get(K.fav) || store.get(K.workout) || store.get(K.plan) || store.get(K.exercisePreferences) || databaseCustomExercises.length);
     var needsData = dataRouteNeedsLibrary(initialRoute) || hasPersistedExerciseState;
     if (needsData) window.dispatchEvent(new CustomEvent('mmg:stage', { detail: { key: 'data' } }));
     var contentLoaded = await loadContent();
@@ -7300,6 +7316,8 @@
       return;
     }
     await ensureDefaultEquipmentProfiles();
+    S.exercisePreferences = cleanExercisePreferences(databaseExercisePreferences);
+    store.set(K.exercisePreferences, JSON.stringify(S.exercisePreferences));
     if(activeEquipmentProfileId){
       var activeProfile=databaseEquipmentProfiles.filter(function(profile){return profile.id===activeEquipmentProfileId;})[0];
       if(activeProfile)S.equipment=activeProfile.equipment.slice();

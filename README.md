@@ -18,7 +18,7 @@ MARKOV MADE GYM is a browser-first fitness operating system for planning trainin
 - **Progress** — training and body signals from locally recorded data.
 - **Nutrition** — calorie and macro planning integrated with the rest of the system.
 - **MARKOV MADE LAB** — strength, training, nutrition, body-composition, cardio and conversion calculators with uncertainty and limitations surfaced.
-- **Local-first data** — settings, workouts, history and other user data stay in the browser by default.
+- **Local-first data** — settings, workouts, history and other user data stay in the browser by default; history, custom exercises, equipment profiles and exercise preferences are mirrored in IndexedDB collections.
 - **All-time workout history** — existing saved sessions migrate from the legacy local-storage key into IndexedDB; the legacy key remains a recent-session compatibility mirror.
 - **Versioned backup** — exports use the `markov-made-gym` schema envelope and preserve workout history, custom exercises, equipment profiles and exercise preferences.
 - **PWA / offline shell** — installable static web application with controlled caching and update lifecycle.

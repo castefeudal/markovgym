@@ -25,7 +25,7 @@ This describes the current browser data model and the persistence boundaries int
 
 ## Workout history and migration
 
-Completed workouts retain their date, duration, exercises, and structured set logs. IndexedDB database `markov-made-gym`, schema version 3, stores history, custom exercises, and named equipment profiles in keyed collections. On first open, valid legacy entries from `mmg.history.v1`, `mmg.customExercises.v1`, and `mmg.equipmentProfiles.v1` are copied once; the legacy keys remain compatibility mirrors. Backups use `schemaVersion: 9` and export custom exercises, equipment profiles, exercise preferences, and complete IndexedDB-backed history.
+Completed workouts retain their date, duration, exercises, and structured set logs. IndexedDB database `markov-made-gym`, schema version 4, stores history, custom exercises, named equipment profiles, and per-exercise preferences in keyed collections. On first open, valid legacy entries from `mmg.history.v1`, `mmg.customExercises.v1`, `mmg.equipmentProfiles.v1`, and `mmg.exercisePreferences.v1` are copied once; LocalStorage keys remain compatibility mirrors. Backups use `schemaVersion: 9` and export custom exercises, equipment profiles, exercise preferences, and complete IndexedDB-backed history.
 
 The History view renders 20 records at a time and reveals more on request. Progression and history lookups use the complete in-memory history loaded from IndexedDB. If IndexedDB is unavailable, the application falls back to browser storage and reports the storage limitation through diagnostics.
 

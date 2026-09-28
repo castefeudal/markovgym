@@ -39,10 +39,11 @@ test('legacy workout history migrates to IndexedDB without a 20-session cap', as
     defaultSets: 3, defaultRepRange: '8–12', defaultRest: 90, loadIncrement: 2.5,
     notes: 'Контролируемая амплитуда', createdAt: '2026-09-01T00:00:00.000Z', updatedAt: '2026-09-01T00:00:00.000Z',
   };
-  await page.addInitScript(({ history, custom }) => {
+  await page.addInitScript(({ history, custom, preferences }) => {
     localStorage.setItem('mmg.history.v1', JSON.stringify(history));
     localStorage.setItem('mmg.customExercises.v1', JSON.stringify([custom]));
-  }, { history: sessions, custom: customExercise });
+    localStorage.setItem('mmg.exercisePreferences.v1', JSON.stringify(preferences));
+  }, { history: sessions, custom: customExercise, preferences: { '0001': 'prefer', 'custom-legacy-example': 'lessOften' } });
   await page.goto('/index.html#home');
   await expect(page.locator('#mmg-boot')).toHaveCount(0);
   await expect.poll(() => page.evaluate(() => window.mmgDiagnostics?.historyCount)).toBe(28);
@@ -68,10 +69,15 @@ test('legacy workout history migrates to IndexedDB without a 20-session cap', as
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
     });
+    const exercisePreferences = await new Promise((resolve, reject) => {
+      const request = db.transaction('exercisePreferences', 'readonly').objectStore('exercisePreferences').getAll();
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
     db.close();
-    return { version: db.version, count, customCount, profileCount };
+    return { version: db.version, count, customCount, profileCount, exercisePreferences };
   });
-  expect(persistedCount).toEqual({ version: 3, count: 28, customCount: 1, profileCount: 4 });
+  expect(persistedCount).toEqual({ version: 4, count: 28, customCount: 1, profileCount: 4, exercisePreferences: [{ id: '0001', preference: 'prefer' }, { id: 'custom-legacy-example', preference: 'lessOften' }] });
   await page.reload();
   await expect.poll(() => page.evaluate(() => window.mmgDiagnostics?.historyCount)).toBe(28);
 
@@ -228,6 +234,11 @@ test('exercise preferences persist, affect library ranking and round-trip throug
   await preference.selectOption('prefer');
   await expect(page.locator('#grid .card').first()).toHaveAttribute('data-id', exerciseId);
   await expect.poll(() => page.evaluate(id => JSON.parse(localStorage.getItem('mmg.exercisePreferences.v1'))[id], exerciseId)).toBe('prefer');
+  await expect.poll(() => page.evaluate(async id => {
+    const db = await new Promise((resolve, reject) => { const request = indexedDB.open('markov-made-gym'); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); });
+    const record = await new Promise((resolve, reject) => { const request = db.transaction('exercisePreferences', 'readonly').objectStore('exercisePreferences').get(id); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); });
+    db.close(); return record?.preference;
+  }, exerciseId)).toBe('prefer');
   await page.reload();
   await page.locator(`[data-pref-toggle="${exerciseId}"]`).click();
   await expect(page.locator(`[data-exercise-preference="${exerciseId}"]`)).toHaveValue('prefer');
@@ -244,6 +255,27 @@ test('exercise preferences persist, affect library ranking and round-trip throug
   const backup = JSON.parse(await readFile(await download.path(), 'utf8'));
   expect(backup.schemaVersion).toBe(9);
   expect(JSON.parse(backup.data.exercisePreferences)[exerciseId]).toBe('discomfort');
+
+  await page.evaluate(async () => {
+    localStorage.setItem('mmg.exercisePreferences.v1', '{}');
+    const db = await new Promise((resolve, reject) => { const request = indexedDB.open('markov-made-gym'); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); });
+    await new Promise((resolve, reject) => { const tx = db.transaction('exercisePreferences', 'readwrite'); tx.objectStore('exercisePreferences').clear(); tx.oncomplete = resolve; tx.onerror = () => reject(tx.error); });
+    db.close();
+  });
+  await page.reload();
+  let importPreview = '';
+  page.once('dialog', dialog => { importPreview = dialog.message(); return dialog.accept(); });
+  const importChooser = page.waitForEvent('filechooser');
+  await page.locator('#data-import').click();
+  const chooser = await importChooser;
+  await chooser.setFiles({ name: 'exercise-preferences.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(backup)) });
+  await expect.poll(() => importPreview).toMatch(/Резервная копия проверена|Backup validated/);
+  await expect.poll(() => page.evaluate(id => JSON.parse(localStorage.getItem('mmg.exercisePreferences.v1'))[id], exerciseId)).toBe('discomfort');
+  await expect.poll(() => page.evaluate(async id => {
+    const db = await new Promise((resolve, reject) => { const request = indexedDB.open('markov-made-gym'); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); });
+    const record = await new Promise((resolve, reject) => { const request = db.transaction('exercisePreferences', 'readonly').objectStore('exercisePreferences').get(id); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); });
+    db.close(); return record?.preference;
+  }, exerciseId)).toBe('discomfort');
 });
 
 test('distance and duration tracking stay structured from Run Mode into workout history', async ({ page }) => {

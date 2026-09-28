@@ -1,4 +1,4 @@
-const VERSION = '2026.09-r11-exercise-preferences';
+const VERSION = '2026.09-r12-indexed-preferences';
 const PREFIX = 'mmg-gym-';
 const SHELL = `${PREFIX}shell-${VERSION}`;
 const MEDIA = `${PREFIX}media-${VERSION}`;
