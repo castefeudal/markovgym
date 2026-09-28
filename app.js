@@ -112,6 +112,7 @@
 
   var K = {
     fav: 'mmg.favorites.v8',
+    exercisePreferences: 'mmg.exercisePreferences.v1',
     workout: 'mmg.workout.v2',
     lang: 'mmg.lang.v2',
     theme: 'mmg.theme.v2',
@@ -855,6 +856,7 @@
     sort: 'recommended',
     limit: 60,
     favorites: [],
+    exercisePreferences: {},
     workout: [],
     activeId: null,
     lastFiltered: []
@@ -867,6 +869,25 @@
     return S.workout.some(function (item) { return item.id === id; });
   }
   function saveFavorites() { store.set(K.fav, JSON.stringify(S.favorites)); }
+  var EXERCISE_PREFERENCE_VALUES = ['prefer', 'neutral', 'lessOften', 'avoid', 'unavailable', 'discomfort'];
+  function exercisePreference(id) { return EXERCISE_PREFERENCE_VALUES.indexOf(S.exercisePreferences[id]) !== -1 ? S.exercisePreferences[id] : 'neutral'; }
+  function exercisePreferenceScore(ex) {
+    var value = exercisePreference(ex.id);
+    return value === 'prefer' ? 115 : value === 'lessOften' ? -85 : (value === 'avoid' || value === 'unavailable' || value === 'discomfort') ? -10000 : 0;
+  }
+  function exercisePreferenceLabel(value) {
+    var labels = S.lang === 'en' ? {neutral:'No preference',prefer:'Prefer',lessOften:'Less often',avoid:'Avoid',unavailable:'Unavailable',discomfort:'Does not suit me / discomfort'} : {neutral:'Без предпочтения',prefer:'Предпочитаю',lessOften:'Реже',avoid:'Избегать',unavailable:'Недоступно',discomfort:'Не подходит / дискомфорт'};
+    return labels[value] || labels.neutral;
+  }
+  function saveExercisePreferences() { store.set(K.exercisePreferences, JSON.stringify(S.exercisePreferences)); }
+  function cleanExercisePreferences(value) {
+    var clean = {};
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return clean;
+    Object.keys(value).slice(0, EX.length).forEach(function(id) {
+      if (BY_ID[id] && EXERCISE_PREFERENCE_VALUES.indexOf(value[id]) !== -1 && value[id] !== 'neutral') clean[id] = value[id];
+    });
+    return clean;
+  }
   function saveWorkout() { store.set(K.workout, JSON.stringify(S.workout)); }
 
   function toggleInArray(arr, value) {
@@ -908,7 +929,7 @@
         return d || (b.score - a.score) || (a.idx - b.idx);
       });
     } else {
-      out.sort(function (a, b) { return (b.score - a.score) || (a.idx - b.idx); });
+      out.sort(function (a, b) { return (b.score + exercisePreferenceScore(b) + (isFav(b.id) ? 65 : 0) - (a.score + exercisePreferenceScore(a) + (isFav(a.id) ? 65 : 0))) || (a.idx - b.idx); });
     }
     return out;
   }
@@ -986,6 +1007,7 @@
         '<h3 class="card-title">' + esc(name) + '</h3>' +
         '<div class="card-specs"><span>' + esc(kind) + '</span><span>' + esc(level) + '</span></div>' +
         '<div class="card-meta"><span class="meta-tag">' + premiumIcon('equipment') + esc(labelEq(ex.equip)) + '</span>' + meta + '</div>' +
+        '<button class="btn btn-quiet btn-sm exercise-preference-trigger" type="button" data-pref-toggle="' + esc(ex.id) + '" aria-label="' + esc((S.lang === 'en' ? 'Set preference for ' : 'Настроить предпочтение: ') + name) + '" title="' + esc(S.lang === 'en' ? 'Personal exercise preference' : 'Личное предпочтение упражнения') + '">' + esc(exercisePreferenceLabel(exercisePreference(ex.id))) + '</button>' +
         '<div class="card-actions">' +
           '<button class="btn btn-solid btn-sm" type="button" data-open="' + esc(ex.id) + '">' + esc(t('openTechnique')) + '</button>' +
           '<button class="btn btn-sm btn-add' + (added ? ' btn-primary' : ' btn-solid') + '" type="button" data-add="' + esc(ex.id) + '" aria-label="' +
@@ -2044,7 +2066,7 @@
     if (goal === 'strength' && ['barbell', 'olympic barbell', 'trap bar', 'dumbbell', 'weighted'].indexOf(ex.equip) !== -1) score += 28;
     if (goal === 'health' && ['leverage machine', 'cable', 'body weight', 'assisted'].indexOf(ex.equip) !== -1) score += 20;
     if (level === 'beginner' && ['leverage machine', 'cable', 'assisted', 'body weight'].indexOf(ex.equip) !== -1) score += 22;
-    return score;
+    return score + exercisePreferenceScore(ex) + (isFav(ex.id) ? 65 : 0);
   }
 
   function renderPlanPlaceholder() {
@@ -2147,11 +2169,12 @@
       var name = DAY_NAMES[day.key][S.lang] || DAY_NAMES[day.key].ru;
       return '<div class="plan-day" data-plan-day="' + dayIndex + '">' +
         '<div class="plan-day-head"><b>' + esc(t('planDay', { n: day.index + 1 })) + ' · ' + esc(name) + '</b>' +
-        '<span>' + esc(t('planRest')) + ' ' + day.items[0].rest + ' ' + esc(t('planSec')) + '</span></div>' +
+        '<span>' + esc(t('planRest')) + ' ' + (day.items.length ? day.items[0].rest + ' ' + esc(t('planSec')) : '—') + '</span></div>' +
         day.items.map(function (it, itemIndex) {
           return '<div class="plan-ex" data-plan-day="' + dayIndex + '" data-plan-item="' + itemIndex + '">' +
             '<button class="plan-ex-name" type="button" data-open="' + esc(it.ex.id) + '">' + esc(exName(it.ex)) + '</button>' +
             '<span class="meta-tag">' + esc(labelEq(it.ex.equip)) + '</span>' +
+            '<span class="plan-ex-reason">' + esc(exercisePreference(it.ex.id) === 'prefer' ? (S.lang === 'en' ? 'Preferred by you' : 'Вы отметили как предпочтительное') : isFav(it.ex.id) ? (S.lang === 'en' ? 'Saved as a favourite' : 'В избранном') : (S.lang === 'en' ? 'Matches this day, goal and available equipment' : 'Подходит для этого дня, цели и доступного оборудования')) + '</span>' +
             '<span class="plan-ex-dose">' + it.sets + ' × ' + esc(it.reps) + '</span>' +
           '</div>';
         }).join('') +
@@ -2202,7 +2225,7 @@
     lines.push('');
     lastPlan.week.forEach(function (day) {
       var name = DAY_NAMES[day.key][S.lang] || DAY_NAMES[day.key].ru;
-      lines.push(t('planDay', { n: day.index + 1 }) + ' — ' + name + ' (' + t('planRest') + ' ' + day.items[0].rest + ' ' + t('planSec') + ')');
+      lines.push(t('planDay', { n: day.index + 1 }) + ' — ' + name + ' (' + t('planRest') + ' ' + (day.items[0] ? day.items[0].rest : 90) + ' ' + t('planSec') + ')');
       day.items.forEach(function (it, i) {
         lines.push('  ' + (i + 1) + '. ' + exName(it.ex) + ' — ' + it.sets + '×' + it.reps + ' (' + labelEq(it.ex.equip) + ')');
       });
@@ -3349,6 +3372,7 @@
   function swapCandidates(ex, reason) {
     var sameTarget = [], sameGroup = [];
     var level = exLevel(ex), kind = exKind(ex);
+    var availableEquipment = equipmentFor(S.profile && S.profile.place ? S.profile.place : 'gym');
 
     EX.forEach(function (cand) {
       if (cand.id === ex.id) return;
@@ -3359,6 +3383,8 @@
     var pool = sameTarget.length >= 4 ? sameTarget : sameTarget.concat(sameGroup);
 
     var pass = function (cand) {
+      if (['avoid', 'unavailable', 'discomfort'].indexOf(exercisePreference(cand.id)) !== -1) return false;
+      if (availableEquipment.indexOf(cand.equip) === -1) return false;
       if (reason === 'busy') return cand.equip !== ex.equip;
       if (reason === 'noequip') return cand.equip !== ex.equip && (isHomeFriendly(cand) || GUIDED.indexOf(cand.equip) !== -1);
       if (reason === 'home') return isHomeFriendly(cand);
@@ -3370,15 +3396,20 @@
     };
 
     var filtered = pool.filter(pass);
-    if (filtered.length < 3) filtered = pool;
 
     filtered.sort(function (a, b) {
       var scoreOf = function (c) {
         var s = 0;
         if (c.target === ex.target) s += 6;
+        if (c.secondary.indexOf(ex.target) !== -1 || ex.secondary.indexOf(c.target) !== -1) s += 2;
+        if (c.movementPattern && ex.movementPattern && c.movementPattern === ex.movementPattern) s += 4;
         if (exKind(c) === kind) s += 3;
+        if (c.laterality && ex.laterality && c.laterality === ex.laterality) s += 1;
         if (exLevel(c) === level) s += 2;
         if (S.profile.place === 'home' && isHomeFriendly(c)) s += 2;
+        if (exercisePreference(c.id) === 'prefer') s += 8;
+        if (exercisePreference(c.id) === 'lessOften') s -= 8;
+        if (isFav(c.id)) s += 4;
         return s + c.score / 20;
       };
       return scoreOf(b) - scoreOf(a);
@@ -3388,11 +3419,15 @@
   }
 
   function swapWhy(ex, cand, reason) {
-    if (cand.target === ex.target && cand.equip !== ex.equip) return t('swapWhyEquip', { v: labelEq(cand.equip) });
-    if (cand.target !== ex.target) return t('swapWhyGroup', { v: labelMu(cand.target) });
-    if (reason === 'hard') return t('swapWhyEasier');
-    if (reason === 'easy') return t('swapWhyHarder');
-    return t('swapWhySame', { v: labelEq(cand.equip) });
+    var en = S.lang === 'en', parts = [];
+    if (cand.target === ex.target) parts.push(en ? 'same primary muscle' : 'та же основная мышца');
+    else parts.push((en ? 'primary muscle group: ' : 'группа основной мышцы: ') + labelMu(cand.target));
+    if (cand.movementPattern && ex.movementPattern && cand.movementPattern === ex.movementPattern) parts.push(en ? 'same movement pattern' : 'тот же паттерн движения');
+    if (exKind(cand) === exKind(ex)) parts.push(en ? 'same exercise role' : 'та же роль упражнения');
+    parts.push((en ? 'available: ' : 'доступно: ') + labelEq(cand.equip));
+    if (reason === 'hard') parts.push(en ? 'beginner-friendly level' : 'подходит для начального уровня');
+    if (exercisePreference(cand.id) === 'prefer') parts.push(en ? 'you marked it as preferred' : 'вы отметили его как предпочтительное');
+    return parts.join(en ? ' · ' : ' · ');
   }
 
   function renderSwapList() {
@@ -3940,6 +3975,7 @@
   /* ---------- 16.6 ПЛАН: ОГРАНИЧЕНИЯ И РАЗБОР ---------------------------- */
   /* Фильтр вызывается из buildPlan при формировании пула упражнений. */
   function planExtraFilter(ex) {
+    if (['avoid', 'unavailable', 'discomfort'].indexOf(exercisePreference(ex.id)) !== -1) return false;
     if (!C) return true;
     var style = $('p-style') ? $('p-style').value : 'balanced';
     if (style === 'free' && FREE_WEIGHT.indexOf(ex.equip) === -1 && ex.equip !== 'body weight') return false;
@@ -5498,6 +5534,8 @@
     }
     S.favorites = fav.map(String).filter(function (id) { return !!BY_ID[id]; });
     saveFavorites();
+    S.exercisePreferences = cleanExercisePreferences(store.json(K.exercisePreferences, {}));
+    saveExercisePreferences();
 
     // Тренировка
     var workout = store.json(K.workout, null);
@@ -5757,6 +5795,30 @@
   }
 
   function bindLibrary() {
+    $('grid').addEventListener('click', function (e) {
+      var trigger = e.target.closest('[data-pref-toggle]');
+      if (!trigger) return;
+      var id = trigger.dataset.prefToggle;
+      if (!BY_ID[id]) return;
+      var select = document.createElement('select');
+      select.className = 'select exercise-preference';
+      select.dataset.exercisePreference = id;
+      select.setAttribute('aria-label', (S.lang === 'en' ? 'Preference: ' : 'Предпочтение: ') + exName(BY_ID[id]));
+      select.innerHTML = EXERCISE_PREFERENCE_VALUES.map(function(value) { return '<option value="' + value + '"' + (exercisePreference(id) === value ? ' selected' : '') + '>' + esc(exercisePreferenceLabel(value)) + '</option>'; }).join('');
+      trigger.replaceWith(select);
+      select.focus();
+    });
+    $('grid').addEventListener('change', function (e) {
+      var select = e.target.closest('[data-exercise-preference]');
+      if (!select) return;
+      var id = select.dataset.exercisePreference, value = select.value;
+      if (!BY_ID[id] || EXERCISE_PREFERENCE_VALUES.indexOf(value) === -1) return;
+      if (value === 'neutral') delete S.exercisePreferences[id]; else S.exercisePreferences[id] = value;
+      saveExercisePreferences();
+      track('exercise_preference_changed', { exercise: id, preference: value });
+      if (value !== 'neutral') showToast(S.lang === 'en' ? 'Preference saved and used in plans and substitutions.' : 'Предпочтение сохранено и учтено в планах и заменах.');
+      renderResults();
+    });
     var onSearch = debounce(function (value) {
       S.query = value;
       S.limit = PAGE;
@@ -6545,8 +6607,8 @@
      Correctness -> data integrity -> usability -> accessibility -> performance.
      This layer deliberately preserves the proven V4 business logic and contracts.
      ======================================================================== */
-  var APP_VERSION = '2026.09-r10-tracking-metrics';
-  var BACKUP_SCHEMA = 8;
+  var APP_VERSION = '2026.09-r11-exercise-preferences';
+  var BACKUP_SCHEMA = 9;
   K.restTimer = 'mmg.restTimer.v2';
   K.lastBackup = 'mmg.lastBackup.v1';
   K.rollbackBackup = 'mmg.backup.rollback.v1';
@@ -6687,8 +6749,9 @@
   migrateEco = function(){ _migrateEcoV5(); restoreRestTimer(); };
 
   /* Production backup format: versioned, staged, validated, previewed, rollback-capable. */
-  DATA_KEYS=['customExercises','equipmentProfiles','equipmentProfileActive','fav','workout','lang','theme','density','profile','meta','history','diary','kbju','tips','coach','rest','recentSearch','recentExercises','runSession','plan','settings','schema','workoutSchema','historySchema'];
+  DATA_KEYS=['customExercises','equipmentProfiles','equipmentProfileActive','exercisePreferences','fav','workout','lang','theme','density','profile','meta','history','diary','kbju','tips','coach','rest','recentSearch','recentExercises','runSession','plan','settings','schema','workoutSchema','historySchema'];
   var BACKUP_LABELS = {
+    exercisePreferences:{ru:'предпочтения упражнений',en:'exercise preferences'},
     customExercises:{ru:'свои упражнения',en:'custom exercises'},equipmentProfiles:{ru:'профили оборудования',en:'equipment profiles'},equipmentProfileActive:{ru:'активный профиль оборудования',en:'active equipment profile'},fav:{ru:'избранное',en:'favorites'},workout:{ru:'тренировка',en:'workout'},lang:{ru:'язык',en:'language'},theme:{ru:'тема',en:'theme'},density:{ru:'плотность сетки',en:'grid density'},profile:{ru:'профиль',en:'profile'},meta:{ru:'данные тренировки',en:'workout meta'},history:{ru:'история',en:'history'},diary:{ru:'дневник прогресса',en:'progress diary'},kbju:{ru:'питание',en:'nutrition'},tips:{ru:'сохранённые материалы',en:'saved knowledge'},coach:{ru:'режим тренера',en:'coach mode'},rest:{ru:'настройка отдыха',en:'rest timer preset'},recentSearch:{ru:'недавние поиски',en:'recent searches'},recentExercises:{ru:'недавние упражнения',en:'recent exercises'},runSession:{ru:'активная сессия',en:'active session'},plan:{ru:'активная программа',en:'active programme'},settings:{ru:'настройки логирования',en:'logging settings'},schema:{ru:'схема данных',en:'schema'},workoutSchema:{ru:'схема тренировки',en:'workout schema'},historySchema:{ru:'схема истории',en:'history schema'}
   };
   function backupLabel(name){var pair=BACKUP_LABELS[name];return pair?(S.lang==='en'?pair.en:pair.ru):name;}
@@ -6726,6 +6789,7 @@
     if(name==='kbju')return(value&&typeof value==='object'&&!Array.isArray(value))?JSON.stringify(value):null;
     if(name==='customExercises')return Array.isArray(value)?JSON.stringify(cleanCustomExercises(value)):null;
     if(name==='equipmentProfiles')return Array.isArray(value)?JSON.stringify(cleanEquipmentProfiles(value)):null;
+    if(name==='exercisePreferences')return value&&typeof value==='object'&&!Array.isArray(value)?JSON.stringify(cleanExercisePreferences(value)):null;
     if(name==='plan'){var restored=restorePlanV7(value);return restored?JSON.stringify(serialisePlanV7(restored)):JSON.stringify(null);}
     if(name==='settings')return(value&&typeof value==='object'&&!Array.isArray(value))?JSON.stringify({rir:!!value.rir,rpe:!!value.rpe,reading:['balanced','comfortable','large'].indexOf(value.reading)!==-1?value.reading:'balanced'}):null;
     return null;

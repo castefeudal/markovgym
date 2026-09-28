@@ -8,8 +8,9 @@ This describes the current browser data model and the persistence boundaries int
 | --- | --- |
 | UserProfile | Goal, experience, training location, availability, focus, limitations, and recovery baseline. Stored under `mmg.profile.v1`. |
 | Exercise | Compact catalog record with id, RU/EN name, body area, equipment, target and secondary muscles, animation slug, and instructions. The bundled catalog contains 1,324 records. |
-| CustomExercise | User-created bilingual exercise with body area, primary/secondary muscles, equipment, movement pattern, tracking type, laterality, compound flag, default dose, load increment, notes, optional local image, and timestamps. Stored in IndexedDB and exported in backup schema v8. |
-| EquipmentProfile | Named, local set of available equipment. The selected profile filters the Library and constrains generated exercise choices without changing a saved workout. Stored in IndexedDB and included in backup schema v8. |
+| CustomExercise | User-created bilingual exercise with body area, primary/secondary muscles, equipment, movement pattern, tracking type, laterality, compound flag, default dose, load increment, notes, optional local image, and timestamps. Stored in IndexedDB and included in current backup schema v9. |
+| EquipmentProfile | Named, local set of available equipment. The selected profile filters the Library and constrains generated exercise choices without changing a saved workout. Stored in IndexedDB and included in current backup schema v9. |
+| ExercisePreferences | Per-exercise preference: prefer, neutral, less often, avoid, unavailable, or user-marked discomfort. Favourite remains a separate saved-list action. Stored locally and included in backup schema v9. |
 | Workout | Current ordered exercise list, target sets/reps/load, completion flags, and per-set log. Stored under `mmg.workout.v2`. |
 | Set | A logged set with reps, load, distance, duration, completion, set role, and optional RIR/RPE. The fields saved depend on the exercise tracking type. Set normalization is in the workout domain in `app.js`. |
 | Program | A weekly split with day definitions and the current week completion markers. Stored under `mmg.plan.v1`. |
@@ -24,7 +25,7 @@ This describes the current browser data model and the persistence boundaries int
 
 ## Workout history and migration
 
-Completed workouts retain their date, duration, exercises, and structured set logs. IndexedDB database `markov-made-gym`, schema version 3, stores history, custom exercises, and named equipment profiles in keyed collections. On first open, valid legacy entries from `mmg.history.v1`, `mmg.customExercises.v1`, and `mmg.equipmentProfiles.v1` are copied once; the legacy keys remain compatibility mirrors. Backups use `schemaVersion: 8` and export all custom exercises, equipment profiles, and complete IndexedDB-backed history.
+Completed workouts retain their date, duration, exercises, and structured set logs. IndexedDB database `markov-made-gym`, schema version 3, stores history, custom exercises, and named equipment profiles in keyed collections. On first open, valid legacy entries from `mmg.history.v1`, `mmg.customExercises.v1`, and `mmg.equipmentProfiles.v1` are copied once; the legacy keys remain compatibility mirrors. Backups use `schemaVersion: 9` and export custom exercises, equipment profiles, exercise preferences, and complete IndexedDB-backed history.
 
 The History view renders 20 records at a time and reveals more on request. Progression and history lookups use the complete in-memory history loaded from IndexedDB. If IndexedDB is unavailable, the application falls back to browser storage and reports the storage limitation through diagnostics.
 

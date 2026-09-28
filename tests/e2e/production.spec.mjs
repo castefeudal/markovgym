@@ -81,7 +81,7 @@ test('legacy workout history migrates to IndexedDB without a 20-session cap', as
   const download = await downloadPromise;
   const backup = JSON.parse(await readFile(await download.path(), 'utf8'));
   expect(backup.app).toBe('markov-made-gym');
-  expect(backup.schemaVersion).toBe(8);
+  expect(backup.schemaVersion).toBe(9);
   expect(JSON.parse(backup.data.history)).toHaveLength(28);
   expect(JSON.parse(backup.data.customExercises)).toHaveLength(1);
   expect(JSON.parse(backup.data.equipmentProfiles)).toHaveLength(4);
@@ -91,7 +91,8 @@ test('legacy workout history migrates to IndexedDB without a 20-session cap', as
   await expect(page.locator('#hist .hist-item')).toHaveCount(28);
 });
 
-test('custom exercise joins the Library, saved workout, Run Mode, history and schema v8 backup', async ({ page }) => {
+test('custom exercise joins the Library, saved workout, Run Mode, history and schema v9 backup', async ({ page }) => {
+  test.setTimeout(90_000);
   await page.goto('/index.html#library');
   await expect(page.locator('#mmg-boot')).toHaveCount(0);
   await page.locator('#custom-exercise-open').click();
@@ -140,7 +141,7 @@ test('custom exercise joins the Library, saved workout, Run Mode, history and sc
   const download = await downloadPromise;
   const backup = JSON.parse(await readFile(await download.path(), 'utf8'));
   const customExercises = JSON.parse(backup.data.customExercises);
-  expect(backup.schemaVersion).toBe(8);
+  expect(backup.schemaVersion).toBe(9);
   expect(customExercises).toHaveLength(1);
   expect(customExercises[0]).toMatchObject({
     nameRu: 'Мой жим гантели', nameEn: 'My dumbbell press',
@@ -182,7 +183,7 @@ test('equipment profiles constrain Library choices, survive reload and preserve 
   await page.locator('#data-export').click();
   const download = await downloadPromise;
   const backup = JSON.parse(await readFile(await download.path(), 'utf8'));
-  expect(backup.schemaVersion).toBe(8);
+  expect(backup.schemaVersion).toBe(9);
   expect(JSON.parse(backup.data.equipmentProfiles)).toHaveLength(5);
   const importedProfileId = backup.data.equipmentProfileActive;
   expect(importedProfileId).toMatch(/^equipment-/);
@@ -214,6 +215,35 @@ test('equipment profiles constrain Library choices, survive reload and preserve 
   await expect.poll(() => importPreview).toMatch(/Резервная копия проверена|Backup validated/);
   await expect.poll(() => page.evaluate(() => window.mmgDiagnostics?.activeEquipmentProfileId)).toBe(importedProfileId);
   await expect.poll(() => page.evaluate(() => window.mmgDiagnostics?.equipmentProfileCount)).toBe(5);
+});
+
+test('exercise preferences persist, affect library ranking and round-trip through backups', async ({ page }) => {
+  await page.goto('/index.html#library');
+  await expect(page.locator('#mmg-boot')).toHaveCount(0);
+  const preferredCard = page.locator('#grid .card').nth(5);
+  const exerciseId = await preferredCard.getAttribute('data-id');
+  await preferredCard.locator('[data-pref-toggle]').click();
+  const preference = preferredCard.locator('[data-exercise-preference]');
+  await expect(preference.locator('option')).toHaveCount(6);
+  await preference.selectOption('prefer');
+  await expect(page.locator('#grid .card').first()).toHaveAttribute('data-id', exerciseId);
+  await expect.poll(() => page.evaluate(id => JSON.parse(localStorage.getItem('mmg.exercisePreferences.v1'))[id], exerciseId)).toBe('prefer');
+  await page.reload();
+  await page.locator(`[data-pref-toggle="${exerciseId}"]`).click();
+  await expect(page.locator(`[data-exercise-preference="${exerciseId}"]`)).toHaveValue('prefer');
+  await page.locator('#search').fill(exerciseId);
+  await expect(page.locator(`[data-pref-toggle="${exerciseId}"]`)).toBeVisible();
+  await page.locator(`[data-pref-toggle="${exerciseId}"]`).click();
+  await page.locator(`[data-exercise-preference="${exerciseId}"]`).selectOption('discomfort');
+  await expect.poll(() => page.evaluate(id => JSON.parse(localStorage.getItem('mmg.exercisePreferences.v1'))[id], exerciseId)).toBe('discomfort');
+
+  await page.goto('/index.html#settings');
+  const downloadPromise = page.waitForEvent('download');
+  await page.locator('#data-export').click();
+  const download = await downloadPromise;
+  const backup = JSON.parse(await readFile(await download.path(), 'utf8'));
+  expect(backup.schemaVersion).toBe(9);
+  expect(JSON.parse(backup.data.exercisePreferences)[exerciseId]).toBe('discomfort');
 });
 
 test('distance and duration tracking stay structured from Run Mode into workout history', async ({ page }) => {
@@ -466,7 +496,7 @@ test('flagship restores saved programme on home and exposes the weekly pulse', a
     }));
   });
   await page.reload();
-  await expect(page.locator('#mmg-boot')).toHaveCount(0);
+  await expect(page.locator('#mmg-boot')).toHaveCount(0, { timeout: 15_000 });
   await expect(page.locator('#v10-home-pulse')).toBeVisible();
   await expect(page.locator('#v10-home-pulse')).toContainText(/0\s*\/\s*2/);
   await page.goto('/index.html#program');

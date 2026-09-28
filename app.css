@@ -4556,3 +4556,5 @@ p,.lede,.small,.tiny,.note,.v7-next-copy,.theme-choice-copy small{text-wrap:pret
 .equipment-profile>label{font-size:.82rem;font-weight:650;color:var(--color-text-secondary)}
 .equipment-profile-actions{display:flex;flex-wrap:wrap;gap:8px}
 .equipment-profile>p{margin:0}
+.exercise-preference{width:100%;min-height:36px;margin-top:3px;padding:6px 28px 6px 9px;font-size:.72rem}
+.plan-ex-reason{grid-column:1/-1;color:var(--v8-muted);font-size:.74rem}
