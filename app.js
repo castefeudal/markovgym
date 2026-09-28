@@ -1693,7 +1693,7 @@
     raw = raw && typeof raw === 'object' ? raw : {};
     var setTypes=['warmup','working','drop','failure','backoff','amrap'];
     var type=setTypes.indexOf(String(raw.type||'working'))!==-1?String(raw.type||'working'):'working';
-    return { reps:String(raw.reps==null?'':raw.reps).slice(0,24), weight:String(raw.weight==null?'':raw.weight).slice(0,40), rir:String(raw.rir==null?'':raw.rir).slice(0,8), rpe:String(raw.rpe==null?'':raw.rpe).slice(0,8), type:type, completed:!!raw.completed, completedAt:Number(raw.completedAt)>0?Number(raw.completedAt):0 };
+    return { reps:String(raw.reps==null?'':raw.reps).slice(0,24), weight:String(raw.weight==null?'':raw.weight).slice(0,40), distance:String(raw.distance==null?'':raw.distance).slice(0,32), duration:String(raw.duration==null?'':raw.duration).slice(0,32), rir:String(raw.rir==null?'':raw.rir).slice(0,8), rpe:String(raw.rpe==null?'':raw.rpe).slice(0,8), type:type, completed:!!raw.completed, completedAt:Number(raw.completedAt)>0?Number(raw.completedAt):0 };
   }
   function ensureSetLog(item) {
     if (!item) return [];
@@ -3558,13 +3558,22 @@
     }
     return null;
   }
+  function setPerformanceSummary(row){
+    if(!row)return'';
+    var parts=[];
+    if(row.weight)parts.push(String(row.weight)+(row.reps?' × '+row.reps:''));
+    else if(row.reps)parts.push(String(row.reps));
+    if(row.distance)parts.push(String(row.distance)+' km');
+    if(row.duration)parts.push(String(row.duration));
+    return parts.join(' · ');
+  }
   function previousSetPerformance(id,setIndex){
     var prev=previousPerformance(id); if(!prev) return null;
     if(Array.isArray(prev.setLog)){
       var exact=prev.setLog[setIndex]; if(exact&&exact.completed) return exact;
       for(var i=prev.setLog.length-1;i>=0;i--) if(prev.setLog[i]&&prev.setLog[i].completed) return prev.setLog[i];
     }
-    return {reps:prev.reps||'',weight:prev.weight||'',completed:!!prev.done};
+    return {reps:prev.reps||'',weight:prev.weight||'',distance:prev.distance||'',duration:prev.duration||'',completed:!!prev.done};
   }
   function firstIncompletePosition(){
     for(var i=0;i<S.workout.length;i++){var log=ensureSetLog(S.workout[i]);for(var j=0;j<log.length;j++)if(!log[j].completed)return{ex:i,set:j+1};}
@@ -3573,26 +3582,29 @@
   function completeCurrentSet(){
     var item=S.workout[runState.ex]; if(!item) return false;
     var log=ensureSetLog(item), row=log[Math.max(0,runState.set-1)]; if(!row) return false;
-    var stage=$('run-stage'),repsInput=qs('[data-run-field="reps"]',stage),weightInput=qs('[data-run-field="weight"]',stage),rirInput=qs('[data-run-field="rir"]',stage),rpeInput=qs('[data-run-field="rpe"]',stage),typeInput=qs('[data-run-set-type]',stage);
-    row.reps=String(repsInput?repsInput.value:(row.reps||item.reps||'')).slice(0,24);
-    row.weight=String(weightInput?weightInput.value:(row.weight||item.weight||'')).slice(0,40);
-    if(rirInput)row.rir=String(rirInput.value||'').slice(0,4); if(rpeInput)row.rpe=String(rpeInput.value||'').slice(0,4); if(typeInput)row.type=String(typeInput.value||'working').slice(0,12);
+    var stage=$('run-stage'),typeInput=qs('[data-run-set-type]',stage);
+    ['reps','weight','distance','duration','rir','rpe'].forEach(function(name){
+      var field=qs('[data-run-field="'+name+'"]',stage);if(field)row[name]=String(field.value||'').slice(0,name==='reps'?24:40);
+    });
+    if(typeInput)row.type=String(typeInput.value||'working').slice(0,12);
     row.completed=true; row.completedAt=Date.now(); item.reps=row.reps||item.reps; item.weight=row.weight||item.weight; item.done=log.every(function(x){return x.completed;}); saveWorkout(); track('set_complete',{id:item.id,set:runState.set}); return true;
   }
 
   function saveCurrentSetDraft(){
     var item=S.workout[runState.ex],stage=$('run-stage'); if(!item||!stage)return;
-    var reps=qs('[data-run-field="reps"]',stage),weight=qs('[data-run-field="weight"]',stage),rir=qs('[data-run-field="rir"]',stage),rpe=qs('[data-run-field="rpe"]',stage),type=qs('[data-run-set-type]',stage),log=ensureSetLog(item),row=log[Math.max(0,runState.set-1)];
-    if(!row)return; if(reps){row.reps=String(reps.value||'').slice(0,24);item.reps=row.reps||item.reps;} if(weight){row.weight=String(weight.value||'').slice(0,40);item.weight=row.weight||item.weight;} if(rir)row.rir=String(rir.value||'').slice(0,4); if(rpe)row.rpe=String(rpe.value||'').slice(0,4); if(type)row.type=String(type.value||'working').slice(0,12); saveWorkout();saveRunSession();
+    var type=qs('[data-run-set-type]',stage),log=ensureSetLog(item),row=log[Math.max(0,runState.set-1)];
+    if(!row)return;
+    ['reps','weight','distance','duration','rir','rpe'].forEach(function(name){var field=qs('[data-run-field="'+name+'"]',stage);if(field){row[name]=String(field.value||'').slice(0,name==='reps'?24:40);if(name==='reps'||name==='weight')item[name]=row[name]||item[name];}});
+    if(type)row.type=String(type.value||'working').slice(0,12); saveWorkout();saveRunSession();
   }
   function runReferenceForCurrent(){
     var item=S.workout[runState.ex];if(!item)return null;var log=ensureSetLog(item),idx=Math.max(0,runState.set-1);
-    for(var i=idx-1;i>=0;i--)if(log[i]&&log[i].completed&&(log[i].reps||log[i].weight))return log[i];
+    for(var i=idx-1;i>=0;i--)if(log[i]&&log[i].completed&&setPerformanceSummary(log[i]))return log[i];
     return previousSetPerformance(item.id,idx);
   }
   function reusePreviousRunResult(){
     var ref=runReferenceForCurrent(),stage=$('run-stage'); if(!ref||!stage)return;
-    var reps=qs('[data-run-field="reps"]',stage),weight=qs('[data-run-field="weight"]',stage);if(reps)reps.value=ref.reps||'';if(weight)weight.value=ref.weight||'';saveCurrentSetDraft();
+    ['reps','weight','distance','duration'].forEach(function(name){var field=qs('[data-run-field="'+name+'"]',stage);if(field)field.value=ref[name]||'';});saveCurrentSetDraft();
   }
 
   function renderRun() {
@@ -3625,20 +3637,24 @@
 
     var currentLog=ensureSetLog(item), currentSet=currentLog[Math.max(0,runState.set-1)]||cleanSetRecord(null);
     var tracking=ex.custom?ex.trackingType:(ex.zone==='cardio'?'duration':'weight-reps');
-    var trackingLabels={
-      'weight-reps':{value:t('wReps'),load:t('wWeight')},
-      'reps-only':{value:S.lang==='en'?'Reps':'Повторы',load:''},
-      duration:{value:S.lang==='en'?'Duration':'Время',load:''},
-      'distance-duration':{value:S.lang==='en'?'Distance and duration':'Дистанция и время',load:''},
-      'weight-duration':{value:S.lang==='en'?'Duration':'Время',load:t('wWeight')},
-      'assisted-weight':{value:S.lang==='en'?'Reps':'Повторы',load:S.lang==='en'?'Assisted weight':'Вес с поддержкой'},
-      'bodyweight-added-weight':{value:S.lang==='en'?'Reps':'Повторы',load:S.lang==='en'?'Added weight':'Дополнительный вес'}
+    var repLabel=S.lang==='en'?'Reps':'Повторы',durationLabel=S.lang==='en'?'Duration':'Время',weightLabel=t('wWeight');
+    var trackingFields={
+      'weight-reps':[{key:'reps',label:repLabel},{key:'weight',label:weightLabel}],
+      'reps-only':[{key:'reps',label:repLabel}],
+      duration:[{key:'duration',label:durationLabel}],
+      'distance-duration':[{key:'distance',label:S.lang==='en'?'Distance (km)':'Дистанция (км)'},{key:'duration',label:durationLabel}],
+      'weight-duration':[{key:'duration',label:durationLabel},{key:'weight',label:weightLabel}],
+      'assisted-weight':[{key:'reps',label:repLabel},{key:'weight',label:S.lang==='en'?'Assisted weight':'Вес с поддержкой'}],
+      'bodyweight-added-weight':[{key:'reps',label:repLabel},{key:'weight',label:S.lang==='en'?'Added weight':'Дополнительный вес'}]
     };
-    var trackingLabel=trackingLabels[tracking]||trackingLabels['weight-reps'];
+    var runFields=(trackingFields[tracking]||trackingFields['weight-reps']).map(function(field){
+      var initial=currentSet[field.key]||item[field.key]||(field.key==='duration'&&!ex.custom?item.reps:'');
+      return '<label>'+esc(field.label)+'<input type="text" inputmode="'+(field.key==='duration'?'text':'decimal')+'" data-run-field="'+field.key+'" value="'+esc(initial||'')+'"></label>';
+    }).join('');
     var prev=runReferenceForCurrent();
-    var prevText=prev&&(prev.reps||prev.weight)?((prev.weight?prev.weight+' × ':'')+(prev.reps||'—')):t('runNoPrev');
+    var prevValue=setPerformanceSummary(prev),prevText=prevValue||t('runNoPrev');
     var setStrip=currentLog.map(function(row,idx){var state=row.completed?'done':(idx===runState.set-1?'current':'pending');return '<button class="run-set-chip" type="button" data-state="'+state+'" data-run-set="'+(idx+1)+'" aria-pressed="'+String(state==='current')+'" aria-label="'+esc(t('runJumpSet',{i:idx+1}))+'">'+(idx+1)+'</button>';}).join('');
-    var usePrev=prev&&(prev.reps||prev.weight)?'<button class="run-use-prev" type="button" data-run-copy-prev><span>'+premiumIcon('progress')+esc(t('runUsePrevious'))+'</span><b>'+esc(t('runUsePreviousValue',{v:prevText}))+'</b></button>':'';
+    var usePrev=prevValue?'<button class="run-use-prev" type="button" data-run-copy-prev><span>'+premiumIcon('progress')+esc(t('runUsePrevious'))+'</span><b>'+esc(t('runUsePreviousValue',{v:prevText}))+'</b></button>':'';
     var runTechnique=exerciseTechniqueModel(ex);
     var runPrimary=runTechnique.cues[0]||runTechnique.control;
     var progression=progressionCopy(progressionForItem(item));
@@ -3654,8 +3670,7 @@
       '<h3 class="run-name">' + esc(exName(ex)) + '</h3></div>' +
       '<div class="run-tech-cues"><div><span>'+esc(detailText('Ключ','Key cue'))+'</span><p>'+esc(runPrimary)+'</p></div><div><span>'+esc(detailText('Дыхание','Breathing'))+'</span><p>'+esc(runTechnique.breathing)+'</p></div></div>' +
       '<div class="run-current"><div class="run-setline"><b>' + esc(t('runSetLabel', { i: runState.set, n: item.sets })) + '</b><span>' + esc(t('runElapsed')) + ' · ' + elapsed + '</span></div>' +
-      '<div class="run-current-inputs"><label>' + esc(ex.zone==='cardio'&&!ex.custom?t('runVolume'):trackingLabel.value) + '<input type="text" inputmode="' + (tracking==='duration'||tracking==='distance-duration'||(ex.zone==='cardio'&&!ex.custom)?'text':'decimal') + '" data-run-field="reps" value="' + esc(currentSet.reps || item.reps || '') + '"></label>' +
-      (trackingLabel.load?'<label>' + esc(trackingLabel.load) + '<input type="text" inputmode="decimal" data-run-field="weight" value="' + esc(currentSet.weight || item.weight || '') + '"></label>':'')+advancedInputs+'</div>'+setTypeSelect +
+      '<div class="run-current-inputs">' + runFields + advancedInputs + '</div>'+setTypeSelect +
       '<div class="run-prev-record"><b>' + esc(t('runPrevPerformance')) + ':</b> ' + esc(prevText) + '</div>' + progressionHtml + usePrev + '<div class="run-set-strip" aria-label="' + esc(t('workoutSetsDone',{done:completedSetCount(item),total:item.sets})) + '">' + setStrip + '</div></div>' +
       '<div class="run-session-meta"><div><span>' + esc(t('sessionExercises')) + '</span><b>' + (runState.ex + 1) + ' / ' + S.workout.length + '</b></div>' +
       '<div><span>' + esc(t('sessionSets')) + '</span><b>' + runDoneSets() + ' / ' + total + '</b></div>' +
@@ -3727,7 +3742,7 @@
   }
 
   function historyDetailHtml(h){
-    return '<div class="hist-detail" id="hist-detail-'+esc(h.id)+'" hidden>'+h.items.map(function(item){var ex=BY_ID[item.id],name=ex?exName(ex):item.id,sets=Array.isArray(item.setLog)&&item.setLog.length?item.setLog:null;var evidence=sets?sets.map(function(row,i){return '<span class="hist-set-chip" data-done="'+String(!!row.completed)+'"><small>'+esc(t('histSet',{i:i+1}))+'</small><b>'+esc((row.weight?row.weight+' × ':'')+(row.reps||'—'))+'</b></span>';}).join(''):'<span class="hist-set-chip"><small>'+esc(t('sessionSets'))+'</small><b>'+esc(String(item.sets||0)+' × '+String(item.reps||'—'))+'</b></span>';return '<div class="hist-ex"><span><b>'+esc(name)+'</b><small>'+esc(ex?labelMu(ex.target):'')+'</small></span><div class="hist-set-list">'+evidence+'</div></div>';}).join('')+'</div>';
+    return '<div class="hist-detail" id="hist-detail-'+esc(h.id)+'" hidden>'+h.items.map(function(item){var ex=BY_ID[item.id],name=ex?exName(ex):item.id,sets=Array.isArray(item.setLog)&&item.setLog.length?item.setLog:null;var evidence=sets?sets.map(function(row,i){return '<span class="hist-set-chip" data-done="'+String(!!row.completed)+'"><small>'+esc(t('histSet',{i:i+1}))+'</small><b>'+esc(setPerformanceSummary(row)||'—')+'</b></span>';}).join(''):'<span class="hist-set-chip"><small>'+esc(t('sessionSets'))+'</small><b>'+esc(String(item.sets||0)+' × '+String(item.reps||'—'))+'</b></span>';return '<div class="hist-ex"><span><b>'+esc(name)+'</b><small>'+esc(ex?labelMu(ex.target):'')+'</small></span><div class="hist-set-list">'+evidence+'</div></div>';}).join('')+'</div>';
   }
 
   function renderHistory() {
@@ -5247,6 +5262,14 @@
     $('run-next').addEventListener('click', runNext);
     $('run-prev').addEventListener('click', runPrev);
     $('run-rest').addEventListener('click', function () { startTimer(S.rest); });
+    $('run-stage').addEventListener('input', function (e) {
+      var field=e.target.closest('[data-run-field]');if(!field)return;
+      var item=S.workout[runState.ex];if(!item)return;
+      var name=field.dataset.runField,value=String(field.value||'').slice(0,name==='reps'?24:40);
+      var log=ensureSetLog(item),set=log[Math.max(0,runState.set-1)];if(set)set[name]=value;
+      if(name==='reps'||name==='weight')item[name]=value;
+      saveWorkout();saveRunSession();
+    });
     $('run-stage').addEventListener('change', function (e) {
       var item = S.workout[runState.ex];
       if (!item) return;
@@ -5258,10 +5281,7 @@
       }
       var field = e.target.closest('[data-run-field]');
       if (!field) return;
-      var value=String(field.value||'').slice(0,field.dataset.runField==='reps'?24:40);
-      if(field.dataset.runField==='reps'||field.dataset.runField==='weight')item[field.dataset.runField]=value;
-      var log=ensureSetLog(item),set=log[Math.max(0,runState.set-1)]; if(set)set[field.dataset.runField]=value;
-      saveWorkout(); renderWorkout(); saveRunSession();
+      saveCurrentSetDraft();
     });
     $('run-stage').addEventListener('click', function (e) {
       var jump=e.target.closest('[data-run-set]'); if(jump){saveCurrentSetDraft();runState.set=Math.max(1,Number(jump.dataset.runSet)||1);saveRunSession();renderRun();return;}
@@ -6525,8 +6545,8 @@
      Correctness -> data integrity -> usability -> accessibility -> performance.
      This layer deliberately preserves the proven V4 business logic and contracts.
      ======================================================================== */
-  var APP_VERSION = '2026.09-r9-equipment-profiles';
-  var BACKUP_SCHEMA = 7;
+  var APP_VERSION = '2026.09-r10-tracking-metrics';
+  var BACKUP_SCHEMA = 8;
   K.restTimer = 'mmg.restTimer.v2';
   K.lastBackup = 'mmg.lastBackup.v1';
   K.rollbackBackup = 'mmg.backup.rollback.v1';

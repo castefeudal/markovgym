@@ -81,7 +81,7 @@ test('legacy workout history migrates to IndexedDB without a 20-session cap', as
   const download = await downloadPromise;
   const backup = JSON.parse(await readFile(await download.path(), 'utf8'));
   expect(backup.app).toBe('markov-made-gym');
-  expect(backup.schemaVersion).toBe(7);
+  expect(backup.schemaVersion).toBe(8);
   expect(JSON.parse(backup.data.history)).toHaveLength(28);
   expect(JSON.parse(backup.data.customExercises)).toHaveLength(1);
   expect(JSON.parse(backup.data.equipmentProfiles)).toHaveLength(4);
@@ -91,7 +91,7 @@ test('legacy workout history migrates to IndexedDB without a 20-session cap', as
   await expect(page.locator('#hist .hist-item')).toHaveCount(28);
 });
 
-test('custom exercise joins the Library, saved workout, Run Mode, history and schema v7 backup', async ({ page }) => {
+test('custom exercise joins the Library, saved workout, Run Mode, history and schema v8 backup', async ({ page }) => {
   await page.goto('/index.html#library');
   await expect(page.locator('#mmg-boot')).toHaveCount(0);
   await page.locator('#custom-exercise-open').click();
@@ -140,7 +140,7 @@ test('custom exercise joins the Library, saved workout, Run Mode, history and sc
   const download = await downloadPromise;
   const backup = JSON.parse(await readFile(await download.path(), 'utf8'));
   const customExercises = JSON.parse(backup.data.customExercises);
-  expect(backup.schemaVersion).toBe(7);
+  expect(backup.schemaVersion).toBe(8);
   expect(customExercises).toHaveLength(1);
   expect(customExercises[0]).toMatchObject({
     nameRu: 'Мой жим гантели', nameEn: 'My dumbbell press',
@@ -182,7 +182,7 @@ test('equipment profiles constrain Library choices, survive reload and preserve 
   await page.locator('#data-export').click();
   const download = await downloadPromise;
   const backup = JSON.parse(await readFile(await download.path(), 'utf8'));
-  expect(backup.schemaVersion).toBe(7);
+  expect(backup.schemaVersion).toBe(8);
   expect(JSON.parse(backup.data.equipmentProfiles)).toHaveLength(5);
   const importedProfileId = backup.data.equipmentProfileActive;
   expect(importedProfileId).toMatch(/^equipment-/);
@@ -214,6 +214,41 @@ test('equipment profiles constrain Library choices, survive reload and preserve 
   await expect.poll(() => importPreview).toMatch(/Резервная копия проверена|Backup validated/);
   await expect.poll(() => page.evaluate(() => window.mmgDiagnostics?.activeEquipmentProfileId)).toBe(importedProfileId);
   await expect.poll(() => page.evaluate(() => window.mmgDiagnostics?.equipmentProfileCount)).toBe(5);
+});
+
+test('distance and duration tracking stay structured from Run Mode into workout history', async ({ page }) => {
+  await page.goto('/index.html#library');
+  await expect(page.locator('#mmg-boot')).toHaveCount(0);
+  await page.locator('#custom-exercise-open').click();
+  await page.locator('#custom-name-ru').fill('Своя пробежка');
+  await page.locator('#custom-name-en').fill('Custom run');
+  await page.locator('#custom-zone').selectOption('cardio');
+  const firstTarget = await page.locator('#custom-target option').evaluateAll(options => options.map(option => option.value).find(Boolean));
+  await page.locator('#custom-target').selectOption(firstTarget);
+  await page.locator('#custom-equipment').selectOption('body weight');
+  await page.locator('#custom-pattern').selectOption({ index: 0 });
+  await page.locator('#custom-tracking').selectOption('distance-duration');
+  await page.locator('#custom-sets').fill('1');
+  await page.locator('#custom-exercise-save').click();
+  const card = page.locator('.card[data-id^="custom-"]');
+  await expect(card).toContainText('Своя пробежка');
+  await card.locator('[data-add]').click();
+  await page.goto('/index.html#workout');
+  await page.locator('[data-v8-start-run]:visible, #w-run:visible').first().click();
+  await expect(page.locator('[data-run-field="distance"]')).toBeVisible();
+  await expect(page.locator('[data-run-field="duration"]')).toBeVisible();
+  await page.locator('[data-run-field="distance"]').fill('2');
+  await page.locator('[data-run-field="duration"]').fill('12:30');
+  await page.locator('#run-next').click();
+  const savedLog = await page.evaluate(() => JSON.parse(localStorage.getItem('mmg.workout.v2'))[0].setLog[0]);
+  expect(savedLog).toMatchObject({ distance: '2', duration: '12:30' });
+  await expect(page.locator('#run-stage')).toContainText(/Все упражнения|All exercises/);
+  await page.locator('#run-next').click();
+  await page.goto('/index.html#workout');
+  const historyItem = page.locator('#hist .hist-item').first();
+  await expect(historyItem).toContainText('Своя пробежка');
+  await historyItem.locator('[data-hist-detail]').click();
+  await expect(historyItem.locator('.hist-detail')).toContainText('2 km · 12:30');
 });
 
 test('hash routes and MARKOV MADE LAB calculators are usable', async ({ page }) => {

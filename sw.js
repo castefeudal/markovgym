@@ -1,4 +1,4 @@
-const VERSION = '2026.09-r9-equipment-profiles';
+const VERSION = '2026.09-r10-tracking-metrics';
 const PREFIX = 'mmg-gym-';
 const SHELL = `${PREFIX}shell-${VERSION}`;
 const MEDIA = `${PREFIX}media-${VERSION}`;
