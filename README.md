@@ -69,6 +69,7 @@ scripts/build-index.mjs       deterministic index builder
 index.html                    generated production entry
 app.js                        current core application runtime
 app.css                       current core styles
+src/features/today/           pure Today next-action decision rules
 src/persistence/              versioned IndexedDB workout-history repository
 gym-tools.js                  MARKOV MADE LAB UI integration
 lab.css                       Lab presentation layer

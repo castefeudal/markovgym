@@ -16,6 +16,10 @@ This describes the current browser data model and the persistence boundaries int
 | Calculator result | Pure calculation output with method, assumptions, range, and limitations in the Lab result contract. |
 | EvidenceReference | Citation metadata in `data/evidence/calculators.json`, linked to supported calculator outputs. |
 
+## Today decision contract
+
+`src/features/today/decision-engine.mjs` receives recorded-state facts and returns one recommendation with machine-readable reasons, a confidence label, missing-data keys, and the next action. It contains no DOM access or localized copy; the UI translates the action while domain tests cover priority and missing-data rules.
+
 ## Workout history and migration
 
 Completed workouts retain their date, duration, exercises, and set logs. IndexedDB database `markov-made-gym`, schema version 1, stores history records by id with no record-count cap. On first open, valid legacy entries from `mmg.history.v1` are copied once; the legacy key remains a recent-history compatibility mirror. Backups use `schemaVersion: 5` and export the complete IndexedDB-backed history.

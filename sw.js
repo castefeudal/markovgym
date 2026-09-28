@@ -1,4 +1,4 @@
-const VERSION = '2026.09-r6-history';
+const VERSION = '2026.09-r7-decisions';
 const PREFIX = 'mmg-gym-';
 const SHELL = `${PREFIX}shell-${VERSION}`;
 const MEDIA = `${PREFIX}media-${VERSION}`;
@@ -14,6 +14,7 @@ const PRECACHE = [
   './tools/lab-calculators.mjs',
   './tools/progression.mjs',
   './src/persistence/history-repository.mjs',
+  './src/features/today/decision-engine.mjs',
   './data/content.json',
   './data/exercises-compact.json',
   './manifest.webmanifest',

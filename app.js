@@ -56,6 +56,7 @@
   var historyRepository = null;
   var databaseHistory = null;
   var historyVisibleCount = 20;
+  var todayDecisionEngine = null;
   var storageOk = (function () {
     try {
       var k = '__mmg_probe__';
@@ -3073,17 +3074,39 @@
     var totalSets=S.workout.reduce(function(sum,w){return sum+(Number(w.sets)||0);},0);
     var doneSets=S.workout.reduce(function(sum,w){return sum+completedSetCount(w);},0);
     var runFresh=S.runSession&&Date.now()-Number(S.runSession.startedAt||0)<8*3600000&&doneSets<totalSets;
-    if(runFresh) return { text:t('nextResume'), why:t('nextResumeWhy'), act:'resumeRun', label:t('continuityResume') };
-    if(S.workout.length&&doneSets<totalSets) return { text:t('nextStart'), why:t('nextStartWhy'), act:'startRun', label:t('continuityStart') };
-    if(S.workout.length&&totalSets&&doneSets>=totalSets) return { text:t('nextSave'), why:t('nextSaveWhy'), act:'workout', label:t('actWorkout') };
-    if (!S.favorites.length && !S.workout.length) return { text: t('nextLibrary'), why: t('nextLibraryWhy'), act: 'library', label: t('consoleLibrary') };
-    if (!S.workout.length) return { text: t('nextWorkout'), why: t('nextWorkoutWhy'), act: 'workout', label: t('actWorkout') };
-    if (!S.kbjuLast) return { text: t('nextKbju'), why: t('nextKbjuWhy'), act: 'kbju', label: t('actKbju') };
-    if (!S.plan) return { text: t('nextPlan'), why: t('nextPlanWhy'), act: 'plan', label: t('actPlan') };
-    if (S.diary.length < 2) return { text: t('nextDiary'), why: t('nextDiaryWhy'), act: 'progress', label: t('actProgress') };
     var last=S.diary[0],age=last&&last.date?Math.floor((Date.now()-Date.parse(last.date+'T12:00:00'))/86400000):0;
-    if(age>8) return { text:t('nextRefresh'), why:t('nextRefreshWhy',{n:age}), act:'progress', label:t('actProgress') };
-    return { text: t('nextKeep'), why: t('nextKeepWhy'), act: 'progress', label: t('actProgress') };
+    var decision=todayDecisionEngine?todayDecisionEngine({
+      activeRun:!!runFresh,
+      pendingWorkout:!!(S.workout.length&&doneSets<totalSets),
+      completedWorkout:!!(S.workout.length&&totalSets&&doneSets>=totalSets),
+      hasFavorites:!!S.favorites.length,
+      hasWorkout:!!S.workout.length,
+      hasNutritionTarget:!!S.kbjuLast,
+      hasProgram:!!S.plan,
+      diaryEntries:S.diary.length,
+      checkinAgeDays:age
+    }):null;
+    var views={
+      resume_run:{text:'nextResume',why:'nextResumeWhy',act:'resumeRun',label:'continuityResume'},
+      start_workout:{text:'nextStart',why:'nextStartWhy',act:'startRun',label:'continuityStart'},
+      save_workout:{text:'nextSave',why:'nextSaveWhy',act:'workout',label:'actWorkout'},
+      find_exercise:{text:'nextLibrary',why:'nextLibraryWhy',act:'library',label:'consoleLibrary'},
+      build_workout:{text:'nextWorkout',why:'nextWorkoutWhy',act:'workout',label:'actWorkout'},
+      set_nutrition:{text:'nextKbju',why:'nextKbjuWhy',act:'kbju',label:'actKbju'},
+      build_program:{text:'nextPlan',why:'nextPlanWhy',act:'plan',label:'actPlan'},
+      record_measurements:{text:'nextDiary',why:'nextDiaryWhy',act:'progress',label:'actProgress'},
+      refresh_measurements:{text:'nextRefresh',why:'nextRefreshWhy',act:'progress',label:'actProgress'},
+      review_progress:{text:'nextKeep',why:'nextKeepWhy',act:'progress',label:'actProgress'}
+    };
+    var view=decision&&views[decision.recommendation];
+    if(!view) return {text:t('nextKeep'),why:t('nextKeepWhy'),act:'progress',label:t('actProgress')};
+    return {
+      text:t(view.text),
+      why:view.text==='nextRefresh'?t(view.why,{n:age}):t(view.why),
+      act:view.act,
+      label:t(view.label),
+      decision:decision
+    };
   }
 
   /* Сигнал состояния: только по фактически введённым данным. */
@@ -6253,7 +6276,7 @@
      Correctness -> data integrity -> usability -> accessibility -> performance.
      This layer deliberately preserves the proven V4 business logic and contracts.
      ======================================================================== */
-  var APP_VERSION = '2026.09-r6-history';
+  var APP_VERSION = '2026.09-r7-decisions';
   var BACKUP_SCHEMA = 5;
   K.restTimer = 'mmg.restTimer.v2';
   K.lastBackup = 'mmg.lastBackup.v1';
@@ -6857,6 +6880,12 @@
 
 
   async function init() {
+    try {
+      var todayModule = await import('./src/features/today/decision-engine.mjs');
+      todayDecisionEngine = todayModule.nextWorkoutAction;
+    } catch (error) {
+      window.dispatchEvent(new CustomEvent('mmg:error', { detail: { key: 'today-decision' } }));
+    }
     try {
       var persistence = await import('./src/persistence/history-repository.mjs');
       historyRepository = await persistence.createHistoryRepository();
