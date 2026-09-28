@@ -1,8 +1,9 @@
 export const HISTORY_DATABASE = 'markov-made-gym';
-export const HISTORY_SCHEMA_VERSION = 2;
+export const HISTORY_SCHEMA_VERSION = 3;
 
 const HISTORY_STORE = 'history';
 const CUSTOM_EXERCISE_STORE = 'customExercises';
+const EQUIPMENT_PROFILE_STORE = 'equipmentProfiles';
 const TRACKING_TYPES = new Set([
   'weight-reps', 'reps-only', 'duration', 'distance-duration',
   'weight-duration', 'assisted-weight', 'bodyweight-added-weight',
@@ -46,6 +47,7 @@ function openDatabase() {
       const db = request.result;
       if (!db.objectStoreNames.contains(HISTORY_STORE)) db.createObjectStore(HISTORY_STORE, { keyPath: 'id' });
       if (!db.objectStoreNames.contains(CUSTOM_EXERCISE_STORE)) db.createObjectStore(CUSTOM_EXERCISE_STORE, { keyPath: 'id' });
+      if (!db.objectStoreNames.contains(EQUIPMENT_PROFILE_STORE)) db.createObjectStore(EQUIPMENT_PROFILE_STORE, { keyPath: 'id' });
     };
     request.onsuccess = () => {
       const db = request.result;
@@ -107,6 +109,24 @@ export function cleanCustomExercises(entries) {
   });
 }
 
+export function cleanEquipmentProfiles(entries) {
+  if (!Array.isArray(entries)) return [];
+  const ids = new Set();
+  return entries.flatMap((entry) => {
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return [];
+    const id = String(entry.id || '').slice(0, 80);
+    const nameRu = String(entry.nameRu || '').trim().slice(0, 80);
+    const nameEn = String(entry.nameEn || '').trim().slice(0, 80);
+    if (!id || ids.has(id) || !nameRu || !nameEn) return [];
+    ids.add(id);
+    const equipment = Array.isArray(entry.equipment)
+      ? [...new Set(entry.equipment.map((value) => String(value).trim().slice(0, 64)).filter(Boolean))].slice(0, 64)
+      : [];
+    const createdAt = typeof entry.createdAt === 'string' ? entry.createdAt.slice(0, 40) : '';
+    return [{ id, nameRu, nameEn, equipment, createdAt, updatedAt: typeof entry.updatedAt === 'string' ? entry.updatedAt.slice(0, 40) : createdAt, builtIn: Boolean(entry.builtIn) }];
+  });
+}
+
 export async function createHistoryRepository() {
   const db = await openDatabase();
 
@@ -160,6 +180,31 @@ export async function createHistoryRepository() {
     return readCustomExercises();
   }
 
+  async function readEquipmentProfiles() {
+    const tx = db.transaction(EQUIPMENT_PROFILE_STORE, 'readonly');
+    return cleanEquipmentProfiles(await requestResult(tx.objectStore(EQUIPMENT_PROFILE_STORE).getAll()));
+  }
+
+  async function replaceEquipmentProfiles(entries) {
+    const records = cleanEquipmentProfiles(entries);
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction(EQUIPMENT_PROFILE_STORE, 'readwrite');
+      const store = tx.objectStore(EQUIPMENT_PROFILE_STORE);
+      store.clear();
+      records.forEach((entry) => store.put(entry));
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error || new Error('Could not save equipment profiles'));
+      tx.onabort = () => reject(tx.error || new Error('Equipment profile save was aborted'));
+    });
+    return records.length;
+  }
+
+  async function migrateLegacyEquipmentProfiles(entries) {
+    const existing = await readEquipmentProfiles();
+    if (!existing.length && Array.isArray(entries) && entries.length) await replaceEquipmentProfiles(entries);
+    return readEquipmentProfiles();
+  }
+
   return Object.freeze({
     schemaVersion: HISTORY_SCHEMA_VERSION,
     readAll,
@@ -168,6 +213,9 @@ export async function createHistoryRepository() {
     readCustomExercises,
     replaceCustomExercises,
     migrateLegacyCustomExercises,
+    readEquipmentProfiles,
+    replaceEquipmentProfiles,
+    migrateLegacyEquipmentProfiles,
     close: () => db.close(),
   });
 }

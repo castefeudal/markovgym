@@ -56,6 +56,9 @@
   var historyRepository = null;
   var databaseHistory = null;
   var databaseCustomExercises = [];
+  var databaseEquipmentProfiles = [];
+  var cleanEquipmentProfiles = function (rows) { return Array.isArray(rows) ? rows.filter(function (row) { return row && typeof row === 'object'; }) : []; };
+  var activeEquipmentProfileId = '';
   var cleanCustomExercises = function (rows) { return Array.isArray(rows) ? rows.filter(function (row) { return row && typeof row === 'object'; }) : []; };
   var historyVisibleCount = 20;
   var todayDecisionEngine = null;
@@ -1124,6 +1127,63 @@
     $('count-eq').textContent = EQUIPMENT.length;
     $('fav-only').setAttribute('aria-pressed', String(S.favOnly));
     ['filter-search-muscle','filter-search-eq'].forEach(function(id){ var input=$(id); if(input && input.value){ input.dispatchEvent(new Event('input',{bubbles:true})); } });
+    renderEquipmentProfileControl();
+  }
+
+  function equipmentProfileName(profile) { return S.lang==='en' ? profile.nameEn : profile.nameRu; }
+  function renderEquipmentProfileControl() {
+    var select=$('equipment-profile-select'); if(!select)return;
+    var en=S.lang==='en';
+    $('equipment-profile-title').textContent=en?'Active equipment profile':'Активный профиль оборудования';
+    $('equipment-profile-save').textContent=en?'Save current selection':'Сохранить текущий выбор';
+    $('equipment-profile-delete').textContent=en?'Delete profile':'Удалить профиль';
+    $('equipment-profile-help').textContent=en?'Changing a profile only changes exercise recommendations and filters. Your workout stays intact.':'Смена профиля меняет фильтры и подбор упражнений, сохраняя текущую тренировку.';
+    var current=databaseEquipmentProfiles.some(function(profile){return profile.id===activeEquipmentProfileId;})?activeEquipmentProfileId:'';
+    select.innerHTML='<option value="">'+(en?'Choose equipment…':'Выбери оборудование…')+'</option>'+databaseEquipmentProfiles.map(function(profile){return'<option value="'+esc(profile.id)+'"'+(profile.id===current?' selected':'')+'>'+esc(equipmentProfileName(profile))+'</option>';}).join('');
+    $('equipment-profile-delete').hidden=!current||!!databaseEquipmentProfiles.filter(function(profile){return profile.id===current;})[0].builtIn;
+  }
+
+  async function saveCurrentEquipmentProfile() {
+    var en=S.lang==='en';
+    var name=window.prompt(en?'Name this equipment profile':'Назови профиль оборудования');
+    if(name===null)return;
+    name=String(name).trim().slice(0,80);
+    if(!name){showToast(en?'Enter a profile name.':'Введи название профиля.');return;}
+    var now=new Date().toISOString(),id='equipment-'+Date.now();
+    try{
+      databaseEquipmentProfiles=await saveEquipmentProfileRecords(databaseEquipmentProfiles.concat([{id:id,nameRu:name,nameEn:name,equipment:S.equipment.slice(),createdAt:now,updatedAt:now,builtIn:false}]));
+      activeEquipmentProfileId=id;store.set(K.equipmentProfileActive,id);renderEquipmentProfileControl();
+      showToast(en?'Equipment profile saved.':'Профиль оборудования сохранён.');
+    }catch(error){showToast(en?'Could not save this profile.':'Не удалось сохранить профиль.');}
+  }
+
+  function activateEquipmentProfile(id) {
+    var profile=databaseEquipmentProfiles.filter(function(item){return item.id===id;})[0];
+    activeEquipmentProfileId=profile?profile.id:'';store.set(K.equipmentProfileActive,activeEquipmentProfileId);
+    if(profile)S.equipment=profile.equipment.slice();
+    S.limit=PAGE;renderEquipmentProfileControl();renderFilters();renderResults();
+  }
+
+  async function removeActiveEquipmentProfile() {
+    var profile=databaseEquipmentProfiles.filter(function(item){return item.id===activeEquipmentProfileId;})[0];
+    if(!profile||profile.builtIn)return;
+    var en=S.lang==='en';
+    if(!window.confirm(en?'Delete this equipment profile? Your workout will stay intact.':'Удалить этот профиль оборудования? Текущая тренировка сохранится.'))return;
+    try{
+      databaseEquipmentProfiles=await saveEquipmentProfileRecords(databaseEquipmentProfiles.filter(function(item){return item.id!==profile.id;}));
+      activeEquipmentProfileId='';store.set(K.equipmentProfileActive,'');S.equipment=profile.equipment.slice();renderFilters();renderResults();
+    }catch(error){showToast(en?'Could not delete this profile.':'Не удалось удалить профиль.');}
+  }
+
+  async function ensureDefaultEquipmentProfiles() {
+    if(databaseEquipmentProfiles.length)return;
+    var now=new Date().toISOString();
+    databaseEquipmentProfiles=await saveEquipmentProfileRecords([
+      {id:'builtin-gym',nameRu:'Мой зал',nameEn:'My gym',equipment:PRESETS.gym.equipment,createdAt:now,updatedAt:now,builtIn:true},
+      {id:'builtin-home',nameRu:'Дом',nameEn:'Home',equipment:HOME_EQUIP,createdAt:now,updatedAt:now,builtIn:true},
+      {id:'builtin-travel',nameRu:'Поездка',nameEn:'Travel',equipment:['body weight','band','resistance band','dumbbell'],createdAt:now,updatedAt:now,builtIn:true},
+      {id:'builtin-custom',nameRu:'Custom',nameEn:'Custom',equipment:HOME_EQUIP.concat(GYM_EQUIP),createdAt:now,updatedAt:now,builtIn:true}
+    ]);
   }
 
   function preferredMuscleZone() {
@@ -1199,6 +1259,8 @@
     S.zones = [];
     S.muscles = [];
     S.equipment = [];
+    activeEquipmentProfileId='';
+    store.set(K.equipmentProfileActive,'');
     S.favOnly = false;
     S.limit = PAGE;
     $('search').value = '';
@@ -1236,7 +1298,11 @@
     if (!preset) return;
     resetFilters(false);
     if (preset.zones) S.zones = preset.zones.slice();
-    if (preset.equipment) S.equipment = preset.equipment.slice();
+    if (preset.equipment) {
+      S.equipment = preset.equipment.slice();
+      var matchingProfile=databaseEquipmentProfiles.filter(function(profile){return sameStringSetV10(profile.equipment,S.equipment);})[0];
+      activeEquipmentProfileId=matchingProfile?matchingProfile.id:'';store.set(K.equipmentProfileActive,activeEquipmentProfileId);
+    }
     if (preset.favOnly) S.favOnly = true;
     renderFilters(); renderResults(); scrollToLibrary();
   }
@@ -1942,6 +2008,8 @@
   };
 
   function equipmentFor(place) {
+    var profile=databaseEquipmentProfiles.filter(function(item){return item.id===activeEquipmentProfileId;})[0];
+    if(profile)return profile.equipment.length?profile.equipment:HOME_EQUIP.concat(GYM_EQUIP);
     if (place === 'home') return HOME_EQUIP;
     if (place === 'mixed') return HOME_EQUIP.concat(GYM_EQUIP);
     return GYM_EQUIP;
@@ -2394,6 +2462,8 @@
   K.meta = 'mmg.workoutMeta.v1';
   K.history = 'mmg.history.v1';
   K.customExercises = 'mmg.customExercises.v1';
+  K.equipmentProfiles = 'mmg.equipmentProfiles.v1';
+  K.equipmentProfileActive = 'mmg.equipmentProfileActive.v1';
   K.diary = 'mmg.diary.v1';
   K.kbju = 'mmg.kbju.v1';
   K.tips = 'mmg.tips.v1';
@@ -2426,6 +2496,15 @@
     databaseCustomExercises = clean;
     if (store.set(K.customExercises, JSON.stringify(clean)) === false && !historyRepository) {
       throw new Error('Custom exercises could not be saved in browser storage');
+    }
+    return clean;
+  }
+  async function saveEquipmentProfileRecords(records) {
+    var clean = cleanEquipmentProfiles(records);
+    if (historyRepository) await historyRepository.replaceEquipmentProfiles(clean);
+    databaseEquipmentProfiles = clean;
+    if (store.set(K.equipmentProfiles, JSON.stringify(clean)) === false && !historyRepository) {
+      throw new Error('Equipment profiles could not be saved in browser storage');
     }
     return clean;
   }
@@ -4685,7 +4764,7 @@
 
     /* данные и футер */
     'data.title': 'My data',
-    'data.text': 'Settings, saved exercises, sessions, history, plans, calculations and the diary are stored in this browser only. Nothing goes to a server and there is no account. Clearing your browser data deletes all of it permanently — which is why export exists.',
+    'data.text': 'Settings, saved exercises, equipment profiles, sessions, history, plans, calculations and the diary are stored in this browser only. Nothing goes to a server and there is no account. Clearing your browser data deletes all of it permanently — which is why export exists.',
     'data.export': 'Export all data', 'data.import': 'Load from a file', 'data.clear': 'Delete all data',
     'data.ioL': 'All data as JSON',
     'footer.colProduct': 'Tools', 'footer.colMethod': 'Method', 'footer.colHelp': 'Pavel Markov',
@@ -5730,6 +5809,10 @@
       showToast(t('favCleared'));
     });
 
+    $('equipment-profile-select').addEventListener('change',function(event){activateEquipmentProfile(event.target.value);});
+    $('equipment-profile-save').addEventListener('click',function(){saveCurrentEquipmentProfile();});
+    $('equipment-profile-delete').addEventListener('click',function(){removeActiveEquipmentProfile();});
+
     // Делегирование по всем группам фильтров
     qs('.filters-body').addEventListener('click', function (e) {
       var btn = e.target.closest('[data-filter-kind]');
@@ -5737,7 +5820,7 @@
       var kind = btn.dataset.filterKind, value = btn.dataset.filterValue;
       if (kind === 'zone') toggleInArray(S.zones, value);
       else if (kind === 'muscle') toggleInArray(S.muscles, value);
-      else if (kind === 'equip') toggleInArray(S.equipment, value);
+      else if (kind === 'equip') { toggleInArray(S.equipment, value); activeEquipmentProfileId=''; store.set(K.equipmentProfileActive,''); renderEquipmentProfileControl(); }
       S.limit = PAGE;
       btn.setAttribute('aria-pressed', String(
         (kind === 'zone' ? S.zones : kind === 'muscle' ? S.muscles : S.equipment).indexOf(value) !== -1
@@ -5753,7 +5836,7 @@
       else if (kind === 'fav') S.favOnly = false;
       else if (kind === 'zone') toggleInArray(S.zones, value);
       else if (kind === 'muscle') toggleInArray(S.muscles, value);
-      else if (kind === 'equip') toggleInArray(S.equipment, value);
+      else if (kind === 'equip') { toggleInArray(S.equipment, value); activeEquipmentProfileId=''; store.set(K.equipmentProfileActive,''); }
       S.limit = PAGE;
       renderFilters();
       renderResults();
@@ -6211,7 +6294,7 @@
       S.query = ''; $('search').value = '';
       if (kind === 'zone') { S.zones = [value]; S.muscles = []; }
       if (kind === 'muscle') { S.muscles = [value]; S.zones = []; }
-      if (kind === 'equip') { S.equipment = [value]; }
+      if (kind === 'equip') { S.equipment = [value]; activeEquipmentProfileId=''; store.set(K.equipmentProfileActive,''); }
     }
     S.limit = PAGE;
     renderFilters(); renderResults();
@@ -6442,8 +6525,8 @@
      Correctness -> data integrity -> usability -> accessibility -> performance.
      This layer deliberately preserves the proven V4 business logic and contracts.
      ======================================================================== */
-  var APP_VERSION = '2026.09-r8-custom-exercises';
-  var BACKUP_SCHEMA = 6;
+  var APP_VERSION = '2026.09-r9-equipment-profiles';
+  var BACKUP_SCHEMA = 7;
   K.restTimer = 'mmg.restTimer.v2';
   K.lastBackup = 'mmg.lastBackup.v1';
   K.rollbackBackup = 'mmg.backup.rollback.v1';
@@ -6584,9 +6667,9 @@
   migrateEco = function(){ _migrateEcoV5(); restoreRestTimer(); };
 
   /* Production backup format: versioned, staged, validated, previewed, rollback-capable. */
-  DATA_KEYS=['customExercises','fav','workout','lang','theme','density','profile','meta','history','diary','kbju','tips','coach','rest','recentSearch','recentExercises','runSession','plan','settings','schema','workoutSchema','historySchema'];
+  DATA_KEYS=['customExercises','equipmentProfiles','equipmentProfileActive','fav','workout','lang','theme','density','profile','meta','history','diary','kbju','tips','coach','rest','recentSearch','recentExercises','runSession','plan','settings','schema','workoutSchema','historySchema'];
   var BACKUP_LABELS = {
-    customExercises:{ru:'свои упражнения',en:'custom exercises'},fav:{ru:'избранное',en:'favorites'},workout:{ru:'тренировка',en:'workout'},lang:{ru:'язык',en:'language'},theme:{ru:'тема',en:'theme'},density:{ru:'плотность сетки',en:'grid density'},profile:{ru:'профиль',en:'profile'},meta:{ru:'данные тренировки',en:'workout meta'},history:{ru:'история',en:'history'},diary:{ru:'дневник прогресса',en:'progress diary'},kbju:{ru:'питание',en:'nutrition'},tips:{ru:'сохранённые материалы',en:'saved knowledge'},coach:{ru:'режим тренера',en:'coach mode'},rest:{ru:'настройка отдыха',en:'rest timer preset'},recentSearch:{ru:'недавние поиски',en:'recent searches'},recentExercises:{ru:'недавние упражнения',en:'recent exercises'},runSession:{ru:'активная сессия',en:'active session'},plan:{ru:'активная программа',en:'active programme'},settings:{ru:'настройки логирования',en:'logging settings'},schema:{ru:'схема данных',en:'schema'},workoutSchema:{ru:'схема тренировки',en:'workout schema'},historySchema:{ru:'схема истории',en:'history schema'}
+    customExercises:{ru:'свои упражнения',en:'custom exercises'},equipmentProfiles:{ru:'профили оборудования',en:'equipment profiles'},equipmentProfileActive:{ru:'активный профиль оборудования',en:'active equipment profile'},fav:{ru:'избранное',en:'favorites'},workout:{ru:'тренировка',en:'workout'},lang:{ru:'язык',en:'language'},theme:{ru:'тема',en:'theme'},density:{ru:'плотность сетки',en:'grid density'},profile:{ru:'профиль',en:'profile'},meta:{ru:'данные тренировки',en:'workout meta'},history:{ru:'история',en:'history'},diary:{ru:'дневник прогресса',en:'progress diary'},kbju:{ru:'питание',en:'nutrition'},tips:{ru:'сохранённые материалы',en:'saved knowledge'},coach:{ru:'режим тренера',en:'coach mode'},rest:{ru:'настройка отдыха',en:'rest timer preset'},recentSearch:{ru:'недавние поиски',en:'recent searches'},recentExercises:{ru:'недавние упражнения',en:'recent exercises'},runSession:{ru:'активная сессия',en:'active session'},plan:{ru:'активная программа',en:'active programme'},settings:{ru:'настройки логирования',en:'logging settings'},schema:{ru:'схема данных',en:'schema'},workoutSchema:{ru:'схема тренировки',en:'workout schema'},historySchema:{ru:'схема истории',en:'history schema'}
   };
   function backupLabel(name){var pair=BACKUP_LABELS[name];return pair?(S.lang==='en'?pair.en:pair.ru):name;}
   function jsonValue(raw){ try{return JSON.parse(raw);}catch(e){return null;} }
@@ -6598,6 +6681,7 @@
     if (name==='coach') return (raw==='0'||raw==='1') ? raw : null;
     if (name==='rest') return [60,90,120,180].indexOf(Number(raw))!==-1 ? String(Number(raw)) : null;
     if (name==='schema'||name==='workoutSchema'||name==='historySchema') return /^\d{1,3}$/.test(raw) ? raw : null;
+    if (name==='equipmentProfileActive') return raw.length<=80?raw:null;
     var value=jsonValue(raw);
     if (value===null) return null;
     if (name==='fav') return JSON.stringify(Array.isArray(value)?value.map(String).filter(function(id){return !!BY_ID[id];}).slice(0,EX.length):[]);
@@ -6621,13 +6705,14 @@
     }
     if(name==='kbju')return(value&&typeof value==='object'&&!Array.isArray(value))?JSON.stringify(value):null;
     if(name==='customExercises')return Array.isArray(value)?JSON.stringify(cleanCustomExercises(value)):null;
+    if(name==='equipmentProfiles')return Array.isArray(value)?JSON.stringify(cleanEquipmentProfiles(value)):null;
     if(name==='plan'){var restored=restorePlanV7(value);return restored?JSON.stringify(serialisePlanV7(restored)):JSON.stringify(null);}
     if(name==='settings')return(value&&typeof value==='object'&&!Array.isArray(value))?JSON.stringify({rir:!!value.rir,rpe:!!value.rpe,reading:['balanced','comfortable','large'].indexOf(value.reading)!==-1?value.reading:'balanced'}):null;
     return null;
   }
   exportAll = function(){
     var payload={app:'markov-made-gym',schemaVersion:BACKUP_SCHEMA,createdAt:new Date().toISOString(),v:BACKUP_SCHEMA,kind:'mmg-backup',appVersion:APP_VERSION,exportedAt:new Date().toISOString(),data:{}};
-    DATA_KEYS.forEach(function(name){var raw=name==='history'?JSON.stringify(S.history):(name==='customExercises'?JSON.stringify(databaseCustomExercises):store.get(K[name]));if(raw!=null)payload.data[name]=raw;});
+    DATA_KEYS.forEach(function(name){var raw=name==='history'?JSON.stringify(S.history):(name==='customExercises'?JSON.stringify(databaseCustomExercises):(name==='equipmentProfiles'?JSON.stringify(databaseEquipmentProfiles):store.get(K[name])));if(raw!=null)payload.data[name]=raw;});
     return JSON.stringify(payload,null,2);
   };
   function analyzeBackup(raw){
@@ -6650,14 +6735,26 @@
         if(store.get(K.customExercises)!==customRaw)changed.push('customExercises');
       }
     }
+    if(Object.prototype.hasOwnProperty.call(parsed.data,'equipmentProfiles')){
+      var profilesRaw=validateBackupValue('equipmentProfiles',parsed.data.equipmentProfiles);
+      if(profilesRaw===null)invalid.push('equipmentProfiles');
+      else{staged.equipmentProfiles=profilesRaw;if(store.get(K.equipmentProfiles)!==profilesRaw)changed.push('equipmentProfiles');}
+    }
     DATA_KEYS.forEach(function(name){
-      if(name==='customExercises'||invalid.indexOf(name)!==-1)return;
+      if(name==='customExercises'||name==='equipmentProfiles'||invalid.indexOf(name)!==-1)return;
       if(!Object.prototype.hasOwnProperty.call(parsed.data,name))return;
       var clean=validateBackupValue(name,parsed.data[name]);
       if(clean===null){invalid.push(name);return;}
       staged[name]=clean;
       if(store.get(K[name])!==clean)changed.push(name);
     });
+    if(Object.prototype.hasOwnProperty.call(staged,'equipmentProfileActive')){
+      var availableProfiles=Object.prototype.hasOwnProperty.call(staged,'equipmentProfiles')?jsonValue(staged.equipmentProfiles):databaseEquipmentProfiles;
+      if(staged.equipmentProfileActive&&!(availableProfiles||[]).some(function(profile){return profile.id===staged.equipmentProfileActive;})){
+        staged.equipmentProfileActive='';
+        if(changed.indexOf('equipmentProfileActive')===-1&&store.get(K.equipmentProfileActive)!=='')changed.push('equipmentProfileActive');
+      }
+    }
     temporaryCustomIds.forEach(function(id){delete BY_ID[id];});
     if(!Object.keys(staged).length)return{ok:false,code:'empty'};
     if(invalid.length)return{ok:false,code:'invalid',invalid:invalid};
@@ -6665,9 +6762,11 @@
   }
   function backupPreviewText(report){
     var list=report.changed.slice(0,10).map(function(n){return '• '+backupLabel(n);}).join('\n');
+    var collections=['customExercises','equipmentProfiles','workout','history','diary'];
+    var summary=collections.map(function(name){var value=jsonValue(report.staged[name]);return Array.isArray(value)?backupLabel(name)+': '+value.length:null;}).filter(Boolean).join(' · ');
     var more=Math.max(0,report.changed.length-10);
-    if(S.lang==='en')return 'Backup validated. Changes: '+report.changed.length+'\n\n'+(list||'No values differ.')+(more?'\n• +'+more+' more':'')+'\n\nA rollback snapshot will be kept on this device. Import now?';
-    return 'Резервная копия проверена. Изменений: '+report.changed.length+'\n\n'+(list||'Значения не отличаются.')+(more?'\n• ещё '+more:'')+'\n\nПеред импортом сохранится локальная точка отката. Импортировать?';
+    if(S.lang==='en')return 'Backup validated. Changes: '+report.changed.length+'\n'+(summary?'Records: '+summary+'\n':'')+'\n'+(list||'No values differ.')+(more?'\n• +'+more+' more':'')+'\n\nA rollback snapshot will be kept on this device. Import now?';
+    return 'Резервная копия проверена. Изменений: '+report.changed.length+'\n'+(summary?'Записи: '+summary+'\n':'')+'\n'+(list||'Значения не отличаются.')+(more?'\n• ещё '+more:'')+'\n\nПеред импортом сохранится локальная точка отката. Импортировать?';
   }
   function writeBackupValues(values){
     var failed=[];
@@ -6684,7 +6783,7 @@
   importAll = function(raw){
     var report=analyzeBackup(raw);
     if(!report.ok){
-      var msg=report.code==='json'?t('ioBadJson'):report.code==='future'?(S.lang==='en'?'This backup was created by a newer app version.':'Эта копия создана более новой версией приложения.'):(S.lang==='en'?'Backup validation failed. Current data was not changed.':'Проверка резервной копии не пройдена. Текущие данные не изменены.');
+      var msg=report.code==='json'?t('ioBadJson'):report.code==='future'?(S.lang==='en'?'This backup was created by a newer app version.':'Эта копия создана более новой версией приложения.'):(report.code==='invalid'?(S.lang==='en'?'Invalid fields: '+report.invalid.map(backupLabel).join(', ')+'. Current data was not changed.':'Не прошли проверку: '+report.invalid.map(backupLabel).join(', ')+'. Текущие данные не изменены.'):(S.lang==='en'?'Backup validation failed. Current data was not changed.':'Проверка резервной копии не пройдена. Текущие данные не изменены.'));
       showToast(msg); return false;
     }
     if(!report.changed.length){showToast(S.lang==='en'?'Backup is valid; nothing to change.':'Копия корректна; изменений нет.');return true;}
@@ -6698,12 +6797,15 @@
     }
     var importedHistory = report.staged.history ? jsonValue(report.staged.history) : null;
     var importedCustomExercises = report.staged.customExercises ? jsonValue(report.staged.customExercises) : null;
+    var importedEquipmentProfiles = report.staged.equipmentProfiles ? jsonValue(report.staged.equipmentProfiles) : null;
     var indexedWrites = [];
     if (report.staged.history && historyRepository) indexedWrites.push(historyRepository.replaceAll(importedHistory));
     if (report.staged.customExercises && historyRepository) indexedWrites.push(historyRepository.replaceCustomExercises(importedCustomExercises));
+    if (report.staged.equipmentProfiles && historyRepository) indexedWrites.push(historyRepository.replaceEquipmentProfiles(importedEquipmentProfiles));
     Promise.all(indexedWrites).then(function () {
       if (Array.isArray(importedHistory)) databaseHistory = importedHistory;
       if (Array.isArray(importedCustomExercises)) databaseCustomExercises = cleanCustomExercises(importedCustomExercises);
+      if (Array.isArray(importedEquipmentProfiles)) databaseEquipmentProfiles = cleanEquipmentProfiles(importedEquipmentProfiles);
       showToast(t('ioRestored',{n:Object.keys(report.staged).length}));
       window.setTimeout(function(){window.location.reload();},650);
     }).catch(function () {
@@ -6713,8 +6815,10 @@
         var restores = [];
         if (historyRepository && previous.staged.history) restores.push(historyRepository.replaceAll(jsonValue(previous.staged.history)));
         if (historyRepository && previous.staged.customExercises) restores.push(historyRepository.replaceCustomExercises(jsonValue(previous.staged.customExercises)));
+        if (historyRepository && previous.staged.equipmentProfiles) restores.push(historyRepository.replaceEquipmentProfiles(jsonValue(previous.staged.equipmentProfiles)));
         Promise.all(restores).then(function () {
           if (previous.staged.customExercises) databaseCustomExercises = cleanCustomExercises(jsonValue(previous.staged.customExercises));
+          if (previous.staged.equipmentProfiles) databaseEquipmentProfiles = cleanEquipmentProfiles(jsonValue(previous.staged.equipmentProfiles));
         }).catch(function () {});
       }
       showToast(S.lang==='en'?'Import could not be verified; the previous backup was restored.':'Импорт не удалось проверить; прежняя резервная копия восстановлена.');
@@ -6727,7 +6831,7 @@
     [K.restTimer,K.lastBackup,K.rollbackBackup,K.legacyFav,K.legacyWorkout,K.legacyLang,K.legacyTheme].forEach(function(key){if(key)store.remove(key);});
     Object.keys(memoryStore).filter(function(key){return key.indexOf('mmg.recovery.')===0;}).forEach(function(key){store.remove(key);});
     if(storageOk){try{for(var i=window.localStorage.length-1;i>=0;i--){var key=window.localStorage.key(i);if(key&&key.indexOf('mmg.recovery.')===0)window.localStorage.removeItem(key);}}catch(e){}}
-    var cleared = historyRepository ? Promise.all([historyRepository.replaceAll([]), historyRepository.replaceCustomExercises([])]) : Promise.resolve();
+    var cleared = historyRepository ? Promise.all([historyRepository.replaceAll([]), historyRepository.replaceCustomExercises([]), historyRepository.replaceEquipmentProfiles([])]) : Promise.resolve();
     cleared.then(function(){
       showToast(t('dataCleared'));
       window.setTimeout(function(){window.location.reload();},550);
@@ -6820,7 +6924,7 @@
     [minus,plus].forEach(function(btn){if(btn)btn.addEventListener('click',function(){if(restTimer.running){restTimer.endsAt=Date.now()+Math.max(0,restTimer.left)*1000;persistRestTimer();}});});
     document.addEventListener('visibilitychange',function(){tickRestTimer();persistRestTimer();},{passive:true});
     window.addEventListener('pageshow',tickRestTimer,{passive:true});
-    window.mmgDiagnostics={version:APP_VERSION,storagePersistent:storageOk,get storageWarnings(){return storageWarnings.slice();},exerciseCount:EX.length,get customExerciseCount(){return databaseCustomExercises.length;},backupSchema:BACKUP_SCHEMA,get historySchema(){return historyRepository?historyRepository.schemaVersion:0;},get historyCount(){return Array.isArray(databaseHistory)?databaseHistory.length:S.history.length;}};
+    window.mmgDiagnostics={version:APP_VERSION,storagePersistent:storageOk,get storageWarnings(){return storageWarnings.slice();},exerciseCount:EX.length,get customExerciseCount(){return databaseCustomExercises.length;},get equipmentProfileCount(){return databaseEquipmentProfiles.length;},get activeEquipmentProfileId(){return activeEquipmentProfileId;},backupSchema:BACKUP_SCHEMA,get historySchema(){return historyRepository?historyRepository.schemaVersion:0;},get historyCount(){return Array.isArray(databaseHistory)?databaseHistory.length:S.history.length;}};
   }
 
 
@@ -7081,15 +7185,21 @@
     try {
       var persistence = await import('./src/persistence/history-repository.mjs');
       cleanCustomExercises = persistence.cleanCustomExercises;
+      cleanEquipmentProfiles = persistence.cleanEquipmentProfiles;
       databaseCustomExercises = cleanCustomExercises(store.json(K.customExercises, []));
+      databaseEquipmentProfiles = cleanEquipmentProfiles(store.json(K.equipmentProfiles, []));
       historyRepository = await persistence.createHistoryRepository();
       databaseHistory = await historyRepository.migrateLegacy(store.json(K.history, []));
       databaseCustomExercises = await historyRepository.migrateLegacyCustomExercises(databaseCustomExercises);
+      databaseEquipmentProfiles = await historyRepository.migrateLegacyEquipmentProfiles(databaseEquipmentProfiles);
+      activeEquipmentProfileId = store.get(K.equipmentProfileActive) || '';
       store.set(K.customExercises, JSON.stringify(databaseCustomExercises));
+      store.set(K.equipmentProfiles, JSON.stringify(databaseEquipmentProfiles));
     } catch (error) {
       historyRepository = null;
       databaseHistory = null;
       databaseCustomExercises = cleanCustomExercises(store.json(K.customExercises, []));
+      databaseEquipmentProfiles = cleanEquipmentProfiles(store.json(K.equipmentProfiles, []));
       storageWarnings.push({ key: K.history, type: 'indexeddb-unavailable', at: Date.now() });
     }
     var initialRoute = (location.hash || '#home').slice(1).split('?')[0];
@@ -7104,6 +7214,12 @@
         '<p>Обнови страницу. Если не помогает — проверь, что файл открыт полностью.</p></div>';
       window.dispatchEvent(new CustomEvent('mmg:error', { detail: { key: 'data' } }));
       return;
+    }
+    await ensureDefaultEquipmentProfiles();
+    if(activeEquipmentProfileId){
+      var activeProfile=databaseEquipmentProfiles.filter(function(profile){return profile.id===activeEquipmentProfileId;})[0];
+      if(activeProfile)S.equipment=activeProfile.equipment.slice();
+      else{activeEquipmentProfileId='';store.set(K.equipmentProfileActive,'');}
     }
 
     captureRu();

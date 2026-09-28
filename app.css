@@ -4552,3 +4552,7 @@ p,.lede,.small,.tiny,.note,.v7-next-copy,.theme-choice-copy small{text-wrap:pret
   .custom-exercise-grid{grid-template-columns:minmax(0,1fr)}
   .custom-notes-field,.custom-image-field{grid-column:auto}
 }
+.equipment-profile{display:grid;gap:8px;margin:0 0 14px;padding:12px;border:1px solid var(--color-border-subtle);border-radius:var(--radius-md);background:var(--color-surface-elevated)}
+.equipment-profile>label{font-size:.82rem;font-weight:650;color:var(--color-text-secondary)}
+.equipment-profile-actions{display:flex;flex-wrap:wrap;gap:8px}
+.equipment-profile>p{margin:0}

@@ -440,6 +440,15 @@
           </div>
 
           <div class="filters-body">
+            <section class="equipment-profile" aria-labelledby="equipment-profile-title">
+              <label id="equipment-profile-title" for="equipment-profile-select"></label>
+              <select class="select" id="equipment-profile-select"></select>
+              <div class="equipment-profile-actions">
+                <button class="btn btn-quiet btn-sm" id="equipment-profile-save" type="button"></button>
+                <button class="btn btn-quiet btn-sm btn-danger" id="equipment-profile-delete" type="button" hidden></button>
+              </div>
+              <p class="tiny" id="equipment-profile-help"></p>
+            </section>
             <div class="filter-fav">
               <button class="chip" id="fav-only" type="button" aria-pressed="false">
                 <span data-i18n="filters.favOnly">Только избранное</span><b class="num" id="fav-count">0</b>

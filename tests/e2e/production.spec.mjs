@@ -63,10 +63,15 @@ test('legacy workout history migrates to IndexedDB without a 20-session cap', as
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
     });
+    const profileCount = await new Promise((resolve, reject) => {
+      const request = db.transaction('equipmentProfiles', 'readonly').objectStore('equipmentProfiles').count();
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
     db.close();
-    return { count, customCount };
+    return { version: db.version, count, customCount, profileCount };
   });
-  expect(persistedCount).toEqual({ count: 28, customCount: 1 });
+  expect(persistedCount).toEqual({ version: 3, count: 28, customCount: 1, profileCount: 4 });
   await page.reload();
   await expect.poll(() => page.evaluate(() => window.mmgDiagnostics?.historyCount)).toBe(28);
 
@@ -76,16 +81,17 @@ test('legacy workout history migrates to IndexedDB without a 20-session cap', as
   const download = await downloadPromise;
   const backup = JSON.parse(await readFile(await download.path(), 'utf8'));
   expect(backup.app).toBe('markov-made-gym');
-  expect(backup.schemaVersion).toBe(6);
+  expect(backup.schemaVersion).toBe(7);
   expect(JSON.parse(backup.data.history)).toHaveLength(28);
   expect(JSON.parse(backup.data.customExercises)).toHaveLength(1);
+  expect(JSON.parse(backup.data.equipmentProfiles)).toHaveLength(4);
   await page.goto('/index.html#workout');
   await expect(page.locator('#hist .hist-item')).toHaveCount(20);
   await page.locator('#hist [data-history-more]').click();
   await expect(page.locator('#hist .hist-item')).toHaveCount(28);
 });
 
-test('custom exercise joins the Library, saved workout, Run Mode and schema v6 backup', async ({ page }) => {
+test('custom exercise joins the Library, saved workout, Run Mode, history and schema v7 backup', async ({ page }) => {
   await page.goto('/index.html#library');
   await expect(page.locator('#mmg-boot')).toHaveCount(0);
   await page.locator('#custom-exercise-open').click();
@@ -134,12 +140,80 @@ test('custom exercise joins the Library, saved workout, Run Mode and schema v6 b
   const download = await downloadPromise;
   const backup = JSON.parse(await readFile(await download.path(), 'utf8'));
   const customExercises = JSON.parse(backup.data.customExercises);
-  expect(backup.schemaVersion).toBe(6);
+  expect(backup.schemaVersion).toBe(7);
   expect(customExercises).toHaveLength(1);
   expect(customExercises[0]).toMatchObject({
     nameRu: 'Мой жим гантели', nameEn: 'My dumbbell press',
     trackingType: 'weight-reps', laterality: 'unilateral', loadIncrement: 2.5,
   });
+});
+
+test('equipment profiles constrain Library choices, survive reload and preserve the current workout', async ({ page }) => {
+  await page.goto('/index.html#library');
+  await expect(page.locator('#mmg-boot')).toHaveCount(0);
+  const filterOpen = page.locator('#mfb-open');
+  if (await filterOpen.isVisible()) await filterOpen.click();
+  await expect.poll(() => page.evaluate(() => window.mmgDiagnostics?.equipmentProfileCount)).toBe(4);
+  await page.locator('#equipment-profile-select').selectOption('builtin-home');
+  await expect.poll(() => page.evaluate(() => window.mmgDiagnostics?.activeEquipmentProfileId)).toBe('builtin-home');
+  if (await page.locator('#filters-apply').isVisible()) await page.locator('#filters-apply').click();
+  const firstHomeExercise = page.locator('#grid .card[data-id]').first();
+  await expect(firstHomeExercise).toBeVisible();
+  await firstHomeExercise.locator('[data-add]').click();
+  await expect(page.locator('.workout-item')).toHaveCount(1);
+
+  if (await filterOpen.isVisible()) await filterOpen.click();
+  await page.locator('#equipment-profile-select').selectOption('builtin-travel');
+  await expect.poll(() => page.evaluate(() => window.mmgDiagnostics?.activeEquipmentProfileId)).toBe('builtin-travel');
+  if (await page.locator('#filters-apply').isVisible()) await page.locator('#filters-apply').click();
+  await expect(page.locator('.workout-item')).toHaveCount(1);
+  await page.reload();
+  await expect.poll(() => page.evaluate(() => window.mmgDiagnostics?.activeEquipmentProfileId)).toBe('builtin-travel');
+  await expect(page.locator('.workout-item')).toHaveCount(1);
+
+  if (await filterOpen.isVisible()) await filterOpen.click();
+  page.once('dialog', dialog => dialog.accept('Weekend'));
+  await page.locator('#equipment-profile-save').click();
+  await expect.poll(() => page.evaluate(() => window.mmgDiagnostics?.equipmentProfileCount)).toBe(5);
+  if (await page.locator('#filters-apply').isVisible()) await page.locator('#filters-apply').click();
+
+  await page.goto('/index.html#settings');
+  const downloadPromise = page.waitForEvent('download');
+  await page.locator('#data-export').click();
+  const download = await downloadPromise;
+  const backup = JSON.parse(await readFile(await download.path(), 'utf8'));
+  expect(backup.schemaVersion).toBe(7);
+  expect(JSON.parse(backup.data.equipmentProfiles)).toHaveLength(5);
+  const importedProfileId = backup.data.equipmentProfileActive;
+  expect(importedProfileId).toMatch(/^equipment-/);
+
+  await page.evaluate(async () => {
+    localStorage.setItem('mmg.equipmentProfiles.v1', '[]');
+    localStorage.setItem('mmg.equipmentProfileActive.v1', 'builtin-home');
+    const db = await new Promise((resolve, reject) => {
+      const request = indexedDB.open('markov-made-gym');
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction('equipmentProfiles', 'readwrite');
+      tx.objectStore('equipmentProfiles').clear();
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error);
+    });
+    db.close();
+  });
+  await page.reload();
+  await expect.poll(() => page.evaluate(() => window.mmgDiagnostics?.activeEquipmentProfileId)).toBe('builtin-home');
+  let importPreview='';
+  page.once('dialog', dialog => { importPreview=dialog.message(); return dialog.accept(); });
+  const importChooser = page.waitForEvent('filechooser');
+  await page.locator('#data-import').click();
+  const chooser = await importChooser;
+  await chooser.setFiles({name:'equipment-backup.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(backup))});
+  await expect.poll(() => importPreview).toMatch(/Резервная копия проверена|Backup validated/);
+  await expect.poll(() => page.evaluate(() => window.mmgDiagnostics?.activeEquipmentProfileId)).toBe(importedProfileId);
+  await expect.poll(() => page.evaluate(() => window.mmgDiagnostics?.equipmentProfileCount)).toBe(5);
 });
 
 test('hash routes and MARKOV MADE LAB calculators are usable', async ({ page }) => {

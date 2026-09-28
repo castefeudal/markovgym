@@ -1,9 +1,21 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { cleanCustomExercises, cleanHistory, HISTORY_SCHEMA_VERSION, newestFirst } from '../src/persistence/history-repository.mjs';
+import { cleanCustomExercises, cleanEquipmentProfiles, cleanHistory, HISTORY_SCHEMA_VERSION, newestFirst } from '../src/persistence/history-repository.mjs';
 
 test('history schema is explicitly versioned', () => {
-  assert.equal(HISTORY_SCHEMA_VERSION, 2);
+  assert.equal(HISTORY_SCHEMA_VERSION, 3);
+});
+
+test('equipment profiles keep named, deduplicated local equipment selections', () => {
+  const profiles = cleanEquipmentProfiles([
+    { id: 'home', nameRu: 'Дом', nameEn: 'Home', equipment: ['band', 'dumbbell', 'band'], builtIn: true, unknown: 'ignored' },
+    { id: 'home', nameRu: 'Duplicate', nameEn: 'Duplicate', equipment: [] },
+    { id: 'invalid', nameRu: '', nameEn: 'Invalid', equipment: ['cable'] },
+  ]);
+  assert.deepEqual(profiles, [{
+    id: 'home', nameRu: 'Дом', nameEn: 'Home', equipment: ['band', 'dumbbell'],
+    createdAt: '', updatedAt: '', builtIn: true,
+  }]);
 });
 
 test('custom exercise records are typed, bounded, and retain all supported tracking modes', () => {

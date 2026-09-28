@@ -8,7 +8,8 @@ This describes the current browser data model and the persistence boundaries int
 | --- | --- |
 | UserProfile | Goal, experience, training location, availability, focus, limitations, and recovery baseline. Stored under `mmg.profile.v1`. |
 | Exercise | Compact catalog record with id, RU/EN name, body area, equipment, target and secondary muscles, animation slug, and instructions. The bundled catalog contains 1,324 records. |
-| CustomExercise | User-created bilingual exercise with body area, primary/secondary muscles, equipment, movement pattern, tracking type, laterality, compound flag, default dose, load increment, notes, optional local image, and timestamps. Stored in IndexedDB and exported in backup schema v6. |
+| CustomExercise | User-created bilingual exercise with body area, primary/secondary muscles, equipment, movement pattern, tracking type, laterality, compound flag, default dose, load increment, notes, optional local image, and timestamps. Stored in IndexedDB and exported in backup schema v7. |
+| EquipmentProfile | Named, local set of available equipment. The selected profile filters the Library and constrains generated exercise choices without changing a saved workout. Stored in IndexedDB and included in backup schema v7. |
 | Workout | Current ordered exercise list, target sets/reps/load, completion flags, and per-set log. Stored under `mmg.workout.v2`. |
 | Set | A logged set with reps, load, completion, set role, and optional RIR/RPE. Set normalization is in the workout domain in `app.js`. |
 | Program | A weekly split with day definitions and the current week completion markers. Stored under `mmg.plan.v1`. |
