@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { joinNutritionAndMeasurements } from '../src/features/nutrition/nutrition-analytics.mjs';
+import { joinNutritionAndMeasurements, weeklyNutritionBudget } from '../src/features/nutrition/nutrition-analytics.mjs';
 import { adaptiveExpenditure } from '../tools/lab-calculators.mjs';
 
 test('daily intake pairs with weight by exact date and leaves incomplete days out', () => {
@@ -38,4 +38,21 @@ test('paired daily logs supply the adaptive expenditure engine only after enough
   const paired = joinNutritionAndMeasurements(intake, measurements);
   assert.equal(adaptiveExpenditure({ days: paired }).status, 'ok');
   assert.equal(adaptiveExpenditure({ days: paired.slice(0, 6) }).status, 'insufficient');
+});
+
+test('weekly calorie context totals date-keyed entries against seven daily targets', () => {
+  const result = weeklyNutritionBudget([
+    { date: '2026-09-28', calories: 2600 }, { date: '2026-09-29', calories: 2700 },
+    { date: '2026-09-29', calories: 2750 }, { date: '2026-10-01', calories: 1900 },
+    { date: '2026-09-27', calories: 3000 }, { date: '2026-10-02', calories: -5 },
+  ], 2800, '2026-10-02');
+  assert.deepEqual(result, {
+    status: 'ok', weekStart: '2026-09-28', weekEnd: '2026-10-04', weeklyTarget: 19600,
+    logged: 7250, difference: 12350, daysLogged: 3,
+  });
+});
+
+test('weekly calorie context ignores future days and refuses an unset target', () => {
+  assert.equal(weeklyNutritionBudget([{ date: '2026-09-30', calories: 2000 }], 2000, '2026-09-29').logged, 0);
+  assert.equal(weeklyNutritionBudget([], null, '2026-09-29').status, 'insufficient');
 });

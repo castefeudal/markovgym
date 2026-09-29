@@ -16,3 +16,32 @@ export function joinNutritionAndMeasurements(nutritionDays = [], measurements = 
   }
   return [...days.values()].sort((a, b) => a.date.localeCompare(b.date));
 }
+
+/** Weekly calorie context; difference is descriptive and must not drive compensation. */
+export function weeklyNutritionBudget(nutritionDays = [], dailyTarget, today = new Date().toISOString().slice(0, 10)) {
+  const target = Number(dailyTarget);
+  if (!Number.isFinite(target) || target <= 0 || !/^\d{4}-\d{2}-\d{2}$/.test(today)) {
+    return { status: 'insufficient', weeklyTarget: null, logged: 0, difference: null, daysLogged: 0, weekStart: null, weekEnd: null };
+  }
+  const current = new Date(`${today}T00:00:00.000Z`);
+  if (!Number.isFinite(current.getTime()) || current.toISOString().slice(0, 10) !== today) {
+    return { status: 'insufficient', weeklyTarget: null, logged: 0, difference: null, daysLogged: 0, weekStart: null, weekEnd: null };
+  }
+  const start = new Date(current);
+  start.setUTCDate(start.getUTCDate() - ((start.getUTCDay() + 6) % 7));
+  const end = new Date(start);
+  end.setUTCDate(end.getUTCDate() + 6);
+  const weekStart = start.toISOString().slice(0, 10), weekEnd = end.toISOString().slice(0, 10);
+  const totals = new Map();
+  for (const entry of Array.isArray(nutritionDays) ? nutritionDays : []) {
+    if (typeof entry?.date !== 'string' || entry.date < weekStart || entry.date > today) continue;
+    const calories = Number(entry.calories);
+    if (Number.isFinite(calories) && calories > 0) totals.set(entry.date, calories);
+  }
+  const logged = [...totals.values()].reduce((sum, calories) => sum + calories, 0);
+  const weeklyTarget = Math.round(target * 7);
+  return {
+    status: 'ok', weekStart, weekEnd, weeklyTarget, logged: Math.round(logged),
+    difference: weeklyTarget - Math.round(logged), daysLogged: totals.size,
+  };
+}

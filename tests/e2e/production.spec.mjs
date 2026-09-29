@@ -17,7 +17,11 @@ test('daily nutrition log persists by date and links optional weight to the prog
   await page.goto('/index.html#nutrition');
   await page.locator('#nutrition-log-form').scrollIntoViewIfNeeded();
   await expect(page.locator('#nutrition-log-title')).toBeVisible();
-  await page.locator('#nlog-date').fill('2026-09-29');
+  await page.locator('#kbju-form').scrollIntoViewIfNeeded();
+  await page.locator('#kbju-calc').click();
+  await expect(page.locator('#nutrition-weekly-budget')).toContainText('Ориентир на неделю');
+  const logDate = await page.locator('#nlog-date').inputValue();
+  await page.locator('#nlog-date').fill(logDate);
   await page.locator('#nlog-calories').fill('2240');
   await page.locator('#nlog-protein').fill('148');
   await page.locator('#nlog-fat').fill('72');
@@ -28,23 +32,25 @@ test('daily nutrition log persists by date and links optional weight to the prog
   await page.locator('#nutrition-log-form button[type="submit"]').click();
   await expect(page.locator('#nutrition-log-list')).toContainText('2240 ккал');
   await expect(page.locator('#nutrition-log-list')).toContainText('80.4 кг');
+  const weeklyBudgetText = (await page.locator('#nutrition-weekly-budget').innerText()).replace(/\u00a0/g, ' ');
+  expect(weeklyBudgetText).toContain('2 240');
   await expect(page.locator('#nutrition-trend')).toContainText('80.4');
   await expect(page.locator('#nutrition-trend')).toContainText('—');
-  const saved = await page.evaluate(async () => {
+  const saved = await page.evaluate(async (date) => {
     const db = await new Promise((resolve, reject) => {
       const request = indexedDB.open('markov-made-gym');
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
     });
     const nutrition = await new Promise((resolve, reject) => {
-      const request = db.transaction('nutritionDays', 'readonly').objectStore('nutritionDays').get('2026-09-29');
+      const request = db.transaction('nutritionDays', 'readonly').objectStore('nutritionDays').get(date);
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
     });
     const diary = JSON.parse(localStorage.getItem('mmg.diary.v1') || '[]');
     db.close();
-    return { nutrition, diary: diary.find(entry => entry.date === '2026-09-29') };
-  });
+    return { nutrition, diary: diary.find(entry => entry.date === date) };
+  }, logDate);
   expect(saved.nutrition).toMatchObject({ calories: 2240, protein: 148, fat: 72, carbs: 252, weightKg: 80.4, accuracy: 'estimated', note: 'Long day' });
   expect(saved.diary.weight).toBe(80.4);
   await page.reload();

@@ -1,4 +1,4 @@
-const VERSION = '2026.09-r22-weight-trend';
+const VERSION = '2026.09-r23-weekly-budget';
 const PREFIX = 'mmg-gym-';
 const SHELL = `${PREFIX}shell-${VERSION}`;
 const MEDIA = `${PREFIX}media-${VERSION}`;

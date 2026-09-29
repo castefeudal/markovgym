@@ -90,6 +90,7 @@
   var historyFilters = { query:'', from:'', to:'', programme:'', exercise:'', durationMin:'', durationMax:'', prOnly:false };
   var todayDecisionEngine = null;
   var weightTrendFn = null;
+  var weeklyNutritionBudgetFn = null;
   var substitutionRanker = null;
   var workoutExecutionOrderFn = null;
   var storageOk = (function () {
@@ -316,6 +317,7 @@
     'nutritionLog.delete': 'Delete', 'nutritionLog.invalid': 'Check the date and nutrition values.',
     'nutritionLog.saved': 'Daily nutrition saved.', 'nutritionLog.saveFailed': 'Could not save the nutrition entry on this device.',
     'nutritionTrend.title': 'Weight trend', 'nutritionTrend.intro': 'The latest scale reading stays visible separately from the smoothed trend.',
+    'nutritionWeek.title': 'Weekly target', 'nutritionWeek.intro': 'Compare the weekly total with your current daily target. This is context, not a debt to compensate for.',
 
     'plan.eyebrow': 'Weekly structure', 'plan.title': 'Starting training plan',
     'plan.text': 'The inputs genuinely change the output: split, volume, reps, rest, cardio and the actual exercises are drawn from this same base.',
@@ -596,6 +598,11 @@
     nextNutritionLog: { ru:'Записать питание за сегодня', en:'Log today’s nutrition' },
     nextNutritionLogWhy: { ru:'Добавь калории и белок; вес за эту дату поможет точнее увидеть динамику.', en:'Add calories and protein; a same-day weigh-in can also strengthen the trend.' },
     actNutritionLog: { ru:'Записать питание', en:'Log nutrition' },
+    'nutritionWeek.noTarget': { ru:'Сначала рассчитай ориентир калорий выше, затем записывай рацион по дням.', en:'Calculate a calorie target above, then log daily intake to see the weekly picture.' },
+    'nutritionWeek.target': { ru:'Ориентир на неделю', en:'Weekly target' }, 'nutritionWeek.logged': { ru:'Записано', en:'Logged' },
+    'nutritionWeek.difference': { ru:'Разница с ориентиром', en:'Difference to target' },
+    'nutritionWeek.days': { ru:'Записано дней: {n}', en:'Days logged: {n}' },
+    'nutritionWeek.note': { ru:'Не нужно компенсировать отдельный день ограничением или перееданием; смотри на записи в контексте недели.', en:'Do not compensate for one day with restriction or overeating; read entries in the context of the week.' },
     'nutritionTrend.empty': { ru:'Чтобы увидеть сглаженный тренд, отмечай вес регулярно: для среднего нужны минимум 3 замера за 7 дней.', en:'Log weight regularly to see a smoothed trend; the 7-day mean needs at least 3 readings.' },
     'nutritionTrend.scale': { ru:'Вес на весах', en:'Scale weight' }, 'nutritionTrend.mean': { ru:'Среднее за 7 дней', en:'7-day mean' },
     'nutritionTrend.delta': { ru:'Изменение за 7 дней', en:'7-day change' }, 'nutritionTrend.rate': { ru:'Темп за 21 день', en:'21-day rate' },
@@ -4081,6 +4088,7 @@
 
     S.kbjuLast = { target: ctx.target, goal: ctx.goal, date: todayISO() };
     store.set(K.kbju, JSON.stringify(S.kbjuLast));
+    renderWeeklyNutritionBudget();
     renderDashIfVisible();
     track('nutrition_calculate', { goal: ctx.goal, target: ctx.target });
   }
@@ -6353,6 +6361,21 @@
     }).join('');
   }
 
+  function renderWeeklyNutritionBudget() {
+    var host = $('nutrition-weekly-budget');
+    if (!host) return;
+    var budget = weeklyNutritionBudgetFn ? weeklyNutritionBudgetFn(databaseNutritionDays, S.kbjuLast && S.kbjuLast.target, todayISO()) : null;
+    if (!budget || budget.status !== 'ok') {
+      host.innerHTML = '<p class="small">' + esc(t('nutritionWeek.noTarget')) + '</p>';
+      return;
+    }
+    var number = function (value) { return new Intl.NumberFormat(S.lang==='en'?'en-US':'ru-RU',{maximumFractionDigits:0}).format(value); };
+    var difference = budget.difference;
+    var signed = (difference > 0 ? '+' : '') + number(difference) + ' ' + (S.lang==='en'?'kcal':'ккал');
+    var days = t('nutritionWeek.days',{n:budget.daysLogged});
+    host.innerHTML = '<div class="nutrition-week-metrics"><div><span>' + esc(t('nutritionWeek.target')) + '</span><b>' + number(budget.weeklyTarget) + ' ' + (S.lang==='en'?'kcal':'ккал') + '</b></div><div><span>' + esc(t('nutritionWeek.logged')) + '</span><b>' + number(budget.logged) + ' ' + (S.lang==='en'?'kcal':'ккал') + '</b></div><div><span>' + esc(t('nutritionWeek.difference')) + '</span><b class="nutrition-week-difference" data-over="' + String(difference < 0) + '">' + esc(signed) + '</b></div></div><p class="tiny">' + esc(budget.weekStart) + ' — ' + esc(budget.weekEnd) + ' · ' + esc(days) + '</p><p class="tiny">' + esc(t('nutritionWeek.note')) + '</p>';
+  }
+
   function renderNutritionTrend() {
     var host = $('nutrition-trend');
     if (!host) return;
@@ -6379,6 +6402,7 @@
       if (historyRepository) await historyRepository.putNutritionDay(record);
       databaseNutritionDays = cleanNutritionDays(databaseNutritionDays.filter(function (row) { return row.date !== date; }).concat([record]));
       store.set(K.nutritionLog, JSON.stringify(databaseNutritionDays));
+      renderWeeklyNutritionBudget();
       if (weightKg !== null) {
         var diary = S.diary.filter(function (entry) { return entry.date === date; })[0];
         if (diary) diary.weight = weightKg;
@@ -6406,10 +6430,11 @@
       var date = button.getAttribute('data-nutrition-delete');
       var remaining = databaseNutritionDays.filter(function (row) { return row.date !== date; });
       var remove = historyRepository ? historyRepository.replaceNutritionDays(remaining) : Promise.resolve();
-      remove.then(function () { databaseNutritionDays = remaining; store.set(K.nutritionLog, JSON.stringify(databaseNutritionDays)); renderNutritionLog(); })
+      remove.then(function () { databaseNutritionDays = remaining; store.set(K.nutritionLog, JSON.stringify(databaseNutritionDays)); renderNutritionLog(); renderWeeklyNutritionBudget(); })
         .catch(function () { showToast(t('nutritionLog.saveFailed')); });
     });
     renderNutritionLog();
+    renderWeeklyNutritionBudget();
     renderNutritionTrend();
   }
 
@@ -6929,7 +6954,7 @@
      Correctness -> data integrity -> usability -> accessibility -> performance.
      This layer deliberately preserves the proven V4 business logic and contracts.
      ======================================================================== */
-  var APP_VERSION = '2026.09-r22-weight-trend';
+  var APP_VERSION = '2026.09-r23-weekly-budget';
   var BACKUP_SCHEMA = 9;
   K.restTimer = 'mmg.restTimer.v2';
   K.lastBackup = 'mmg.lastBackup.v1';
@@ -7600,7 +7625,7 @@
   var _openExerciseProductOSV7=openExercise;openExercise=function(id,trigger,silent){var result=_openExerciseProductOSV7(id,trigger,silent);renderV7ExerciseHistory(id);return result;};
   var _decorateKbjuProductOSV7=decorateKbju;decorateKbju=function(ctx){var result=_decorateKbjuProductOSV7(ctx);renderV7NutritionContext(ctx);renderV7Home();return result;};
   var _progressIntelligenceHtmlProductOSV7=progressIntelligenceHtml;progressIntelligenceHtml=function(){var html=_progressIntelligenceHtmlProductOSV7();if(!html)return html;var c=v7DiaryConfidence(),badge='<div class="v7-confidence" data-level="'+c.level+'"><b>'+esc(c.label)+'</b><span>'+esc(c.detail)+'</span></div>';return html.replace('<div class="intel-metrics">',badge+'<div class="intel-metrics">');};
-  var _applyLangProductOSV7=applyLang;applyLang=function(initial){_applyLangProductOSV7(initial);renderV7All();renderNutritionLog();renderNutritionTrend();if(S.activeId)renderV7ExerciseHistory(S.activeId);};
+  var _applyLangProductOSV7=applyLang;applyLang=function(initial){_applyLangProductOSV7(initial);renderV7All();renderNutritionLog();renderWeeklyNutritionBudget();renderNutritionTrend();if(S.activeId)renderV7ExerciseHistory(S.activeId);};
   var _scrollToIdProductOSV7=scrollToId;scrollToId=function(id){if(V7_ROUTE_IDS[id]){navigateV7(id,true);return;}_scrollToIdProductOSV7(id);};
   var _scrollToLibraryProductOSV7=scrollToLibrary;scrollToLibrary=function(){navigateV7('library',false);requestAnimationFrame(function(){var el=$('library');if(el)el.scrollIntoView({block:'start',behavior:REDUCED_MOTION.matches?'auto':'smooth'});});};
 
@@ -7623,6 +7648,12 @@
       weightTrendFn = weightTrendModule.weightTrend;
     } catch (error) {
       window.dispatchEvent(new CustomEvent('mmg:error', { detail: { key: 'weight-trend' } }));
+    }
+    try {
+      var nutritionAnalyticsModule = await import('./src/features/nutrition/nutrition-analytics.mjs');
+      weeklyNutritionBudgetFn = nutritionAnalyticsModule.weeklyNutritionBudget;
+    } catch (error) {
+      window.dispatchEvent(new CustomEvent('mmg:error', { detail: { key: 'nutrition-analytics' } }));
     }
     try {
       var substitutionModule = await import('./src/features/exercise/substitution-engine.mjs');
