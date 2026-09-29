@@ -17,8 +17,9 @@ This describes the current browser data model and the persistence boundaries int
 | Set | A logged set with reps, load, distance, duration, completion, set role, and optional RIR/RPE. The fields saved depend on the exercise tracking type. Set normalization is in the workout domain in `app.js`. |
 | Program | A weekly split with day definitions and the current week completion markers. Stored in IndexedDB `userState`, with `mmg.plan.v1` as a compatibility mirror. |
 | Measurement | Date-keyed body diary values such as weight, waist, sleep, and recovery. Stored in IndexedDB `userState`, with `mmg.diary.v1` as a compatibility mirror. |
+| NutritionDay | One date-keyed intake summary: calories, protein, optional fat/carbohydrates, optional accuracy, note, and optional same-day weight. Stored in IndexedDB `nutritionDays`; `mmg.nutritionLog.v1` remains a migration/backup compatibility copy. Weight also updates that date in the body diary. |
 | UserState | Versioned IndexedDB record keyed by the existing domain storage key. It holds profile, current workout, program, measurements, nutrition calculation, notes, and settings as validated JSON strings while older app code transitions to repository reads. |
-| Nutrition calculation | Current macro target calculation and last result. A full daily intake diary is not yet part of the persisted model. |
+| Nutrition calculation | Current macro target calculation and last result. Daily NutritionDay records join by date with body measurements for adaptive expenditure; the Lab requires at least seven paired days and reports coverage, uncertainty, confidence, and its edge-mean smoothing window. |
 | Calculator result | Pure calculation output with method, assumptions, range, and limitations in the Lab result contract. |
 | EvidenceReference | Citation metadata in `data/evidence/calculators.json`, linked to supported calculator outputs. |
 
@@ -28,10 +29,10 @@ This describes the current browser data model and the persistence boundaries int
 
 ## Workout history and migration
 
-Completed workouts retain their date, duration, exercises, and structured set logs. IndexedDB database `markov-made-gym`, schema version 5, stores history, custom exercises, named equipment profiles, per-exercise preferences, and structured `userState` records. Existing LocalStorage values are copied only when the corresponding IndexedDB record is absent; LocalStorage remains a compatibility mirror. Backups use `schemaVersion: 9` and export custom exercises, equipment profiles, exercise preferences, and complete IndexedDB-backed history.
+Completed workouts retain their date, duration, exercises, and structured set logs. IndexedDB database `markov-made-gym`, schema version 6, stores history, nutrition days, custom exercises, named equipment profiles, per-exercise preferences, and structured `userState` records. Existing LocalStorage values are copied only when the corresponding IndexedDB collection is empty; LocalStorage remains a compatibility mirror. Backups use `schemaVersion: 9` and export custom exercises, equipment profiles, exercise preferences, nutrition days, and complete IndexedDB-backed history.
 
 The History view renders 20 records at a time and reveals more on request. Progression and history lookups use the complete in-memory history loaded from IndexedDB. If IndexedDB is unavailable, the application falls back to browser storage and reports the storage limitation through diagnostics.
 
 ## Planned model boundaries
 
-ExercisePreference, NutritionDay, Mesocycle, ProgressSignal, and CalculatorResult history are not yet independent persisted collections. Add them through versioned migrations and repository APIs rather than more unrelated LocalStorage keys. Preserve old backup fields when introducing those collections.
+Mesocycle, ProgressSignal, and CalculatorResult history are not yet independent persisted collections. Add them through versioned migrations and repository APIs rather than more unrelated LocalStorage keys. Preserve old backup fields when introducing those collections.

@@ -76,11 +76,13 @@
     });
   }
   var databaseHistory = null;
+  var databaseNutritionDays = [];
   var databaseCustomExercises = [];
   var databaseEquipmentProfiles = [];
   var databaseExercisePreferences = {};
   var databaseAppState = {};
   var cleanIdbExercisePreferences = function (value) { return value && typeof value === 'object' && !Array.isArray(value) ? value : {}; };
+  var cleanNutritionDays = function (rows) { return Array.isArray(rows) ? rows.filter(function (row) { return row && typeof row === 'object'; }) : []; };
   var cleanEquipmentProfiles = function (rows) { return Array.isArray(rows) ? rows.filter(function (row) { return row && typeof row === 'object'; }) : []; };
   var activeEquipmentProfileId = '';
   var cleanCustomExercises = function (rows) { return Array.isArray(rows) ? rows.filter(function (row) { return row && typeof row === 'object'; }) : []; };
@@ -303,6 +305,15 @@
     'kbju.pace': 'Rate of change', 'kbju.paceGentle': 'Gentle', 'kbju.paceModerate': 'Moderate', 'kbju.paceAssertive': 'Assertive',
     'kbju.submit': 'Calculate macros',
     'kbju.disclaimer': 'This is a reference estimate, not a substitute for a doctor or dietitian. With medical conditions, pregnancy or medication, targets should be set by a specialist.',
+    'nutritionLog.eyebrow': 'Daily log', 'nutritionLog.title': 'What the day looked like',
+    'nutritionLog.text': 'Calories and protein are required. Add the rest if useful; weight entered for this date is also saved in the progress diary.',
+    'nutritionLog.date': 'Date', 'nutritionLog.calories': 'Calories, kcal *', 'nutritionLog.protein': 'Protein, g *',
+    'nutritionLog.fat': 'Fat, g', 'nutritionLog.carbs': 'Carbohydrates, g', 'nutritionLog.weight': 'Weight for this date, kg',
+    'nutritionLog.accuracy': 'Entry accuracy', 'nutritionLog.unknown': 'Not specified', 'nutritionLog.accurate': 'Accurate',
+    'nutritionLog.estimated': 'Estimated', 'nutritionLog.rough': 'Rough estimate', 'nutritionLog.note': 'Note (optional)',
+    'nutritionLog.save': 'Save day', 'nutritionLog.empty': 'No entries yet. Add today’s intake in a few seconds.',
+    'nutritionLog.delete': 'Delete', 'nutritionLog.invalid': 'Check the date and nutrition values.',
+    'nutritionLog.saved': 'Daily nutrition saved.', 'nutritionLog.saveFailed': 'Could not save the nutrition entry on this device.',
 
     'plan.eyebrow': 'Weekly structure', 'plan.title': 'Starting training plan',
     'plan.text': 'The inputs genuinely change the output: split, volume, reps, rest, cardio and the actual exercises are drawn from this same base.',
@@ -570,7 +581,16 @@
     progressSessions: { ru:'Тренировки 30 дн.', en:'Sessions 30d' },
     progressWorkSets: { ru:'Рабочие подходы 30 дн.', en:'Work sets 30d' },
     histDuration: { ru:'{v} мин', en:'{v} min' },
-    histSetsDone: { ru:'{done}/{total} подходов', en:'{done}/{total} sets' }
+    histSetsDone: { ru:'{done}/{total} подходов', en:'{done}/{total} sets' },
+    'nutritionLog.empty': { ru:'Записей пока нет. Добавь рацион за сегодня — это займёт несколько секунд.', en:'No entries yet. Add today’s intake in a few seconds.' },
+    'nutritionLog.accurate': { ru:'Точно', en:'Accurate' }, 'nutritionLog.estimated': { ru:'Оценка', en:'Estimated' },
+    'nutritionLog.rough': { ru:'Примерно', en:'Rough estimate' }, 'nutritionLog.delete': { ru:'Удалить', en:'Delete' },
+    'nutritionLog.invalid': { ru:'Проверь дату и значения питания.', en:'Check the date and nutrition values.' },
+    'nutritionLog.saved': { ru:'Рацион за день сохранён.', en:'Daily nutrition saved.' },
+    'nutritionLog.saveFailed': { ru:'Не удалось сохранить запись на этом устройстве.', en:'Could not save the nutrition entry on this device.' },
+    nextNutritionLog: { ru:'Записать питание за сегодня', en:'Log today’s nutrition' },
+    nextNutritionLogWhy: { ru:'Добавь калории и белок; вес за эту дату поможет точнее увидеть динамику.', en:'Add calories and protein; a same-day weigh-in can also strengthen the trend.' },
+    actNutritionLog: { ru:'Записать питание', en:'Log nutrition' }
   });
 
   function t(key, vals) {
@@ -2527,6 +2547,7 @@
   K.equipmentProfiles = 'mmg.equipmentProfiles.v1';
   K.equipmentProfileActive = 'mmg.equipmentProfileActive.v1';
   K.diary = 'mmg.diary.v1';
+  K.nutritionLog = 'mmg.nutritionLog.v1';
   K.kbju = 'mmg.kbju.v1';
   K.tips = 'mmg.tips.v1';
   K.coach = 'mmg.coach.v1';
@@ -3267,7 +3288,8 @@
       hasNutritionTarget:!!S.kbjuLast,
       hasProgram:!!S.plan,
       diaryEntries:S.diary.length,
-      checkinAgeDays:age
+      checkinAgeDays:age,
+      hasNutritionLogToday:databaseNutritionDays.some(function(entry){return entry.date===todayISO();})
     }):null;
     var views={
       resume_run:{text:'nextResume',why:'nextResumeWhy',act:'resumeRun',label:'continuityResume'},
@@ -3279,6 +3301,7 @@
       build_program:{text:'nextPlan',why:'nextPlanWhy',act:'plan',label:'actPlan'},
       record_measurements:{text:'nextDiary',why:'nextDiaryWhy',act:'progress',label:'actProgress'},
       refresh_measurements:{text:'nextRefresh',why:'nextRefreshWhy',act:'progress',label:'actProgress'},
+      log_nutrition:{text:'nextNutritionLog',why:'nextNutritionLogWhy',act:'nutritionLog',label:'actNutritionLog'},
       review_progress:{text:'nextKeep',why:'nextKeepWhy',act:'progress',label:'actProgress'}
     };
     var view=decision&&views[decision.recommendation];
@@ -4709,7 +4732,7 @@
   }
 
   /* ---------- 16.11 УПРАВЛЕНИЕ ДАННЫМИ ----------------------------------- */
-  var DATA_KEYS = ['fav', 'workout', 'lang', 'theme', 'density', 'profile', 'meta', 'history', 'customExercises', 'diary', 'kbju', 'tips', 'coach', 'rest', 'plan', 'settings', 'recentSearch', 'recentExercises'];
+  var DATA_KEYS = ['fav', 'workout', 'lang', 'theme', 'density', 'profile', 'meta', 'history', 'customExercises', 'diary', 'nutritionLog', 'kbju', 'tips', 'coach', 'rest', 'plan', 'settings', 'recentSearch', 'recentExercises'];
 
   function exportAll() {
     var payload = { v: 3, kind: 'mmg-backup', at: new Date().toISOString(), data: {} };
@@ -5377,6 +5400,7 @@
       if (name === 'workout') { scrollToId('workout'); return; }
       if (name === 'progress') { scrollToId('progress'); return; }
       if (name === 'checkin') { scrollToId('nutrition'); $('c-prev').focus(); return; }
+      if (name === 'nutritionLog') { scrollToId('nutrition'); window.setTimeout(function(){var field=$('nlog-calories');if(field)field.focus();},80); return; }
       applyConsoleAction(name);
     });
 
@@ -6301,7 +6325,70 @@
     });
   }
 
+  function renderNutritionLog() {
+    var host = $('nutrition-log-list');
+    if (!host) return;
+    var rows = cleanNutritionDays(databaseNutritionDays).slice(0, 14);
+    if (!rows.length) {
+      host.innerHTML = '<p class="small">' + esc(t('nutritionLog.empty')) + '</p>';
+      return;
+    }
+    host.innerHTML = rows.map(function (row) {
+      var day = row.date.split('-').reverse().join('.');
+      var weight = row.weightKg == null ? '' : ' · ' + esc(row.weightKg) + ' кг';
+      var macros = [row.fat == null ? '' : esc(row.fat) + ' г жиров', row.carbs == null ? '' : esc(row.carbs) + ' г углеводов'].filter(Boolean).join(' · ');
+      var confidence = row.accuracy === 'accurate' ? t('nutritionLog.accurate') : row.accuracy === 'estimated' ? t('nutritionLog.estimated') : row.accuracy === 'rough' ? t('nutritionLog.rough') : '';
+      return '<article class="nutrition-log-row"><div><strong>' + esc(day) + '</strong><span>' + esc(row.calories) + ' ккал · ' + esc(row.protein) + ' г белка' + weight + '</span>' + (macros ? '<small>' + macros + '</small>' : '') + (confidence ? '<small>' + esc(confidence) + '</small>' : '') + (row.note ? '<small>' + esc(row.note) + '</small>' : '') + '</div><button class="btn btn-quiet" type="button" data-nutrition-delete="' + esc(row.date) + '" aria-label="' + esc(t('nutritionLog.delete')) + '">' + esc(t('nutritionLog.delete')) + '</button></article>';
+    }).join('');
+  }
+
+  async function saveNutritionDay() {
+    var date = $('nlog-date').value || todayISO();
+    var calories = Number($('nlog-calories').value), protein = Number($('nlog-protein').value);
+    var weightKg = $('nlog-weight').value === '' ? null : Number($('nlog-weight').value);
+    var record = cleanNutritionDays([{ date: date, calories: calories, protein: protein,
+      fat: $('nlog-fat').value, carbs: $('nlog-carbs').value, weightKg: weightKg,
+      accuracy: $('nlog-accuracy').value, note: $('nlog-note').value, updatedAt: new Date().toISOString() }])[0];
+    if (!record) { showToast(t('nutritionLog.invalid')); return; }
+    try {
+      if (historyRepository) await historyRepository.putNutritionDay(record);
+      databaseNutritionDays = cleanNutritionDays(databaseNutritionDays.filter(function (row) { return row.date !== date; }).concat([record]));
+      store.set(K.nutritionLog, JSON.stringify(databaseNutritionDays));
+      if (weightKg !== null) {
+        var diary = S.diary.filter(function (entry) { return entry.date === date; })[0];
+        if (diary) diary.weight = weightKg;
+        else S.diary.push({ date: date, weight: weightKg, waist: null, recovery: null, sleep: null, mood: 3, hunger: 3, fatigue: 3, lift: '', note: '' });
+        S.diary.sort(function (a, b) { return a.date < b.date ? 1 : -1; });
+        saveDiary(); renderProgress(); renderDashIfVisible();
+      }
+      renderNutritionLog();
+      $('nlog-note').value = '';
+      showToast(t('nutritionLog.saved'));
+    } catch (error) {
+      storageWarnings.push({ key: K.nutritionLog, type: 'indexeddb-write', at: Date.now() });
+      showToast(t('nutritionLog.saveFailed'));
+    }
+  }
+
+  function bindNutritionLog() {
+    var form = $('nutrition-log-form');
+    if (!form) return;
+    $('nlog-date').value = todayISO();
+    form.addEventListener('submit', function (event) { event.preventDefault(); saveNutritionDay(); });
+    $('nutrition-log-list').addEventListener('click', function (event) {
+      var button = event.target.closest('[data-nutrition-delete]');
+      if (!button) return;
+      var date = button.getAttribute('data-nutrition-delete');
+      var remaining = databaseNutritionDays.filter(function (row) { return row.date !== date; });
+      var remove = historyRepository ? historyRepository.replaceNutritionDays(remaining) : Promise.resolve();
+      remove.then(function () { databaseNutritionDays = remaining; store.set(K.nutritionLog, JSON.stringify(databaseNutritionDays)); renderNutritionLog(); })
+        .catch(function () { showToast(t('nutritionLog.saveFailed')); });
+    });
+    renderNutritionLog();
+  }
+
   function bindTools() {
+    bindNutritionLog();
     $('kbju-form').addEventListener('submit', function (e) { e.preventDefault(); calcKbju(); });
     $('plan-form').addEventListener('submit', function (e) { e.preventDefault(); if (DATA_READY) buildPlan(); else ensureData().then(buildPlan); });
 
@@ -6816,7 +6903,7 @@
      Correctness -> data integrity -> usability -> accessibility -> performance.
      This layer deliberately preserves the proven V4 business logic and contracts.
      ======================================================================== */
-  var APP_VERSION = '2026.09-r20-workout-groups';
+  var APP_VERSION = '2026.09-r21-nutrition-log';
   var BACKUP_SCHEMA = 9;
   K.restTimer = 'mmg.restTimer.v2';
   K.lastBackup = 'mmg.lastBackup.v1';
@@ -6958,9 +7045,9 @@
   migrateEco = function(){ _migrateEcoV5(); restoreRestTimer(); };
 
   /* Production backup format: versioned, staged, validated, previewed, rollback-capable. */
-  DATA_KEYS=['customExercises','equipmentProfiles','equipmentProfileActive','exercisePreferences','fav','workout','lang','theme','density','profile','meta','history','diary','kbju','tips','coach','rest','recentSearch','recentExercises','runSession','plan','settings','schema','workoutSchema','historySchema'];
+  DATA_KEYS=['customExercises','equipmentProfiles','equipmentProfileActive','exercisePreferences','fav','workout','lang','theme','density','profile','meta','history','diary','nutritionLog','kbju','tips','coach','rest','recentSearch','recentExercises','runSession','plan','settings','schema','workoutSchema','historySchema'];
   var BACKUP_LABELS = {
-    exercisePreferences:{ru:'предпочтения упражнений',en:'exercise preferences'},
+    exercisePreferences:{ru:'предпочтения упражнений',en:'exercise preferences'},nutritionLog:{ru:'дневник питания',en:'nutrition log'},
     customExercises:{ru:'свои упражнения',en:'custom exercises'},equipmentProfiles:{ru:'профили оборудования',en:'equipment profiles'},equipmentProfileActive:{ru:'активный профиль оборудования',en:'active equipment profile'},fav:{ru:'избранное',en:'favorites'},workout:{ru:'тренировка',en:'workout'},lang:{ru:'язык',en:'language'},theme:{ru:'тема',en:'theme'},density:{ru:'плотность сетки',en:'grid density'},profile:{ru:'профиль',en:'profile'},meta:{ru:'данные тренировки',en:'workout meta'},history:{ru:'история',en:'history'},diary:{ru:'дневник прогресса',en:'progress diary'},kbju:{ru:'питание',en:'nutrition'},tips:{ru:'сохранённые материалы',en:'saved knowledge'},coach:{ru:'режим тренера',en:'coach mode'},rest:{ru:'настройка отдыха',en:'rest timer preset'},recentSearch:{ru:'недавние поиски',en:'recent searches'},recentExercises:{ru:'недавние упражнения',en:'recent exercises'},runSession:{ru:'активная сессия',en:'active session'},plan:{ru:'активная программа',en:'active programme'},settings:{ru:'настройки логирования',en:'logging settings'},schema:{ru:'схема данных',en:'schema'},workoutSchema:{ru:'схема тренировки',en:'workout schema'},historySchema:{ru:'схема истории',en:'history schema'}
   };
   function backupLabel(name){var pair=BACKUP_LABELS[name];return pair?(S.lang==='en'?pair.en:pair.ru):name;}
@@ -6988,6 +7075,11 @@
     }
     if (name==='history') return JSON.stringify(Array.isArray(value)?value.filter(function(x){return x&&Array.isArray(x.items);}):[]);
     if (name==='diary') return JSON.stringify(Array.isArray(value)?value.filter(function(x){return x&&typeof x.date==='string';}).slice(0,400):[]);
+    if (name==='nutritionLog') {
+      if (!Array.isArray(value)) return null;
+      var cleanNutrition = cleanNutritionDays(value);
+      return cleanNutrition.length===value.length ? JSON.stringify(cleanNutrition) : null;
+    }
     if (name==='tips') return JSON.stringify(Array.isArray(value)?value.map(String).slice(0,200):[]);
     if (name==='recentSearch') return JSON.stringify(Array.isArray(value)?value.map(String).filter(Boolean).slice(0,8):[]);
     if (name==='recentExercises') return JSON.stringify(Array.isArray(value)?value.map(String).filter(function(id){return !!BY_ID[id];}).slice(0,8):[]);
@@ -7005,7 +7097,7 @@
   }
   exportAll = function(){
     var payload={app:'markov-made-gym',schemaVersion:BACKUP_SCHEMA,createdAt:new Date().toISOString(),v:BACKUP_SCHEMA,kind:'mmg-backup',appVersion:APP_VERSION,exportedAt:new Date().toISOString(),data:{}};
-    DATA_KEYS.forEach(function(name){var raw=name==='history'?JSON.stringify(S.history):(name==='customExercises'?JSON.stringify(databaseCustomExercises):(name==='equipmentProfiles'?JSON.stringify(databaseEquipmentProfiles):store.get(K[name])));if(raw!=null)payload.data[name]=raw;});
+    DATA_KEYS.forEach(function(name){var raw=name==='history'?JSON.stringify(S.history):(name==='nutritionLog'?JSON.stringify(databaseNutritionDays):(name==='customExercises'?JSON.stringify(databaseCustomExercises):(name==='equipmentProfiles'?JSON.stringify(databaseEquipmentProfiles):store.get(K[name]))));if(raw!=null)payload.data[name]=raw;});
     return JSON.stringify(payload,null,2);
   };
   function analyzeBackup(raw){
@@ -7039,7 +7131,8 @@
       var clean=validateBackupValue(name,parsed.data[name]);
       if(clean===null){invalid.push(name);return;}
       staged[name]=clean;
-      if(store.get(K[name])!==clean)changed.push(name);
+      var currentRaw = name==='nutritionLog' ? JSON.stringify(databaseNutritionDays) : store.get(K[name]);
+      if(currentRaw!==clean)changed.push(name);
     });
     if(Object.prototype.hasOwnProperty.call(staged,'equipmentProfileActive')){
       var availableProfiles=Object.prototype.hasOwnProperty.call(staged,'equipmentProfiles')?jsonValue(staged.equipmentProfiles):databaseEquipmentProfiles;
@@ -7055,7 +7148,7 @@
   }
   function backupPreviewText(report){
     var list=report.changed.slice(0,10).map(function(n){return '• '+backupLabel(n);}).join('\n');
-    var collections=['customExercises','equipmentProfiles','workout','history','diary'];
+    var collections=['customExercises','equipmentProfiles','workout','history','diary','nutritionLog'];
     var summary=collections.map(function(name){var value=jsonValue(report.staged[name]);return Array.isArray(value)?backupLabel(name)+': '+value.length:null;}).filter(Boolean).join(' · ');
     var more=Math.max(0,report.changed.length-10);
     if(S.lang==='en')return 'Backup validated. Changes: '+report.changed.length+'\n'+(summary?'Records: '+summary+'\n':'')+'\n'+(list||'No values differ.')+(more?'\n• +'+more+' more':'')+'\n\nA rollback snapshot will be kept on this device. Import now?';
@@ -7089,17 +7182,20 @@
       return false;
     }
     var importedHistory = report.staged.history ? jsonValue(report.staged.history) : null;
+    var importedNutritionDays = report.staged.nutritionLog ? cleanNutritionDays(jsonValue(report.staged.nutritionLog)) : null;
     var importedCustomExercises = report.staged.customExercises ? jsonValue(report.staged.customExercises) : null;
     var importedEquipmentProfiles = report.staged.equipmentProfiles ? jsonValue(report.staged.equipmentProfiles) : null;
     var importedExercisePreferences = report.staged.exercisePreferences ? cleanIdbExercisePreferences(jsonValue(report.staged.exercisePreferences)) : null;
     var indexedWrites = [];
     indexedWrites.push(flushAppStateWrites());
     if (report.staged.history && historyRepository) indexedWrites.push(historyRepository.replaceAll(importedHistory));
+    if (report.staged.nutritionLog && historyRepository) indexedWrites.push(historyRepository.replaceNutritionDays(importedNutritionDays));
     if (report.staged.customExercises && historyRepository) indexedWrites.push(historyRepository.replaceCustomExercises(importedCustomExercises));
     if (report.staged.equipmentProfiles && historyRepository) indexedWrites.push(historyRepository.replaceEquipmentProfiles(importedEquipmentProfiles));
     if (report.staged.exercisePreferences && historyRepository) indexedWrites.push(historyRepository.replaceExercisePreferences(importedExercisePreferences));
     Promise.all(indexedWrites).then(function () {
       if (Array.isArray(importedHistory)) databaseHistory = importedHistory;
+      if (Array.isArray(importedNutritionDays)) databaseNutritionDays = importedNutritionDays;
       if (Array.isArray(importedCustomExercises)) databaseCustomExercises = cleanCustomExercises(importedCustomExercises);
       if (Array.isArray(importedEquipmentProfiles)) databaseEquipmentProfiles = cleanEquipmentProfiles(importedEquipmentProfiles);
       if (importedExercisePreferences) { databaseExercisePreferences = importedExercisePreferences; S.exercisePreferences = importedExercisePreferences; }
@@ -7112,11 +7208,13 @@
         var restores = [];
         restores.push(flushAppStateWrites());
         if (historyRepository && previous.staged.history) restores.push(historyRepository.replaceAll(jsonValue(previous.staged.history)));
+        if (historyRepository && previous.staged.nutritionLog) restores.push(historyRepository.replaceNutritionDays(cleanNutritionDays(jsonValue(previous.staged.nutritionLog))));
         if (historyRepository && previous.staged.customExercises) restores.push(historyRepository.replaceCustomExercises(jsonValue(previous.staged.customExercises)));
         if (historyRepository && previous.staged.equipmentProfiles) restores.push(historyRepository.replaceEquipmentProfiles(jsonValue(previous.staged.equipmentProfiles)));
         if (historyRepository && previous.staged.exercisePreferences) restores.push(historyRepository.replaceExercisePreferences(cleanIdbExercisePreferences(jsonValue(previous.staged.exercisePreferences))));
         Promise.all(restores).then(function () {
           if (previous.staged.customExercises) databaseCustomExercises = cleanCustomExercises(jsonValue(previous.staged.customExercises));
+          if (previous.staged.nutritionLog) databaseNutritionDays = cleanNutritionDays(jsonValue(previous.staged.nutritionLog));
           if (previous.staged.equipmentProfiles) databaseEquipmentProfiles = cleanEquipmentProfiles(jsonValue(previous.staged.equipmentProfiles));
           if (previous.staged.exercisePreferences) { databaseExercisePreferences = cleanIdbExercisePreferences(jsonValue(previous.staged.exercisePreferences)); S.exercisePreferences = databaseExercisePreferences; }
         }).catch(function () {});
@@ -7133,7 +7231,7 @@
     Object.keys(memoryStore).filter(function(key){return key.indexOf('mmg.recovery.')===0;}).forEach(function(key){store.remove(key);});
     if(storageOk){try{for(var i=window.localStorage.length-1;i>=0;i--){var key=window.localStorage.key(i);if(key&&key.indexOf('mmg.recovery.')===0)window.localStorage.removeItem(key);}}catch(e){}}
     var cleared = historyRepository ? flushAppStateWrites().then(function(){
-      return Promise.all([historyRepository.replaceAll([]), historyRepository.replaceCustomExercises([]), historyRepository.replaceEquipmentProfiles([]), historyRepository.replaceExercisePreferences({})]);
+      return Promise.all([historyRepository.replaceAll([]), historyRepository.replaceNutritionDays([]), historyRepository.replaceCustomExercises([]), historyRepository.replaceEquipmentProfiles([]), historyRepository.replaceExercisePreferences({})]);
     }).then(function(){return historyRepository.clearUserState();}) : Promise.resolve();
     cleared.then(function(){
       DATA_KEYS.forEach(function(name){var key=K[name];if(!key)return;delete memoryStore[key];if(storageOk){try{window.localStorage.removeItem(key);}catch(e){}}});
@@ -7250,7 +7348,7 @@
   V7_COPY.en.tools='Lab';
   function v7c(key){var pack=V7_COPY[S.lang==='en'?'en':'ru'];return pack[key]||key;}
   function v7RouteFromHash(){var h=(location.hash||'#home').slice(1).split('?')[0];if(h==='top'||!h)return'home';return V7_ROUTE_IDS[h]?h:'home';}
-  function v7Returning(){return !!(profileComplete()||S.workout.length||S.history.length||S.diary.length||S.plan||S.kbjuLast||S.favorites.length);}
+  function v7Returning(){return !!(profileComplete()||S.workout.length||S.history.length||S.diary.length||databaseNutritionDays.length||S.plan||S.kbjuLast||S.favorites.length);}
   function v7CurrentWeekKey(){var d=new Date(),day=(d.getDay()+6)%7;d.setHours(12,0,0,0);d.setDate(d.getDate()-day);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
   function v7EnsurePlanWeek(){if(!S.plan)return;var wk=v7CurrentWeekKey();if(S.plan.weekKey&&S.plan.weekKey!==wk){S.plan.weekKey=wk;S.plan.completedDays=[];savePlanV7();}else if(!S.plan.weekKey)S.plan.weekKey=wk;}
   function v7NextPlanDay(){if(!S.plan||!Array.isArray(S.plan.days)||!S.plan.days.length)return -1;v7EnsurePlanWeek();var done=Array.isArray(S.plan.completedDays)?S.plan.completedDays:[];for(var i=0;i<S.plan.days.length;i++)if(done.indexOf(i)===-1)return i;return -1;}
@@ -7260,10 +7358,11 @@
     if(active)return{type:'resume',title:v7c('continueRun'),why:v7c('continueRunWhy'),evidence:[done+' / '+total+' '+v7c('sets')]};
     if(S.workout.length&&done<total)return{type:'run',title:v7c('startReady'),why:v7c('startReadyWhy'),evidence:[S.workout.length+' '+(S.lang==='en'?'exercises':'упражнений'),total+' '+v7c('sets')]};
     var pday=v7NextPlanDay();if(S.plan&&pday>=0)return{type:'planDay',day:pday,title:v7c('startPlan'),why:v7c('startPlanWhy'),evidence:[v7c('programmeDay')+' '+(pday+1)+' / '+S.plan.days.length]};
-    if(S.plan&&S.plan.days&&S.plan.completedDays&&S.plan.completedDays.length>=S.plan.days.length)return{type:'progress',title:v7c('weekComplete'),why:v7c('weekCompleteWhy'),evidence:[S.plan.completedDays.length+' / '+S.plan.days.length]};
     if(!profileComplete())return{type:'profile',title:v7c('finishProfile'),why:v7c('finishProfileWhy'),evidence:[]};
     var last=S.diary[0],age=last&&last.date?Math.floor((Date.now()-Date.parse(last.date+'T12:00:00'))/86400000):999;
     if(S.history.length&&age>7)return{type:'checkin',title:v7c('checkin'),why:v7c('checkinWhy'),evidence:[age+' '+v7c('days')]};
+    if(!databaseNutritionDays.some(function(entry){return entry.date===todayISO();}))return{type:'nutrition',title:S.lang==='en'?'Log today’s nutrition':'Записать питание за сегодня',why:S.lang==='en'?'Add calories and protein; a same-day weigh-in can also strengthen the trend.':'Добавь калории и белок; вес за эту дату поможет точнее увидеть динамику.',evidence:[]};
+    if(S.plan&&S.plan.days&&S.plan.completedDays&&S.plan.completedDays.length>=S.plan.days.length)return{type:'progress',title:v7c('weekComplete'),why:v7c('weekCompleteWhy'),evidence:[S.plan.completedDays.length+' / '+S.plan.days.length]};
     if(!S.plan)return{type:'program',title:v7c('buildPlan'),why:v7c('buildPlanWhy'),evidence:[]};
     return{type:'library',title:v7c('discover'),why:v7c('discoverWhy'),evidence:[]};
   }
@@ -7434,7 +7533,7 @@
     ensureMobileAppNav();renderV7All();initV8Keyboard();
     window.addEventListener('hashchange',function(){applyV7Route(true);track('home_action',{route:v7RouteFromHash()});});
     window.addEventListener('hashchange',function(){var route=v7RouteFromHash();if(dataRouteNeedsLibrary(route))ensureData().then(refreshDataDependentUI);});
-    document.addEventListener('click',function(e){var startRun=e.target.closest('[data-v8-start-run]');if(startRun){e.preventDefault();openRun();return;}var r=e.target.closest('a[data-v7-route],button[data-v7-route]');if(r){e.preventDefault();navigateV7(r.dataset.v7Route,true);return;}var a=e.target.closest('[data-v7-action]');if(a){var type=a.dataset.v7Action;if(type==='resume'||type==='run')openRun();else if(type==='planDay')startPlanDayV7(Number(a.dataset.v7Day)||0,true);else if(type==='profile'){navigateV7('home',false);var panel=qs('.hero-panel');if(panel){panel.scrollIntoView({block:'start'});var first=qs('.console-opt',panel);if(first)first.focus();}}else if(type==='checkin'){navigateV7('progress',true);setTimeout(function(){if($('g-weight'))$('g-weight').focus();},80);}else navigateV7(V7_ROUTE_IDS[type]?type:(type==='program'?'program':'library'),true);track('home_action',{action:type});return;}var th=e.target.closest('[data-v7-theme]');if(th){S.theme=th.dataset.v7Theme;applyTheme();renderV7Settings();return;}var rd=e.target.closest('[data-v10-reading]');if(rd){var reading=rd.dataset.v10Reading;if(['balanced','comfortable','large'].indexOf(reading)!==-1){S.settings.reading=reading;saveSettings();applyReadability();renderV7Settings();}return;}var focusTarget=e.target.closest('[data-v10-focus]');if(focusTarget){var focusEl=$(focusTarget.dataset.v10Focus);if(focusEl){focusEl.scrollIntoView({block:'center',behavior:REDUCED_MOTION.matches?'auto':'smooth'});window.setTimeout(function(){try{focusEl.focus({preventScroll:true});}catch(_e){}},REDUCED_MOTION.matches?0:220);}return;}var st=e.target.closest('[data-v7-setting]');if(st){var key=st.dataset.v7Setting;S.settings[key]=!S.settings[key];saveSettings();renderV7Settings();if(runOpen())renderRun();return;}if(e.target.closest('[data-v7-coach]')){$('coach-switch').click();renderV7Settings();return;}var data=e.target.closest('[data-v7-data]');if(data){var map={export:'data-export',import:'data-import',clear:'data-clear'};var target=$(map[data.dataset.v7Data]);if(target)target.click();return;}},true);
+    document.addEventListener('click',function(e){var startRun=e.target.closest('[data-v8-start-run]');if(startRun){e.preventDefault();openRun();return;}var r=e.target.closest('a[data-v7-route],button[data-v7-route]');if(r){e.preventDefault();navigateV7(r.dataset.v7Route,true);return;}var a=e.target.closest('[data-v7-action]');if(a){var type=a.dataset.v7Action;if(type==='resume'||type==='run')openRun();else if(type==='planDay')startPlanDayV7(Number(a.dataset.v7Day)||0,true);else if(type==='profile'){navigateV7('home',false);var panel=qs('.hero-panel');if(panel){panel.scrollIntoView({block:'start'});var first=qs('.console-opt',panel);if(first)first.focus();}}else if(type==='checkin'){navigateV7('progress',true);setTimeout(function(){if($('g-weight'))$('g-weight').focus();},80);}else if(type==='nutrition'){navigateV7('nutrition',true);setTimeout(function(){if($('nlog-calories'))$('nlog-calories').focus();},80);}else navigateV7(V7_ROUTE_IDS[type]?type:(type==='program'?'program':'library'),true);track('home_action',{action:type});return;}var th=e.target.closest('[data-v7-theme]');if(th){S.theme=th.dataset.v7Theme;applyTheme();renderV7Settings();return;}var rd=e.target.closest('[data-v10-reading]');if(rd){var reading=rd.dataset.v10Reading;if(['balanced','comfortable','large'].indexOf(reading)!==-1){S.settings.reading=reading;saveSettings();applyReadability();renderV7Settings();}return;}var focusTarget=e.target.closest('[data-v10-focus]');if(focusTarget){var focusEl=$(focusTarget.dataset.v10Focus);if(focusEl){focusEl.scrollIntoView({block:'center',behavior:REDUCED_MOTION.matches?'auto':'smooth'});window.setTimeout(function(){try{focusEl.focus({preventScroll:true});}catch(_e){}},REDUCED_MOTION.matches?0:220);}return;}var st=e.target.closest('[data-v7-setting]');if(st){var key=st.dataset.v7Setting;S.settings[key]=!S.settings[key];saveSettings();renderV7Settings();if(runOpen())renderRun();return;}if(e.target.closest('[data-v7-coach]')){$('coach-switch').click();renderV7Settings();return;}var data=e.target.closest('[data-v7-data]');if(data){var map={export:'data-export',import:'data-import',clear:'data-clear'};var target=$(map[data.dataset.v7Data]);if(target)target.click();return;}},true);
     if(window.MutationObserver){var mo=new MutationObserver(function(){renderV7Home();syncV7Floating();});['workout-list','hist','prog-out','plan-out'].forEach(function(id){var el=$(id);if(el)mo.observe(el,{childList:true,subtree:false,attributes:true,attributeFilter:['data-filled']});});}
     applyV7Route(false);window.mmgV7={navigate:navigateV7,get route(){return v7RouteFromHash();},render:renderV7All};window.mmgV8=window.mmgV7;
   }
@@ -7475,7 +7574,7 @@
   var _openExerciseProductOSV7=openExercise;openExercise=function(id,trigger,silent){var result=_openExerciseProductOSV7(id,trigger,silent);renderV7ExerciseHistory(id);return result;};
   var _decorateKbjuProductOSV7=decorateKbju;decorateKbju=function(ctx){var result=_decorateKbjuProductOSV7(ctx);renderV7NutritionContext(ctx);renderV7Home();return result;};
   var _progressIntelligenceHtmlProductOSV7=progressIntelligenceHtml;progressIntelligenceHtml=function(){var html=_progressIntelligenceHtmlProductOSV7();if(!html)return html;var c=v7DiaryConfidence(),badge='<div class="v7-confidence" data-level="'+c.level+'"><b>'+esc(c.label)+'</b><span>'+esc(c.detail)+'</span></div>';return html.replace('<div class="intel-metrics">',badge+'<div class="intel-metrics">');};
-  var _applyLangProductOSV7=applyLang;applyLang=function(initial){_applyLangProductOSV7(initial);renderV7All();if(S.activeId)renderV7ExerciseHistory(S.activeId);};
+  var _applyLangProductOSV7=applyLang;applyLang=function(initial){_applyLangProductOSV7(initial);renderV7All();renderNutritionLog();if(S.activeId)renderV7ExerciseHistory(S.activeId);};
   var _scrollToIdProductOSV7=scrollToId;scrollToId=function(id){if(V7_ROUTE_IDS[id]){navigateV7(id,true);return;}_scrollToIdProductOSV7(id);};
   var _scrollToLibraryProductOSV7=scrollToLibrary;scrollToLibrary=function(){navigateV7('library',false);requestAnimationFrame(function(){var el=$('library');if(el)el.scrollIntoView({block:'start',behavior:REDUCED_MOTION.matches?'auto':'smooth'});});};
 
@@ -7511,9 +7610,11 @@
       cleanCustomExercises = persistence.cleanCustomExercises;
       cleanEquipmentProfiles = persistence.cleanEquipmentProfiles;
       cleanIdbExercisePreferences = persistence.cleanExercisePreferences;
+      cleanNutritionDays = persistence.cleanNutritionDays;
       databaseCustomExercises = cleanCustomExercises(store.json(K.customExercises, []));
       databaseEquipmentProfiles = cleanEquipmentProfiles(store.json(K.equipmentProfiles, []));
       historyRepository = await persistence.createHistoryRepository();
+      databaseNutritionDays = await historyRepository.migrateLegacyNutritionDays(store.json(K.nutritionLog, []));
       databaseHistory = await historyRepository.migrateLegacy(store.json(K.history, []));
       databaseCustomExercises = await historyRepository.migrateLegacyCustomExercises(databaseCustomExercises);
       databaseEquipmentProfiles = await historyRepository.migrateLegacyEquipmentProfiles(databaseEquipmentProfiles);
@@ -7533,6 +7634,7 @@
     } catch (error) {
       historyRepository = null;
       databaseHistory = null;
+      databaseNutritionDays = cleanNutritionDays(store.json(K.nutritionLog, []));
       databaseCustomExercises = cleanCustomExercises(store.json(K.customExercises, []));
       databaseEquipmentProfiles = cleanEquipmentProfiles(store.json(K.equipmentProfiles, []));
       databaseExercisePreferences = cleanIdbExercisePreferences(store.json(K.exercisePreferences, {}));

@@ -696,6 +696,30 @@
 
       <div class="guides" id="guides-nutrition"></div>
 
+      <section class="panel nutrition-log-panel" aria-labelledby="nutrition-log-title">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow" data-i18n="nutritionLog.eyebrow">Ежедневный журнал</p>
+            <h3 id="nutrition-log-title" data-i18n="nutritionLog.title">Что получилось за день</h3>
+            <p class="small" data-i18n="nutritionLog.text">Калории и белок — обязательные поля. Остальное можно добавить по желанию; вес за эту дату попадёт и в дневник прогресса.</p>
+          </div>
+        </div>
+        <form id="nutrition-log-form" class="nutrition-log-form">
+          <div class="form-grid">
+            <div class="field"><label for="nlog-date" data-i18n="nutritionLog.date">Дата</label><input class="input" id="nlog-date" type="date" required></div>
+            <div class="field"><label for="nlog-calories" data-i18n="nutritionLog.calories">Калории, ккал *</label><input class="input" id="nlog-calories" type="number" inputmode="numeric" min="1" max="15000" step="1" required></div>
+            <div class="field"><label for="nlog-protein" data-i18n="nutritionLog.protein">Белок, г *</label><input class="input" id="nlog-protein" type="number" inputmode="decimal" min="0" max="500" step="0.1" required></div>
+            <div class="field"><label for="nlog-fat" data-i18n="nutritionLog.fat">Жиры, г</label><input class="input" id="nlog-fat" type="number" inputmode="decimal" min="0" max="1000" step="0.1"></div>
+            <div class="field"><label for="nlog-carbs" data-i18n="nutritionLog.carbs">Углеводы, г</label><input class="input" id="nlog-carbs" type="number" inputmode="decimal" min="0" max="1500" step="0.1"></div>
+            <div class="field"><label for="nlog-weight" data-i18n="nutritionLog.weight">Вес за эту дату, кг</label><input class="input" id="nlog-weight" type="number" inputmode="decimal" min="30" max="300" step="0.1"></div>
+            <div class="field"><label for="nlog-accuracy" data-i18n="nutritionLog.accuracy">Точность записи</label><select class="select" id="nlog-accuracy"><option value="unknown" data-i18n="nutritionLog.unknown">Не отмечать</option><option value="accurate" data-i18n="nutritionLog.accurate">Точно</option><option value="estimated" data-i18n="nutritionLog.estimated">Оценка</option><option value="rough" data-i18n="nutritionLog.rough">Примерно</option></select></div>
+            <div class="field span-all"><label for="nlog-note" data-i18n="nutritionLog.note">Заметка (необязательно)</label><input class="input" id="nlog-note" maxlength="240"></div>
+          </div>
+          <button class="btn btn-primary" type="submit" data-i18n="nutritionLog.save">Сохранить день</button>
+        </form>
+        <div id="nutrition-log-list" class="nutrition-log-list" aria-live="polite"></div>
+      </section>
+
       <div class="tool-layout v8-tool-offset">
         <form class="tool-form panel" id="checkin-form" novalidate>
           <div>

@@ -22,6 +22,7 @@ import {
   tdee,
   waistToHeight,
 } from './tools/lab-calculators.mjs';
+import { joinNutritionAndMeasurements } from './src/features/nutrition/nutrition-analytics.mjs';
 
 const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
 const en = () => document.documentElement.lang === 'en';
@@ -249,13 +250,14 @@ function history() {
 }
 
 function diaryRows() {
-  const raw = readJson(['mmg.diary.v1', 'mmg.nutrition.v1', 'mmg_nutrition_v7'], []);
-  const rows = Array.isArray(raw) ? raw : Array.isArray(raw?.entries) ? raw.entries : [];
-  return rows.map((row) => ({
-    date: row.date || row.day || row.createdAt,
-    calories: Number(row.calories ?? row.kcal ?? row.energy),
-    weightKg: Number(row.weightKg ?? row.weight ?? row.bodyWeight),
-  })).filter((row) => row.date && row.calories > 0 && row.weightKg > 0);
+  const measurementRaw = readJson(['mmg.diary.v1'], []);
+  const measurementRows = Array.isArray(measurementRaw) ? measurementRaw : Array.isArray(measurementRaw?.entries) ? measurementRaw.entries : [];
+  const legacyNutritionRaw = readJson(['mmg.nutrition.v1', 'mmg_nutrition_v7'], []);
+  const legacyNutritionRows = Array.isArray(legacyNutritionRaw) ? legacyNutritionRaw : Array.isArray(legacyNutritionRaw?.entries) ? legacyNutritionRaw.entries : [];
+  const logged = readJson(['mmg.nutritionLog.v1'], []);
+  const logRows = Array.isArray(logged) ? logged : [];
+  const nutritionRows = legacyNutritionRows.filter((row) => row && (row.calories != null || row.kcal != null || row.energy != null)).concat(logRows);
+  return joinNutritionAndMeasurements(nutritionRows, measurementRows);
 }
 
 function filterCards() {

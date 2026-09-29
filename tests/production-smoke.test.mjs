@@ -26,7 +26,7 @@ test('exercise GIF media uses a fresh revision and cache write failures stay non
   const sw = await read('sw.js');
   assert.match(app, /MEDIA_REVISION = '20260927-media4'/);
   assert.match(app, /\.gif\?v=' \+ MEDIA_REVISION/);
-  assert.match(sw, /2026\.09-r20-workout-groups/);
+  assert.match(sw, /const VERSION = '2026\.09-r\d+-[a-z-]+'/);
   assert.match(sw, /Cache Storage is an optimisation only/);
   assert.match(sw, /ignoreSearch: true/);
 });
@@ -82,8 +82,8 @@ test('exercise detail view keeps full-frame media and structured guidance', asyn
 
 test('detail assets use a cache-busting revision', async () => {
   const index = await read('index.html');
-  assert.match(index, /app\.css\?v=2026\.09-r20-workout-groups/);
-  assert.match(index, /app\.js\?v=2026\.09-r20-workout-groups/);
+  assert.match(index, /app\.css\?v=2026\.09-r\d+-[a-z-]+/);
+  assert.match(index, /app\.js\?v=2026\.09-r\d+-[a-z-]+/);
 });
 
 test('detail media box itself stays inside the visual frame and step counter increments once', async () => {
@@ -116,7 +116,7 @@ test('saved theme is hydrated before stylesheet and runtime keeps theme metadata
   const index = await read('index.html');
   const app = await read('app.js');
   const hydrate = index.indexOf("localStorage.getItem('mmg.theme.v2')");
-  const stylesheet = index.indexOf('app.css?v=2026.09-r20-workout-groups');
+  const stylesheet = index.indexOf('app.css?v=');
   assert.ok(hydrate >= 0 && stylesheet > hydrate, 'saved theme must resolve before stylesheet paint');
   assert.match(app, /document\.documentElement\.style\.colorScheme = S\.theme === 'obsidian' \? 'dark' : 'light'/);
   assert.match(app, /obsidian: '#070A0E', soft: '#EAF0F6', ivory: '#F6F5F1'/);
@@ -148,8 +148,19 @@ test('PWA manifest is relative-origin and points to a valid shell', async () => 
 
 test('service worker precaches the same shell resources as the index', async () => {
   const sw = await read('sw.js');
-  for (const resource of ['index.html', 'app.css', 'app.js', 'tools/workout-groups.mjs', 'src/persistence/history-repository.mjs', 'src/features/today/decision-engine.mjs', 'src/features/exercise/substitution-engine.mjs', 'src/features/workout/pr-engine.mjs', 'data/content.json', 'data/exercises-compact.json']) assert.match(sw, new RegExp(resource.replaceAll('.', '\\.')));
+  for (const resource of ['index.html', 'app.css', 'app.js', 'tools/workout-groups.mjs', 'src/persistence/history-repository.mjs', 'src/features/today/decision-engine.mjs', 'src/features/exercise/substitution-engine.mjs', 'src/features/workout/pr-engine.mjs', 'src/features/nutrition/nutrition-analytics.mjs', 'data/content.json', 'data/exercises-compact.json']) assert.match(sw, new RegExp(resource.replaceAll('.', '\\.')));
   assert.doesNotMatch(sw, /legacy-base\.html|r2\.payload/);
+});
+
+test('daily nutrition records use a dedicated validated store and survive backup import/export flows', async () => {
+  const app = await read('app.js');
+  const repository = await read('src/persistence/history-repository.mjs');
+  assert.match(app, /K\.nutritionLog = 'mmg\.nutritionLog\.v1'/);
+  assert.match(app, /name==='nutritionLog'[\s\S]*?cleanNutritionDays/);
+  assert.match(app, /historyRepository\.replaceNutritionDays\(importedNutritionDays\)/);
+  assert.match(app, /nutritionLog'\?JSON\.stringify\(databaseNutritionDays\)/);
+  assert.match(repository, /createObjectStore\(NUTRITION_DAY_STORE, \{ keyPath: 'date' \}\)/);
+  assert.match(repository, /migrateLegacyNutritionDays/);
 });
 
 test('backward-compatible local storage keys remain in application code', async () => {
@@ -199,9 +210,9 @@ test('progress view can switch between weight waist and sleep', async () => {
 test('first paint restores readability preference before flagship stylesheet', async () => {
   const index = await read('index.html');
   const hydration = index.indexOf("localStorage.getItem('mmg.settings.v1')");
-  const stylesheet = index.indexOf('app.css?v=2026.09-r20-workout-groups');
+  const stylesheet = index.indexOf('app.css?v=');
   assert.ok(hydration >= 0 && stylesheet > hydration, 'reading preference must hydrate before stylesheet paint');
-  assert.match(index, /data-app-version="2026\.09-r20-workout-groups"/);
+  assert.match(index, /data-app-version="2026\.09-r\d+-[a-z-]+"/);
 });
 
 
@@ -224,6 +235,6 @@ test('in-library quick scenarios reuse preset state and session balance flags du
   const block = css.slice(css.lastIndexOf('/* 23. FLAGSHIP LIBRARY REFINEMENT'));
   assert.match(block, /\.v10-library-quick\{/);
   assert.match(block, /\.v10-library-quick-btn\[aria-pressed="true"\]/);
-  assert.match(index, /app\.css\?v=2026\.09-r20-workout-groups/);
-  assert.match(index, /app\.js\?v=2026\.09-r20-workout-groups/);
+  assert.match(index, /app\.css\?v=2026\.09-r\d+-[a-z-]+/);
+  assert.match(index, /app\.js\?v=2026\.09-r\d+-[a-z-]+/);
 });

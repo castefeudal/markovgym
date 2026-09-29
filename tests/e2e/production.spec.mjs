@@ -13,6 +13,41 @@ test('home boots with the full exercise dataset and no page errors', async ({ pa
   expect(failed).toEqual([]);
 });
 
+test('daily nutrition log persists by date and links optional weight to the progress diary', async ({ page }) => {
+  await page.goto('/index.html#nutrition');
+  await expect(page.locator('#nutrition-log-title')).toBeVisible();
+  await page.locator('#nlog-date').fill('2026-09-29');
+  await page.locator('#nlog-calories').fill('2240');
+  await page.locator('#nlog-protein').fill('148');
+  await page.locator('#nlog-fat').fill('72');
+  await page.locator('#nlog-carbs').fill('252');
+  await page.locator('#nlog-weight').fill('80.4');
+  await page.locator('#nlog-accuracy').selectOption('estimated');
+  await page.locator('#nlog-note').fill('Long day');
+  await page.locator('#nutrition-log-form button[type="submit"]').click();
+  await expect(page.locator('#nutrition-log-list')).toContainText('2240 ккал');
+  await expect(page.locator('#nutrition-log-list')).toContainText('80.4 кг');
+  const saved = await page.evaluate(async () => {
+    const db = await new Promise((resolve, reject) => {
+      const request = indexedDB.open('markov-made-gym');
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    const nutrition = await new Promise((resolve, reject) => {
+      const request = db.transaction('nutritionDays', 'readonly').objectStore('nutritionDays').get('2026-09-29');
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    const diary = JSON.parse(localStorage.getItem('mmg.diary.v1') || '[]');
+    db.close();
+    return { nutrition, diary: diary.find(entry => entry.date === '2026-09-29') };
+  });
+  expect(saved.nutrition).toMatchObject({ calories: 2240, protein: 148, fat: 72, carbs: 252, weightKg: 80.4, accuracy: 'estimated', note: 'Long day' });
+  expect(saved.diary.weight).toBe(80.4);
+  await page.reload();
+  await expect(page.locator('#nutrition-log-list')).toContainText('2240 ккал');
+});
+
 test('first service worker install does not reload the active page', async ({ page }) => {
   let documentNavigations = 0;
   page.on('request', (request) => {

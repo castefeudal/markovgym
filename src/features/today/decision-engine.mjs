@@ -31,5 +31,8 @@ export function nextWorkoutAction(context = {}) {
   if (Number(context.checkinAgeDays) > 8) {
     return result('refresh_measurements', ['checkin_is_stale'], 'medium', ['measurements']);
   }
+  if (context.hasNutritionLogToday === false) {
+    return result('log_nutrition', ['nutrition_log_missing_today'], 'low', ['nutrition_entry']);
+  }
   return result('review_progress', ['current_records_available'], 'medium');
 }

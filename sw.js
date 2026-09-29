@@ -1,4 +1,4 @@
-const VERSION = '2026.09-r20-workout-groups';
+const VERSION = '2026.09-r21-nutrition-log';
 const PREFIX = 'mmg-gym-';
 const SHELL = `${PREFIX}shell-${VERSION}`;
 const MEDIA = `${PREFIX}media-${VERSION}`;
@@ -18,6 +18,7 @@ const PRECACHE = [
   './src/features/today/decision-engine.mjs',
   './src/features/exercise/substitution-engine.mjs',
   './src/features/workout/pr-engine.mjs',
+  './src/features/nutrition/nutrition-analytics.mjs',
   './data/content.json',
   './data/exercises-compact.json',
   './manifest.webmanifest',

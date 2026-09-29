@@ -26,7 +26,7 @@ test('Today decision selects the highest priority incomplete action', () => {
 });
 
 test('Today decision explains missing data before asking for a progress review', () => {
-  const base = { hasWorkout: true, hasNutritionTarget: true, hasProgram: true, diaryEntries: 4 };
+  const base = { hasWorkout: true, hasNutritionTarget: true, hasProgram: true, diaryEntries: 4, hasNutritionLogToday: true };
   assert.deepEqual(nextWorkoutAction(base), {
     recommendation: 'review_progress',
     reasons: ['current_records_available'],
@@ -38,4 +38,5 @@ test('Today decision explains missing data before asking for a progress review',
   assert.equal(nextWorkoutAction({ ...base, hasProgram: false }).recommendation, 'build_program');
   assert.equal(nextWorkoutAction({ ...base, diaryEntries: 1 }).recommendation, 'record_measurements');
   assert.equal(nextWorkoutAction({ ...base, checkinAgeDays: 9 }).recommendation, 'refresh_measurements');
+  assert.equal(nextWorkoutAction({ ...base, hasNutritionLogToday: false }).recommendation, 'log_nutrition');
 });

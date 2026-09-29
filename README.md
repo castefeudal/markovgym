@@ -23,7 +23,8 @@ MARKOV MADE GYM is a browser-first fitness operating system for planning trainin
 - **MARKOV MADE LAB** — strength, training, nutrition, body-composition, cardio and conversion calculators with uncertainty and limitations surfaced.
 - **Local-first data** — profile, workout, program, measurements, nutrition settings, notes and app settings migrate into IndexedDB `userState`; history, custom exercises, equipment profiles and exercise preferences use dedicated IndexedDB collections. LocalStorage remains a compatibility mirror.
 - **All-time workout history** — existing saved sessions migrate from the legacy local-storage key into IndexedDB; the legacy key remains a recent-session compatibility mirror.
-- **Versioned backup** — exports use the `markov-made-gym` schema envelope and preserve workout history, custom exercises, equipment profiles and exercise preferences.
+- **Daily nutrition log** — record calories and protein with optional macros, confidence and a same-date weigh-in; paired intake and weight flow into the transparent adaptive-expenditure estimate. The date-keyed log is stored in IndexedDB and included in validated backups.
+- **Versioned backup** — exports use the `markov-made-gym` schema envelope and preserve workout history, nutrition days, custom exercises, equipment profiles and exercise preferences.
 - **PWA / offline shell** — installable static web application with controlled caching and update lifecycle.
 - **RU / EN interface** plus 9-language exercise instruction data.
 
@@ -77,7 +78,7 @@ app.js                        current core application runtime
 app.css                       current core styles
 src/features/today/           pure Today next-action decision rules
 src/features/workout/         pure personal-record detection against completed history
-src/persistence/              versioned IndexedDB workout-history and custom-exercise repositories
+src/persistence/              versioned IndexedDB repositories for history, nutrition and user-created data
 gym-tools.js                  MARKOV MADE LAB UI integration
 lab.css                       Lab presentation layer
 tools/gym-calculators.mjs     original pure gym calculations

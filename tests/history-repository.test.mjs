@@ -1,9 +1,21 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { cleanCustomExercises, cleanEquipmentProfiles, cleanExercisePreferences, cleanHistory, HISTORY_SCHEMA_VERSION, newestFirst } from '../src/persistence/history-repository.mjs';
+import { cleanCustomExercises, cleanEquipmentProfiles, cleanExercisePreferences, cleanHistory, cleanNutritionDays, HISTORY_SCHEMA_VERSION, newestFirst } from '../src/persistence/history-repository.mjs';
 
 test('history schema is explicitly versioned', () => {
-  assert.equal(HISTORY_SCHEMA_VERSION, 5);
+  assert.equal(HISTORY_SCHEMA_VERSION, 6);
+});
+
+test('nutrition days are date-keyed, bounded and deterministic', () => {
+  assert.deepEqual(cleanNutritionDays([
+    { date: '2026-09-28', calories: 2200, protein: 145, fat: 70, carbs: 250, weightKg: 80.4, accuracy: 'estimated', note: 'Restaurant meal', ignored: true },
+    { date: '2026-09-28', calories: 2300, protein: 150, updatedAt: 'later' },
+    { date: '2026-02-30', calories: 2000, protein: 120 },
+    { date: '2026-09-27', calories: 16000, protein: 100 },
+    { date: '2026-09-26', calories: 2000, protein: -1 },
+  ]), [
+    { date: '2026-09-28', calories: 2300, protein: 150, fat: null, carbs: null, weightKg: null, accuracy: 'unknown', note: '', updatedAt: 'later' },
+  ]);
 });
 
 test('exercise preferences are bounded, normalized and drop neutral entries', () => {

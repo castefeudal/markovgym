@@ -1,11 +1,12 @@
 export const HISTORY_DATABASE = 'markov-made-gym';
-export const HISTORY_SCHEMA_VERSION = 5;
+export const HISTORY_SCHEMA_VERSION = 6;
 
 const HISTORY_STORE = 'history';
 const CUSTOM_EXERCISE_STORE = 'customExercises';
 const EQUIPMENT_PROFILE_STORE = 'equipmentProfiles';
 const EXERCISE_PREFERENCE_STORE = 'exercisePreferences';
 const USER_STATE_STORE = 'userState';
+const NUTRITION_DAY_STORE = 'nutritionDays';
 const EXERCISE_PREFERENCE_VALUES = new Set(['prefer', 'neutral', 'lessOften', 'avoid', 'unavailable', 'discomfort']);
 const TRACKING_TYPES = new Set([
   'weight-reps', 'reps-only', 'duration', 'distance-duration',
@@ -53,6 +54,7 @@ function openDatabase() {
       if (!db.objectStoreNames.contains(EQUIPMENT_PROFILE_STORE)) db.createObjectStore(EQUIPMENT_PROFILE_STORE, { keyPath: 'id' });
       if (!db.objectStoreNames.contains(EXERCISE_PREFERENCE_STORE)) db.createObjectStore(EXERCISE_PREFERENCE_STORE, { keyPath: 'id' });
       if (!db.objectStoreNames.contains(USER_STATE_STORE)) db.createObjectStore(USER_STATE_STORE, { keyPath: 'key' });
+      if (!db.objectStoreNames.contains(NUTRITION_DAY_STORE)) db.createObjectStore(NUTRITION_DAY_STORE, { keyPath: 'date' });
     };
     request.onsuccess = () => {
       const db = request.result;
@@ -137,6 +139,30 @@ export function cleanExercisePreferences(value) {
   return Object.fromEntries(Object.entries(value)
     .filter(([id, preference]) => id.length > 0 && id.length <= 80 && EXERCISE_PREFERENCE_VALUES.has(preference) && preference !== 'neutral')
     .slice(0, 1324));
+}
+
+export function cleanNutritionDays(entries) {
+  if (!Array.isArray(entries)) return [];
+  const records = new Map();
+  const optional = (value, max) => {
+    if (value == null || value === '') return null;
+    const number = Number(value);
+    return Number.isFinite(number) && number >= 0 && number <= max ? Math.round(number * 10) / 10 : undefined;
+  };
+  for (const entry of entries) {
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) continue;
+    const date = String(entry.date || '');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) continue;
+    const parsedDate = new Date(`${date}T00:00:00.000Z`);
+    if (!Number.isFinite(parsedDate.getTime()) || parsedDate.toISOString().slice(0, 10) !== date) continue;
+    const calories = Number(entry.calories), protein = Number(entry.protein);
+    if (!Number.isFinite(calories) || calories < 1 || calories > 15_000 || !Number.isFinite(protein) || protein < 0 || protein > 500) continue;
+    const fat = optional(entry.fat, 1_000), carbs = optional(entry.carbs, 1_500), weightKg = optional(entry.weightKg, 500);
+    if (fat === undefined || carbs === undefined || weightKg === undefined) continue;
+    const accuracy = ['accurate', 'estimated', 'rough'].includes(entry.accuracy) ? entry.accuracy : 'unknown';
+    records.set(date, { date, calories: Math.round(calories), protein: Math.round(protein * 10) / 10, fat, carbs, weightKg, accuracy, note: String(entry.note || '').trim().slice(0, 240), updatedAt: String(entry.updatedAt || '').slice(0, 40) });
+  }
+  return [...records.values()].sort((a, b) => b.date.localeCompare(a.date));
 }
 
 export async function createHistoryRepository() {
@@ -243,6 +269,44 @@ export async function createHistoryRepository() {
     return readExercisePreferences();
   }
 
+  async function readNutritionDays() {
+    const tx = db.transaction(NUTRITION_DAY_STORE, 'readonly');
+    return cleanNutritionDays(await requestResult(tx.objectStore(NUTRITION_DAY_STORE).getAll()));
+  }
+
+  async function replaceNutritionDays(entries) {
+    const records = cleanNutritionDays(entries);
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction(NUTRITION_DAY_STORE, 'readwrite');
+      const store = tx.objectStore(NUTRITION_DAY_STORE);
+      store.clear();
+      records.forEach((entry) => store.put(entry));
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error || new Error('Could not save nutrition days'));
+      tx.onabort = () => reject(tx.error || new Error('Nutrition log save was aborted'));
+    });
+    return records.length;
+  }
+
+  async function putNutritionDay(entry) {
+    const [record] = cleanNutritionDays([entry]);
+    if (!record) throw new TypeError('Invalid nutrition day');
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction(NUTRITION_DAY_STORE, 'readwrite');
+      tx.objectStore(NUTRITION_DAY_STORE).put(record);
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error || new Error('Could not save nutrition day'));
+      tx.onabort = () => reject(tx.error || new Error('Nutrition day save was aborted'));
+    });
+    return record;
+  }
+
+  async function migrateLegacyNutritionDays(entries) {
+    const existing = await readNutritionDays();
+    if (!existing.length && Array.isArray(entries) && entries.length) await replaceNutritionDays(entries);
+    return readNutritionDays();
+  }
+
   async function readUserState() {
     const tx = db.transaction(USER_STATE_STORE, 'readonly');
     const records = await requestResult(tx.objectStore(USER_STATE_STORE).getAll());
@@ -310,6 +374,10 @@ export async function createHistoryRepository() {
     readExercisePreferences,
     replaceExercisePreferences,
     migrateLegacyExercisePreferences,
+    readNutritionDays,
+    replaceNutritionDays,
+    putNutritionDay,
+    migrateLegacyNutritionDays,
     readUserState,
     migrateLegacyUserState,
     writeUserState,
