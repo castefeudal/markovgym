@@ -8,7 +8,7 @@ MARKOV MADE GYM is a browser-first fitness operating system for planning trainin
 
 ## Product capabilities
 
-- **Today** — the next relevant action instead of a dashboard full of noise.
+- **Today** — the next relevant action, including a review when a selected training block ends, instead of a dashboard full of noise.
 - **Library** — 1,324 exercises with multilingual instructions, search, filters, body map, media, technique guidance and substitutions.
 - **Custom exercises** — add bilingual movements with muscle, equipment, movement, laterality, tracking, default dose, load increment, notes and an optional local image; they participate in search, workout, programme, history and backup flows.
 - **Equipment profiles** — switch between gym, home, travel and custom equipment sets; Library filters and generated exercise choices follow the active profile while an in-progress workout remains intact.

@@ -1,4 +1,4 @@
-const VERSION = '2026.09-r25-local-diagnostics';
+const VERSION = '2026.09-r26-block-review';
 const PREFIX = 'mmg-gym-';
 const SHELL = `${PREFIX}shell-${VERSION}`;
 const MEDIA = `${PREFIX}media-${VERSION}`;

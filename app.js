@@ -3305,6 +3305,7 @@
     var doneSets=S.workout.reduce(function(sum,w){return sum+completedSetCount(w);},0);
     var runFresh=S.runSession&&Date.now()-Number(S.runSession.startedAt||0)<8*3600000&&doneSets<totalSets;
     var last=S.diary[0],age=last&&last.date?Math.floor((Date.now()-Date.parse(last.date+'T12:00:00'))/86400000):0;
+    var programmeBlock=S.plan&&v7MesocycleStatus();
     var decision=todayDecisionEngine?todayDecisionEngine({
       activeRun:!!runFresh,
       pendingWorkout:!!(S.workout.length&&doneSets<totalSets),
@@ -3313,6 +3314,7 @@
       hasWorkout:!!S.workout.length,
       hasNutritionTarget:!!S.kbjuLast,
       hasProgram:!!S.plan,
+      programmeBlockComplete:!!(programmeBlock&&programmeBlock.status==='complete'),
       diaryEntries:S.diary.length,
       checkinAgeDays:age,
       hasNutritionLogToday:databaseNutritionDays.some(function(entry){return entry.date===todayISO();})
@@ -3325,6 +3327,7 @@
       build_workout:{text:'nextWorkout',why:'nextWorkoutWhy',act:'workout',label:'actWorkout'},
       set_nutrition:{text:'nextKbju',why:'nextKbjuWhy',act:'kbju',label:'actKbju'},
       build_program:{text:'nextPlan',why:'nextPlanWhy',act:'plan',label:'actPlan'},
+      review_program_block:{text:'nextBlockReview',why:'nextBlockReviewWhy',act:'plan',label:'actPlan'},
       record_measurements:{text:'nextDiary',why:'nextDiaryWhy',act:'progress',label:'actProgress'},
       refresh_measurements:{text:'nextRefresh',why:'nextRefreshWhy',act:'progress',label:'actProgress'},
       log_nutrition:{text:'nextNutritionLog',why:'nextNutritionLogWhy',act:'nutritionLog',label:'actNutritionLog'},
@@ -4245,7 +4248,7 @@
     var placeLabel = ctx.placeLabel || (S.lang === 'en' ? ({gym:'Gym',home:'Home',minimal:'Minimal equipment'}[place] || place) : ({gym:'Зал',home:'Дом',minimal:'Минимум оборудования'}[place] || place));
     var created = S.plan.createdAt ? new Date(S.plan.createdAt) : null;
     var createdLabel = created && !isNaN(created.getTime()) ? new Intl.DateTimeFormat(S.lang === 'en' ? 'en-GB' : 'ru-RU',{day:'numeric',month:'short'}).format(created) : '';
-    var block = mesocycleStatusFn ? mesocycleStatusFn({startWeek:ctx.blockStartWeek||S.plan.weekKey,durationWeeks:Number(ctx.blockWeeks)||4,today:todayISO()}) : null;
+    var block = v7MesocycleStatus();
     var blockLabel = block && block.status !== 'insufficient'
       ? (block.status === 'complete'
         ? (S.lang === 'en' ? 'Block complete · review the next block' : 'Блок завершён · оцени результат и задай следующий')
@@ -5135,6 +5138,8 @@
     nextKbjuWhy: { ru: 'Тренировки без питания решают только половину задачи', en: 'Training without nutrition solves only half the job' },
     nextPlan: { ru: 'Собери структуру недели', en: 'Build the shape of your week' },
     nextPlanWhy: { ru: 'Разовая тренировка — это ещё не программа', en: 'A single session is not a programme yet' },
+    nextBlockReview: { ru: 'Сверить блок и задать следующий', en: 'Review this block and set up the next one' },
+    nextBlockReviewWhy: { ru: 'Выбранная длительность блока закончилась. Сверь записи и восстановление перед тем, как задать следующий блок.', en: 'The selected block length has elapsed. Review your training records and recovery before setting up the next block.' },
     nextDiary: { ru: 'Начни записывать вес и талию', en: 'Start logging weight and waist' },
     nextDiaryWhy: { ru: 'Без двух-трёх точек оценить динамику нельзя', en: 'Without two or three data points there is no trend to read' },
     nextKeep: { ru: 'Держи режим и записывай данные две недели', en: 'Hold the routine and log data for two weeks' },
@@ -6973,7 +6978,7 @@
      Correctness -> data integrity -> usability -> accessibility -> performance.
      This layer deliberately preserves the proven V4 business logic and contracts.
      ======================================================================== */
-  var APP_VERSION = '2026.09-r25-local-diagnostics';
+  var APP_VERSION = '2026.09-r26-block-review';
   var BACKUP_SCHEMA = 9;
   K.restTimer = 'mmg.restTimer.v2';
   K.lastBackup = 'mmg.lastBackup.v1';
@@ -7420,6 +7425,7 @@
   function v7RouteFromHash(){var h=(location.hash||'#home').slice(1).split('?')[0];if(h==='top'||!h)return'home';return V7_ROUTE_IDS[h]?h:'home';}
   function v7Returning(){return !!(profileComplete()||S.workout.length||S.history.length||S.diary.length||databaseNutritionDays.length||S.plan||S.kbjuLast||S.favorites.length);}
   function v7CurrentWeekKey(){var d=new Date(),day=(d.getDay()+6)%7;d.setHours(12,0,0,0);d.setDate(d.getDate()-day);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+  function v7MesocycleStatus(){if(!S.plan||!mesocycleStatusFn)return null;var ctx=S.plan.ctx||{};return mesocycleStatusFn({startWeek:ctx.blockStartWeek||S.plan.weekKey,durationWeeks:Number(ctx.blockWeeks)||4,today:todayISO()});}
   function v7EnsurePlanWeek(){if(!S.plan)return;var wk=v7CurrentWeekKey();if(S.plan.weekKey&&S.plan.weekKey!==wk){S.plan.weekKey=wk;S.plan.completedDays=[];savePlanV7();}else if(!S.plan.weekKey)S.plan.weekKey=wk;}
   function v7NextPlanDay(){if(!S.plan||!Array.isArray(S.plan.days)||!S.plan.days.length)return -1;v7EnsurePlanWeek();var done=Array.isArray(S.plan.completedDays)?S.plan.completedDays:[];for(var i=0;i<S.plan.days.length;i++)if(done.indexOf(i)===-1)return i;return -1;}
   function v7NextAction(){
@@ -7427,6 +7433,7 @@
     var active=S.runSession&&Date.now()-Number(S.runSession.startedAt||0)<8*3600000&&done<total;
     if(active)return{type:'resume',title:v7c('continueRun'),why:v7c('continueRunWhy'),evidence:[done+' / '+total+' '+v7c('sets')]};
     if(S.workout.length&&done<total)return{type:'run',title:v7c('startReady'),why:v7c('startReadyWhy'),evidence:[S.workout.length+' '+(S.lang==='en'?'exercises':'упражнений'),total+' '+v7c('sets')]};
+    var block=v7MesocycleStatus();if(block&&block.status==='complete')return{type:'program',title:t('nextBlockReview'),why:t('nextBlockReviewWhy'),evidence:[block.durationWeeks+' '+(S.lang==='en'?'weeks':'недель')]};
     var pday=v7NextPlanDay();if(S.plan&&pday>=0)return{type:'planDay',day:pday,title:v7c('startPlan'),why:v7c('startPlanWhy'),evidence:[v7c('programmeDay')+' '+(pday+1)+' / '+S.plan.days.length]};
     if(!profileComplete())return{type:'profile',title:v7c('finishProfile'),why:v7c('finishProfileWhy'),evidence:[]};
     var last=S.diary[0],age=last&&last.date?Math.floor((Date.now()-Date.parse(last.date+'T12:00:00'))/86400000):999;

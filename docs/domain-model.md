@@ -27,7 +27,7 @@ This describes the current browser data model and the persistence boundaries int
 
 ## Today decision contract
 
-`src/features/today/decision-engine.mjs` receives recorded-state facts and returns one recommendation with machine-readable reasons, a confidence label, missing-data keys, and the next action. It contains no DOM access or localized copy; the UI translates the action while domain tests cover priority and missing-data rules.
+`src/features/today/decision-engine.mjs` receives recorded-state facts and returns one recommendation with machine-readable reasons, a confidence label, missing-data keys, and the next action. Active runs and unsaved completed workouts keep priority; an elapsed programme block then asks the user to review records and recovery before setting up another block. The module contains no DOM access or localized copy; the UI translates the action while domain tests cover priority and missing-data rules.
 
 ## Workout history and migration
 

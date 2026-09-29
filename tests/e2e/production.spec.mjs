@@ -801,6 +801,36 @@ test('flagship restores saved programme on home and exposes the weekly pulse', a
   await page.reload();
   await page.goto('/index.html#program');
   await expect(page.locator('#plan-out [data-mesocycle-status="active"]')).toContainText('Неделя блока 1 из 6');
+  const oldBlockStart = await page.evaluate(() => {
+    const date = new Date();
+    date.setHours(12, 0, 0, 0);
+    date.setDate(date.getDate() - ((date.getDay() + 6) % 7) - 28);
+    return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-');
+  });
+  await page.evaluate(async (startWeek) => {
+    const db = await new Promise((resolve, reject) => {
+      const request = indexedDB.open('markov-made-gym');
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction('userState', 'readwrite');
+      const state = tx.objectStore('userState');
+      const get = state.get('mmg.plan.v1');
+      get.onsuccess = () => {
+        const plan = JSON.parse(get.result.value);
+        plan.ctx.blockWeeks = 4;
+        plan.ctx.blockStartWeek = startWeek;
+        state.put({ key: 'mmg.plan.v1', value: JSON.stringify(plan) });
+      };
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error);
+    });
+    db.close();
+  }, oldBlockStart);
+  await page.reload();
+  await page.goto('/index.html#home');
+  await expect(page.locator('#v7-home-next')).toContainText('Сверить блок и задать следующий');
 });
 
 test('readability choice persists and progress supports multiple chart signals', async ({ page }) => {

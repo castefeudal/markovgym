@@ -40,3 +40,10 @@ test('Today decision explains missing data before asking for a progress review',
   assert.equal(nextWorkoutAction({ ...base, checkinAgeDays: 9 }).recommendation, 'refresh_measurements');
   assert.equal(nextWorkoutAction({ ...base, hasNutritionLogToday: false }).recommendation, 'log_nutrition');
 });
+
+test('Today asks for a programme block review after preserving active and completed workout priorities', () => {
+  const base = { hasProgram: true, programmeBlockComplete: true };
+  assert.equal(nextWorkoutAction(base).recommendation, 'review_program_block');
+  assert.equal(nextWorkoutAction({ ...base, pendingWorkout: true }).recommendation, 'start_workout');
+  assert.equal(nextWorkoutAction({ ...base, completedWorkout: true }).recommendation, 'save_workout');
+});

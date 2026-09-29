@@ -13,6 +13,7 @@ export function nextWorkoutAction(context = {}) {
   if (context.activeRun) return result('resume_run', ['active_run'], 'high');
   if (context.pendingWorkout) return result('start_workout', ['workout_ready'], 'high');
   if (context.completedWorkout) return result('save_workout', ['workout_complete'], 'high');
+  if (context.programmeBlockComplete) return result('review_program_block', ['programme_block_complete'], 'medium', ['programme_review']);
   if (!context.hasFavorites && !context.hasWorkout) {
     return result('find_exercise', ['no_exercises_selected'], 'medium', ['exercise_choice']);
   }
