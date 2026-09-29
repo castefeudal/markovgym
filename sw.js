@@ -1,4 +1,4 @@
-const VERSION = '2026.09-r23-weekly-budget';
+const VERSION = '2026.09-r24-program-blocks';
 const PREFIX = 'mmg-gym-';
 const SHELL = `${PREFIX}shell-${VERSION}`;
 const MEDIA = `${PREFIX}media-${VERSION}`;
@@ -16,6 +16,7 @@ const PRECACHE = [
   './tools/workout-groups.mjs',
   './src/persistence/history-repository.mjs',
   './src/features/today/decision-engine.mjs',
+  './src/features/program/mesocycle.mjs',
   './src/features/exercise/substitution-engine.mjs',
   './src/features/workout/pr-engine.mjs',
   './src/features/nutrition/nutrition-analytics.mjs',

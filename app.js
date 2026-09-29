@@ -89,6 +89,7 @@
   var historyVisibleCount = 20;
   var historyFilters = { query:'', from:'', to:'', programme:'', exercise:'', durationMin:'', durationMax:'', prOnly:false };
   var todayDecisionEngine = null;
+  var mesocycleStatusFn = null;
   var weightTrendFn = null;
   var weeklyNutritionBudgetFn = null;
   var substitutionRanker = null;
@@ -326,6 +327,7 @@
     'plan.level': 'Experience', 'plan.lvlBeginner': 'Beginner (under a year)',
     'plan.lvlMiddle': 'Intermediate (1–3 years)', 'plan.lvlAdvanced': 'Advanced (3+ years)',
     'plan.days': 'Sessions per week', 'plan.time': 'Session length',
+    'plan.blockWeeks': 'Block length', 'plan.block4': '4 weeks', 'plan.block6': '6 weeks', 'plan.block8': '8 weeks',
     'plan.time35': '35 minutes', 'plan.time50': '50 minutes', 'plan.time70': '70 minutes', 'plan.time90': '90 minutes',
     'plan.place': 'Where you train', 'plan.placeGym': 'Gym', 'plan.placeHome': 'Home', 'plan.placeMixed': 'Home + gym',
     'plan.focus': 'Priority', 'plan.focusBalanced': 'Balanced full body', 'plan.focusChest': 'Chest',
@@ -2164,6 +2166,7 @@
     var level = $('p-level').value;
     var days = Number($('p-days').value);
     var time = Number($('p-time').value);
+    var blockWeeks = Number($('p-block-weeks') && $('p-block-weeks').value) || 4;
     var place = $('p-place').value;
     var focus = $('p-focus').value;
 
@@ -2235,7 +2238,7 @@
       return { key: key, index: dayIndex, items: items };
     });
 
-    lastPlan = { week: week, goal: goal, level: level, days: days, time: time, place: place, focus: focus, ctx: {goal:goal,level:level,days:days,time:time,place:place,focus:focus,style:$('p-style')?$('p-style').value:'balanced',recovery:recovery,cardio:$('p-cardio')?$('p-cardio').value:'light',steps:$('p-steps')?$('p-steps').value:'mid'} };
+    lastPlan = { week: week, goal: goal, level: level, days: days, time: time, place: place, focus: focus, ctx: {goal:goal,level:level,days:days,time:time,place:place,focus:focus,style:$('p-style')?$('p-style').value:'balanced',recovery:recovery,cardio:$('p-cardio')?$('p-cardio').value:'light',steps:$('p-steps')?$('p-steps').value:'mid',blockWeeks:blockWeeks} };
 
     var goalLabel = $('p-goal').selectedOptions[0].textContent;
     var placeLabel = $('p-place').selectedOptions[0].textContent;
@@ -2290,6 +2293,7 @@
       recovery: $('p-recovery') ? $('p-recovery').value : 'mid',
       cardio: $('p-cardio') ? $('p-cardio').value : 'light',
       steps: $('p-steps') ? $('p-steps').value : 'mid',
+      blockWeeks: blockWeeks,
       goalLabel: goalLabel, levelLabel: levelLabel, placeLabel: placeLabel
     });
   }
@@ -2624,7 +2628,11 @@
   function restorePlanV7(raw){
     if(!raw||typeof raw!=='object'||!Array.isArray(raw.days))return null;
     var days=raw.days.map(function(day,i){return {key:String(day.key||''),index:Number(day.index)>=0?Number(day.index):i,items:(day.items||[]).map(function(it){var ex=BY_ID[String(it.id||'')];return ex?{ex:ex,sets:clamp(Number(it.sets)||3,1,20),reps:String(it.reps||'10–12').slice(0,24),rest:clamp(Number(it.rest)||90,15,900)}:null;}).filter(Boolean)};}).filter(function(d){return d.items.length;});
-    var currentWeek=v7CurrentWeekKey(),storedWeek=String(raw.weekKey||currentWeek),completed=Array.isArray(raw.completedDays)?raw.completedDays.map(Number).filter(function(n){return n>=0&&n<days.length;}):[];if(raw.weekKey&&storedWeek!==currentWeek)completed=[];return days.length?{days:days,ctx:raw.ctx&&typeof raw.ctx==='object'?raw.ctx:{},createdAt:Number(raw.createdAt)||Date.now(),weekKey:currentWeek,completedDays:completed}:null;
+    var currentWeek=v7CurrentWeekKey(),storedWeek=String(raw.weekKey||currentWeek),completed=Array.isArray(raw.completedDays)?raw.completedDays.map(Number).filter(function(n){return n>=0&&n<days.length;}):[];if(raw.weekKey&&storedWeek!==currentWeek)completed=[];
+    var ctx=raw.ctx&&typeof raw.ctx==='object'?Object.assign({},raw.ctx):{};
+    if([4,6,8].indexOf(Number(ctx.blockWeeks))===-1)ctx.blockWeeks=4;
+    if(typeof ctx.blockStartWeek!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(ctx.blockStartWeek))ctx.blockStartWeek=currentWeek;
+    return days.length?{days:days,ctx:ctx,createdAt:Number(raw.createdAt)||Date.now(),weekKey:currentWeek,completedDays:completed}:null;
   }
   function savePlanV7(){var data=serialisePlanV7(S.plan);if(data)store.set(K.plan,JSON.stringify(data));else store.remove(K.plan);}
 
@@ -4236,6 +4244,12 @@
     var placeLabel = ctx.placeLabel || (S.lang === 'en' ? ({gym:'Gym',home:'Home',minimal:'Minimal equipment'}[place] || place) : ({gym:'Зал',home:'Дом',minimal:'Минимум оборудования'}[place] || place));
     var created = S.plan.createdAt ? new Date(S.plan.createdAt) : null;
     var createdLabel = created && !isNaN(created.getTime()) ? new Intl.DateTimeFormat(S.lang === 'en' ? 'en-GB' : 'ru-RU',{day:'numeric',month:'short'}).format(created) : '';
+    var block = mesocycleStatusFn ? mesocycleStatusFn({startWeek:ctx.blockStartWeek||S.plan.weekKey,durationWeeks:Number(ctx.blockWeeks)||4,today:todayISO()}) : null;
+    var blockLabel = block && block.status !== 'insufficient'
+      ? (block.status === 'complete'
+        ? (S.lang === 'en' ? 'Block complete · review the next block' : 'Блок завершён · оцени результат и задай следующий')
+        : (S.lang === 'en' ? 'Block week {week} of {total}' : 'Неделя блока {week} из {total}').replace('{week}',String(block.weekNumber)).replace('{total}',String(block.durationWeeks)))
+      : '';
 
     var weekHtml = week.map(function(day, dayIndex){
       var name = DAY_NAMES[day.key] ? (DAY_NAMES[day.key][S.lang] || DAY_NAMES[day.key].ru) : (S.lang === 'en' ? 'Session' : 'Тренировка');
@@ -4275,6 +4289,7 @@
       '</div>' +
       '<div class="plan-week">'+weekHtml+'</div>' +
       '<div class="v10-plan-guidance">' +
+        (blockLabel?'<div class="note" data-mesocycle-status="'+esc(block.status)+'">'+esc(blockLabel)+'</div>':'') +
         (coachWhy?'<div class="note"><b>'+esc(t('planWhyT'))+'</b> '+esc(L(coachWhy))+'</div>':'') +
         (warm?'<div class="note"><b>'+esc(t('planWarmT'))+'</b> '+esc(L(warm))+'</div>':'') +
         '<div class="note"><b>'+esc(t('planCardio'))+'.</b> '+esc(planCardioTextV10(ctx))+'</div>' +
@@ -4295,6 +4310,9 @@
 
   function decoratePlan(week, ctx) {
     if (!$('plan-out')) return;
+    ctx=Object.assign({},ctx||{});
+    ctx.blockWeeks=[4,6,8].indexOf(Number(ctx.blockWeeks))!==-1?Number(ctx.blockWeeks):4;
+    ctx.blockStartWeek=v7CurrentWeekKey();
     S.plan={days:week,ctx:ctx,createdAt:Date.now(),weekKey:v7CurrentWeekKey(),completedDays:[]};
     S.profile.goal=ctx.goal==='fatloss'?'fat':ctx.goal;
     S.profile.level=ctx.level==='middle'?'medium':ctx.level;
@@ -6832,7 +6850,7 @@
     var wiz=document.createElement('div');wiz.id='plan-wizard';wiz.className='plan-wizard v7-plan-wizard';
     wiz.innerHTML='<div class="wizard-head"><div class="wizard-progress" aria-hidden="true"><i></i></div><div class="wizard-steps" role="navigation"></div><div class="wizard-summary" id="wizard-summary"></div></div><div class="wizard-panes"></div><div class="wizard-footer"><button class="btn btn-quiet" id="wizard-back" type="button"></button><span class="wizard-step-status" id="wizard-status"></span><button class="btn btn-solid" id="wizard-next" type="button"></button></div>';
     form.insertBefore(wiz,grid);form.classList.add('is-wizard','v7-wizard-form');
-    var panes=qs('.wizard-panes',wiz),groups=[['p-goal'],['p-level'],['p-days','p-time'],['p-place','p-style'],['p-focus'],['p-recovery','p-cardio','p-steps','p-avoid']];
+    var panes=qs('.wizard-panes',wiz),groups=[['p-goal'],['p-level'],['p-days','p-time'],['p-place','p-style'],['p-focus'],['p-recovery','p-cardio','p-steps','p-avoid','p-block-weeks']];
     groups.forEach(function(ids,i){var pane=document.createElement('div');pane.className='wizard-pane';pane.dataset.step=String(i);var intro=document.createElement('div');intro.className='v7-wizard-intro';intro.innerHTML='<span class="num">'+String(i+1).padStart(2,'0')+' / 06</span><h3>'+esc(wizardStepTitles()[i])+'</h3>';pane.appendChild(intro);var pg=document.createElement('div');pg.className='form-grid';ids.forEach(function(id){if(byId[id])pg.appendChild(byId[id]);});if(i===5&&limitField)pg.appendChild(limitField);pane.appendChild(pg);panes.appendChild(pane);});
     if(adv&&adv.parentNode)adv.remove();if(grid&&grid.parentNode)grid.remove();
     build.classList.add('wizard-build');qs('.wizard-footer',wiz).appendChild(build);if(disclaimer)qsa('.wizard-pane',wiz)[5].appendChild(disclaimer);
@@ -6954,7 +6972,7 @@
      Correctness -> data integrity -> usability -> accessibility -> performance.
      This layer deliberately preserves the proven V4 business logic and contracts.
      ======================================================================== */
-  var APP_VERSION = '2026.09-r23-weekly-budget';
+  var APP_VERSION = '2026.09-r24-program-blocks';
   var BACKUP_SCHEMA = 9;
   K.restTimer = 'mmg.restTimer.v2';
   K.lastBackup = 'mmg.lastBackup.v1';
@@ -7642,6 +7660,12 @@
       todayDecisionEngine = todayModule.nextWorkoutAction;
     } catch (error) {
       window.dispatchEvent(new CustomEvent('mmg:error', { detail: { key: 'today-decision' } }));
+    }
+    try {
+      var mesocycleModule = await import('./src/features/program/mesocycle.mjs');
+      mesocycleStatusFn = mesocycleModule.mesocycleStatus;
+    } catch (error) {
+      window.dispatchEvent(new CustomEvent('mmg:error', { detail: { key: 'program-mesocycle' } }));
     }
     try {
       var weightTrendModule = await import('./src/features/progress/weight-trend.mjs');

@@ -793,6 +793,14 @@ test('flagship restores saved programme on home and exposes the weekly pulse', a
   await page.goto('/index.html#program');
   await expect(page.locator('#plan-out')).toHaveAttribute('data-filled', 'true');
   await expect(page.locator('#plan-out .v10-plan-day')).toHaveCount(2);
+  await expect(page.locator('#plan-out [data-mesocycle-status="active"]')).toContainText('Неделя блока 1 из 4');
+  await page.locator('#plan-wizard [data-wizard-step="5"]').click();
+  await page.locator('#p-block-weeks').selectOption('6');
+  await page.locator('#plan-build').click();
+  await expect(page.locator('#plan-out [data-mesocycle-status="active"]')).toContainText('Неделя блока 1 из 6');
+  await page.reload();
+  await page.goto('/index.html#program');
+  await expect(page.locator('#plan-out [data-mesocycle-status="active"]')).toContainText('Неделя блока 1 из 6');
 });
 
 test('readability choice persists and progress supports multiple chart signals', async ({ page }) => {

@@ -17,7 +17,7 @@ MARKOV MADE GYM is a browser-first fitness operating system for planning trainin
 - **Workout / Run Mode** — workout building, one-hand set logging, adjustable load/reps, quick set notes, add/remove/undo set controls, exercise-specific tracking, set roles, RPE/RIR, stable live session clock, rest flow, searchable session history and quiet personal-record notices. Lab warm-up ramps can be inserted before an unstarted weighted exercise and stay out of working-volume and progression calculations.
 - **Supersets / circuits** — group adjacent unstarted exercises as a superset, tri-set or circuit. Run Mode alternates sets by round, rests between rounds and carries group structure into history and repeated workouts.
 - **Progression** — the deterministic double-progression rule evaluates completed working sets only, exposes its evidence and holds the load until the rep floor is met; warm-up, drop, failure, back-off and AMRAP sets do not distort that recommendation.
-- **Program** — persistent weekly training structure.
+- **Program** — persistent weekly training structure with a selected 4/6/8-week block, calendar-week progress and a clear end-of-block review state.
 - **Progress** — training and body signals from locally recorded data.
 - **Nutrition** — calorie and macro planning integrated with the rest of the system.
 - **MARKOV MADE LAB** — strength, training, nutrition, body-composition, cardio and conversion calculators with uncertainty and limitations surfaced.
