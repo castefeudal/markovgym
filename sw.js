@@ -1,4 +1,4 @@
-const VERSION = '2026.09-r30-feature-styles';
+const VERSION = '2026.09-r31-translation-module';
 const PREFIX = 'mmg-gym-';
 const SHELL = `${PREFIX}shell-${VERSION}`;
 const MEDIA = `${PREFIX}media-${VERSION}`;
@@ -12,6 +12,7 @@ const PRECACHE = [
   './styles/features/nutrition.css',
   './app.js',
   './src/app/router.mjs',
+  './src/app/i18n.mjs',
   './lab.css',
   './bootstrap.js',
   './gym-tools.js',

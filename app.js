@@ -99,6 +99,7 @@
   var workoutExecutionOrderFn = null;
   var routeIsKnown = null;
   var normalizeRouteHash = null;
+  var runtimeTranslator = null;
   var storageOk = (function () {
     try {
       var k = '__mmg_probe__';
@@ -653,6 +654,7 @@
   });
 
   function t(key, vals) {
+    if (runtimeTranslator) return runtimeTranslator(key, vals);
     var entry = T[key];
     var str = entry ? (entry[S.lang] || entry.ru) : key;
     return vals ? fmt(str, vals) : str;
@@ -7058,7 +7060,7 @@
      Correctness -> data integrity -> usability -> accessibility -> performance.
      This layer deliberately preserves the proven V4 business logic and contracts.
      ======================================================================== */
-  var APP_VERSION = '2026.09-r30-feature-styles';
+  var APP_VERSION = '2026.09-r31-translation-module';
   var BACKUP_SCHEMA = 9;
   K.restTimer = 'mmg.restTimer.v2';
   K.lastBackup = 'mmg.lastBackup.v1';
@@ -7761,6 +7763,12 @@
       V7_ROUTE_IDS = Object.keys(routeViews).reduce(function(a,k){a[k]=1;return a;},{});
     } catch (error) {
       window.dispatchEvent(new CustomEvent('mmg:error', { detail: { key: 'router' } }));
+    }
+    try {
+      var i18n = await import('./src/app/i18n.mjs');
+      runtimeTranslator = i18n.createTranslator(T, function(){return S.lang;});
+    } catch (error) {
+      window.dispatchEvent(new CustomEvent('mmg:error', { detail: { key: 'i18n' } }));
     }
     try {
       var workoutGroupModule = await import('./tools/workout-groups.mjs');

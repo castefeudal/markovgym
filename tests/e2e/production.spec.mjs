@@ -537,6 +537,22 @@ test('mobile shell has no horizontal page overflow', async ({ page }) => {
   }
 });
 
+test('RU and EN runtime translations follow the saved language', async ({ page }) => {
+  await page.goto('/index.html#workout');
+  await expect(page.locator('html')).toHaveAttribute('data-app-ready', 'true');
+  await expect(page.locator('#workout-list .empty b')).toContainText('Тренировка пока пустая');
+  await page.locator('[data-lang="en"]:visible').first().click();
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+  await expect(page.locator('#workout-list .empty b')).toContainText('The workout is empty');
+  await page.reload();
+  await expect(page.locator('html')).toHaveAttribute('data-app-ready', 'true');
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+  await expect(page.locator('#workout-list .empty b')).toContainText('The workout is empty');
+  await page.locator('[data-lang="ru"]:visible').first().click();
+  await expect(page.locator('html')).toHaveAttribute('lang', 'ru');
+  await expect(page.locator('#workout-list .empty b')).toContainText('Тренировка пока пустая');
+});
+
 
 test('exercise detail shows complete GIF and structured technique guidance', async ({ page }) => {
   const errors = [];
