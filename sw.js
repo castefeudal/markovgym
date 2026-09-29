@@ -1,4 +1,4 @@
-const VERSION = '2026.09-r14-substitution-engine';
+const VERSION = '2026.09-r15-personal-records';
 const PREFIX = 'mmg-gym-';
 const SHELL = `${PREFIX}shell-${VERSION}`;
 const MEDIA = `${PREFIX}media-${VERSION}`;
@@ -16,6 +16,7 @@ const PRECACHE = [
   './src/persistence/history-repository.mjs',
   './src/features/today/decision-engine.mjs',
   './src/features/exercise/substitution-engine.mjs',
+  './src/features/workout/pr-engine.mjs',
   './data/content.json',
   './data/exercises-compact.json',
   './manifest.webmanifest',

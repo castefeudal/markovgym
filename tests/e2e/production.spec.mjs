@@ -474,6 +474,41 @@ test('run mode exposes RIR and RPE only when advanced logging is enabled', async
   await expect(page.locator('[data-run-set-type]')).toHaveValue('backoff');
 });
 
+test('Run Mode announces a history-backed estimated one-rep-max record', async ({ page }) => {
+  await page.goto('/index.html#library');
+  await expect(page.locator('#mmg-boot')).toHaveCount(0);
+  const exerciseId = await page.locator('#grid [data-add]').evaluateAll((buttons) => {
+    const strength = buttons.find((button) => !button.closest('.card')?.innerText.toLowerCase().includes('кардио'));
+    return strength?.getAttribute('data-add');
+  });
+  expect(exerciseId).toBeTruthy();
+  await page.evaluate(async (id) => {
+    const db = await new Promise((resolve, reject) => {
+      const request = indexedDB.open('markov-made-gym');
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction('history', 'readwrite');
+      tx.objectStore('history').put({ id: 'baseline', name: 'Baseline', date: '2026-09-01', items: [{ id, setLog: [{ completed: true, type: 'working', weight: 100, reps: 5 }] }] });
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error);
+    });
+    db.close();
+  }, exerciseId);
+  await page.reload();
+  await expect(page.locator('#mmg-boot')).toHaveCount(0);
+  await page.locator('#grid [data-add="' + exerciseId + '"]').click();
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('mmg.workout.v2') || '[]').length), { timeout: 10_000 }).toBe(1);
+  await page.goto('/index.html#workout');
+  await page.locator('[data-v8-start-run]:visible, #w-run:visible').first().click();
+  await page.locator('[data-run-field="weight"]').fill('105');
+  await page.locator('[data-run-field="reps"]').fill('5');
+  await page.locator('#run-next').click();
+  await expect(page.locator('.run-pr-notice')).toContainText('Новый PR');
+  await expect(page.locator('.run-pr-notice')).toContainText('e1RM');
+});
+
 test('exercise detail has no horizontal overflow on a 390px viewport', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/index.html#library');

@@ -4558,3 +4558,4 @@ p,.lede,.small,.tiny,.note,.v7-next-copy,.theme-choice-copy small{text-wrap:pret
 .equipment-profile>p{margin:0}
 .exercise-preference{width:100%;min-height:36px;margin-top:3px;padding:6px 28px 6px 9px;font-size:.72rem}
 .plan-ex-reason{grid-column:1/-1;color:var(--v8-muted);font-size:.74rem}
+.run-pr-notice{display:grid;gap:4px;padding:10px 12px;border-left:2px solid var(--v8-signal);background:var(--v8-workspace);color:var(--v8-text-2);font-size:.72rem;font-variant-numeric:tabular-nums}.run-pr-notice b{color:var(--v8-signal);font-weight:800}

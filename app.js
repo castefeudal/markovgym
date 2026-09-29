@@ -3548,7 +3548,8 @@
   }
 
   /* Режим выполнения 3.0: один подход, минимум действий, сохранение сессии. */
-  var runState = { ex: 0, set: 1, startedAt: 0, saved: false };
+  var runState = { ex: 0, set: 1, startedAt: 0, saved: false, lastPRs: [], personalRecords: [] };
+  var detectSetPersonalRecords = null, detectVolumePersonalRecords = null;
 
   function runOpen() { return $('run').getAttribute('data-open') === 'true'; }
 
@@ -3647,12 +3648,29 @@
   function completeCurrentSet(){
     var item=S.workout[runState.ex]; if(!item) return false;
     var log=ensureSetLog(item), row=log[Math.max(0,runState.set-1)]; if(!row) return false;
+    var wasCompleted=!!row.completed;
     var stage=$('run-stage'),typeInput=qs('[data-run-set-type]',stage);
     ['reps','weight','distance','duration','rir','rpe'].forEach(function(name){
       var field=qs('[data-run-field="'+name+'"]',stage);if(field)row[name]=String(field.value||'').slice(0,name==='reps'?24:40);
     });
     if(typeInput)row.type=String(typeInput.value||'working').slice(0,12);
-    row.completed=true; row.completedAt=Date.now(); item.reps=row.reps||item.reps; item.weight=row.weight||item.weight; item.done=log.every(function(x){return x.completed;}); saveWorkout(); track('set_complete',{id:item.id,set:runState.set}); return true;
+    row.completed=true; row.completedAt=Date.now(); item.reps=row.reps||item.reps; item.weight=row.weight||item.weight; item.done=log.every(function(x){return x.completed;});
+    if(!wasCompleted&&detectSetPersonalRecords){
+      var exercise=BY_ID[item.id],tracking=exercise&&exercise.custom?exercise.trackingType:(exercise&&exercise.zone==='cardio'?'duration':'weight-reps');
+      var records=detectSetPersonalRecords({exerciseId:item.id,set:row,trackingType:tracking,history:S.history});
+      var volumeItems=S.workout.map(function(workoutItem){var row=BY_ID[workoutItem.id];return Object.assign({},workoutItem,{trackingType:row&&row.custom?row.trackingType:(row&&row.zone==='cardio'?'duration':'weight-reps')});});
+      if(item.done&&detectVolumePersonalRecords)records=records.concat(detectVolumePersonalRecords({exerciseId:item.id,currentItems:volumeItems,history:S.history,exerciseComplete:true}));
+      if(S.workout.every(function(workoutItem){return ensureSetLog(workoutItem).every(function(set){return set.completed;});})&&detectVolumePersonalRecords)records=records.concat(detectVolumePersonalRecords({exerciseId:item.id,currentItems:volumeItems,history:S.history,sessionComplete:true}));
+      runState.lastPRs=records;
+      records.forEach(function(record){var key=item.id+':'+record.type+':'+record.value;if(!runState.personalRecords.some(function(saved){return saved.key===key;}))runState.personalRecords.push({key:key,exerciseId:item.id,type:record.type,value:record.value});});
+    }
+    saveWorkout(); track('set_complete',{id:item.id,set:runState.set}); return true;
+  }
+
+  function runPersonalRecordNotice(){
+    if(!runState.lastPRs||!runState.lastPRs.length)return '';
+    var labels={load:{ru:'вес',en:'load'},'added-load':{ru:'дополнительный вес',en:'added load'},'reps-at-load':{ru:'повторы на весе',en:'reps at this load'},e1rm:{ru:'e1RM',en:'e1RM'},reps:{ru:'повторы',en:'reps'},duration:{ru:'время',en:'duration'},distance:{ru:'дистанция',en:'distance'},'exercise-volume':{ru:'объём упражнения',en:'exercise volume'},'session-volume':{ru:'объём тренировки',en:'workout volume'}};
+    return '<div class="run-pr-notice" role="status" aria-live="polite">'+runState.lastPRs.map(function(record){var label=(labels[record.type]||labels.load)[S.lang==='en'?'en':'ru'];var unit=record.type==='duration'?(S.lang==='en'?' sec':' сек'):record.type==='distance'?' km':(['load','added-load','e1rm','exercise-volume','session-volume'].indexOf(record.type)>=0?' kg':'');return '<span><b>'+(S.lang==='en'?'New PR':'Новый PR')+'</b> · '+esc(label)+' '+esc(String(record.value))+unit+'</span>';}).join('')+'</div>';
   }
 
   function saveCurrentSetDraft(){
@@ -3677,7 +3695,7 @@
     var stage = $('run-stage');
     var elapsed = fmtClock(runElapsedSeconds());
     if (!item) {
-      stage.innerHTML = '<div class="run-finish-summary">' + premiumIcon('check') +
+      stage.innerHTML = runPersonalRecordNotice()+'<div class="run-finish-summary">' + premiumIcon('check') +
         '<h3>' + esc(t('runDoneTitle')) + '</h3><p class="small">' + esc(t('runFinishedBody')) + '</p>' +
         '<div class="run-session-meta"><div><span>' + esc(t('runElapsed')) + '</span><b>' + elapsed + '</b></div>' +
         '<div><span>' + esc(t('sessionExercises')) + '</span><b>' + S.workout.length + '</b></div>' +
@@ -3734,7 +3752,7 @@
       '<div class="run-context"><div><div class="run-submeta"><span class="meta-tag">' + esc(labelMu(ex.target)) + '</span><span class="meta-tag">' + premiumIcon('equipment') + esc(labelEq(ex.equip)) + '</span></div>' +
       '<h3 class="run-name">' + esc(exName(ex)) + '</h3></div>' +
       '<div class="run-tech-cues"><div><span>'+esc(detailText('Ключ','Key cue'))+'</span><p>'+esc(runPrimary)+'</p></div><div><span>'+esc(detailText('Дыхание','Breathing'))+'</span><p>'+esc(runTechnique.breathing)+'</p></div></div>' +
-      '<div class="run-current"><div class="run-setline"><b>' + esc(t('runSetLabel', { i: runState.set, n: item.sets })) + '</b><span>' + esc(t('runElapsed')) + ' · ' + elapsed + '</span></div>' +
+      runPersonalRecordNotice()+'<div class="run-current"><div class="run-setline"><b>' + esc(t('runSetLabel', { i: runState.set, n: item.sets })) + '</b><span>' + esc(t('runElapsed')) + ' · ' + elapsed + '</span></div>' +
       '<div class="run-current-inputs">' + runFields + advancedInputs + '</div>'+setTypeSelect +
       '<div class="run-prev-record"><b>' + esc(t('runPrevPerformance')) + ':</b> ' + esc(prevText) + '</div>' + progressionHtml + usePrev + '<div class="run-set-strip" aria-label="' + esc(t('workoutSetsDone',{done:completedSetCount(item),total:item.sets})) + '">' + setStrip + '</div></div>' +
       '<div class="run-session-meta"><div><span>' + esc(t('sessionExercises')) + '</span><b>' + (runState.ex + 1) + ' / ' + S.workout.length + '</b></div>' +
@@ -3775,6 +3793,7 @@
       runState.startedAt = Number(S.runSession.startedAt) || Date.now();
     } else {
       var first=firstIncompletePosition(); runState.ex=first.ex; runState.set=first.set; runState.startedAt=Date.now();
+      runState.lastPRs=[];runState.personalRecords=[];
     }
     runState.saved = false;
     saveRunSession();
@@ -3793,8 +3812,9 @@
       note:S.meta.note,
       planDay:Number.isInteger(Number(S.meta.planDay))?Number(S.meta.planDay):null,
       durationSec: runState && runState.startedAt ? runElapsedSeconds() : 0,
+      personalRecords:(runState.personalRecords||[]).map(function(record){return Object.assign({},record);}),
       items: S.workout.map(function (w) {
-        return { id:w.id, sets:w.sets, reps:w.reps, weight:w.weight, done:w.done, setLog:ensureSetLog(w).map(function(set){return Object.assign({},set);}) };
+        var ex=BY_ID[w.id];return { id:w.id, sets:w.sets, reps:w.reps, weight:w.weight, trackingType:ex&&ex.custom?ex.trackingType:(ex&&ex.zone==='cardio'?'duration':'weight-reps'), done:w.done, setLog:ensureSetLog(w).map(function(set){return Object.assign({},set);}) };
       })
     };
     S.history.unshift(entry);
@@ -6636,7 +6656,7 @@
      Correctness -> data integrity -> usability -> accessibility -> performance.
      This layer deliberately preserves the proven V4 business logic and contracts.
      ======================================================================== */
-  var APP_VERSION = '2026.09-r14-substitution-engine';
+  var APP_VERSION = '2026.09-r15-personal-records';
   var BACKUP_SCHEMA = 9;
   K.restTimer = 'mmg.restTimer.v2';
   K.lastBackup = 'mmg.lastBackup.v1';
@@ -7312,6 +7332,13 @@
       substitutionRanker = substitutionModule.rankSubstitutions;
     } catch (error) {
       window.dispatchEvent(new CustomEvent('mmg:error', { detail: { key: 'substitution-engine' } }));
+    }
+    try {
+      var prModule = await import('./src/features/workout/pr-engine.mjs');
+      detectSetPersonalRecords = prModule.detectSetPersonalRecords;
+      detectVolumePersonalRecords = prModule.detectVolumePersonalRecords;
+    } catch (error) {
+      window.dispatchEvent(new CustomEvent('mmg:error', { detail: { key: 'pr-engine' } }));
     }
     try {
       var persistence = await import('./src/persistence/history-repository.mjs');
