@@ -86,6 +86,7 @@
   var cleanCustomExercises = function (rows) { return Array.isArray(rows) ? rows.filter(function (row) { return row && typeof row === 'object'; }) : []; };
   var historyVisibleCount = 20;
   var todayDecisionEngine = null;
+  var substitutionRanker = null;
   var storageOk = (function () {
     try {
       var k = '__mmg_probe__';
@@ -3404,64 +3405,59 @@
   }
 
   function swapCandidates(ex, reason) {
-    var sameTarget = [], sameGroup = [];
-    var level = exLevel(ex), kind = exKind(ex);
-    var availableEquipment = equipmentFor(S.profile && S.profile.place ? S.profile.place : 'gym');
-
-    EX.forEach(function (cand) {
-      if (cand.id === ex.id) return;
-      if (cand.target === ex.target) sameTarget.push(cand);
-      else if (cand.group === ex.group && cand.zone === ex.zone) sameGroup.push(cand);
+    if (!substitutionRanker) return [];
+    var profile = databaseEquipmentProfiles.filter(function(item){return item.id===activeEquipmentProfileId;})[0];
+    var availableEquipment = profile ? profile.equipment : equipmentFor(S.profile && S.profile.place ? S.profile.place : 'gym');
+    var relatedCandidates = EX.filter(function(cand){
+      return cand.target===ex.target || (cand.group===ex.group&&cand.zone===ex.zone) ||
+        (Array.isArray(ex.secondary)&&ex.secondary.indexOf(cand.target)!==-1) ||
+        (Array.isArray(cand.secondary)&&cand.secondary.some(function(mu){return mu===ex.target||ex.secondary.indexOf(mu)!==-1;}));
     });
-
-    var pool = sameTarget.length >= 4 ? sameTarget : sameTarget.concat(sameGroup);
-
-    var pass = function (cand) {
-      if (['avoid', 'unavailable', 'discomfort'].indexOf(exercisePreference(cand.id)) !== -1) return false;
-      if (availableEquipment.indexOf(cand.equip) === -1) return false;
-      if (reason === 'busy') return cand.equip !== ex.equip;
-      if (reason === 'noequip') return cand.equip !== ex.equip && (isHomeFriendly(cand) || GUIDED.indexOf(cand.equip) !== -1);
-      if (reason === 'home') return isHomeFriendly(cand);
-      if (reason === 'awkward') return GUIDED.indexOf(cand.equip) !== -1 || isHomeFriendly(cand);
-      if (reason === 'discomfort') return GUIDED.indexOf(cand.equip) !== -1 || cand.equip === 'body weight';
-      if (reason === 'hard') return exLevel(cand) === 'beginner';
-      if (reason === 'easy') return exLevel(cand) === 'advanced' || (exKind(cand) === 'compound' && FREE_WEIGHT.indexOf(cand.equip) !== -1);
-      return true;
-    };
-
-    var filtered = pool.filter(pass);
-
-    filtered.sort(function (a, b) {
-      var scoreOf = function (c) {
-        var s = 0;
-        if (c.target === ex.target) s += 6;
-        if (c.secondary.indexOf(ex.target) !== -1 || ex.secondary.indexOf(c.target) !== -1) s += 2;
-        if (c.movementPattern && ex.movementPattern && c.movementPattern === ex.movementPattern) s += 4;
-        if (exKind(c) === kind) s += 3;
-        if (c.laterality && ex.laterality && c.laterality === ex.laterality) s += 1;
-        if (exLevel(c) === level) s += 2;
-        if (S.profile.place === 'home' && isHomeFriendly(c)) s += 2;
-        if (exercisePreference(c.id) === 'prefer') s += 8;
-        if (exercisePreference(c.id) === 'lessOften') s -= 8;
-        if (isFav(c.id)) s += 4;
-        return s + c.score / 20;
-      };
-      return scoreOf(b) - scoreOf(a);
-    });
-
-    return filtered.slice(0, 6);
+    var roleById=Object.create(null),levelById=Object.create(null);
+    relatedCandidates.forEach(function(cand){roleById[cand.id]=exKind(cand);levelById[cand.id]=exLevel(cand);});
+    var experience=S.profile&&S.profile.level==='middle'?'medium':(S.profile&&S.profile.level)||'';
+    var planSlot=null;
+    if(S.plan&&Array.isArray(S.plan.days)){
+      S.plan.days.some(function(day,dayIndex){
+        var items=Array.isArray(day.items)?day.items:[];
+        var itemIndex=items.findIndex(function(item){return item&&(item.id===ex.id||(item.ex&&item.ex.id===ex.id));});
+        if(itemIndex<0)return false;
+        planSlot={dayIndex:dayIndex,index:itemIndex,role:ex.exerciseRole||exKind(ex)};
+        return true;
+      });
+    }
+    return substitutionRanker({
+      exercise:ex,candidates:relatedCandidates,reason:reason,availableEquipment:availableEquipment,
+      preferenceById:S.exercisePreferences,favouriteIds:S.favorites,location:S.profile&&S.profile.place,
+      experience:experience,roleById:roleById,levelById:levelById,programSlot:planSlot,
+      homeEquipment:HOME_EQUIP,guidedEquipment:GUIDED,freeWeightEquipment:FREE_WEIGHT,limit:6
+    }).map(function(result){return Object.assign({},result.exercise,{substitutionReasons:result.reasons});});
   }
 
   function swapWhy(ex, cand, reason) {
-    var en = S.lang === 'en', parts = [];
-    if (cand.target === ex.target) parts.push(en ? 'same primary muscle' : 'та же основная мышца');
-    else parts.push((en ? 'primary muscle group: ' : 'группа основной мышцы: ') + labelMu(cand.target));
-    if (cand.movementPattern && ex.movementPattern && cand.movementPattern === ex.movementPattern) parts.push(en ? 'same movement pattern' : 'тот же паттерн движения');
-    if (exKind(cand) === exKind(ex)) parts.push(en ? 'same exercise role' : 'та же роль упражнения');
-    parts.push((en ? 'available: ' : 'доступно: ') + labelEq(cand.equip));
-    if (reason === 'hard') parts.push(en ? 'beginner-friendly level' : 'подходит для начального уровня');
-    if (exercisePreference(cand.id) === 'prefer') parts.push(en ? 'you marked it as preferred' : 'вы отметили его как предпочтительное');
-    return parts.join(en ? ' · ' : ' · ');
+    var en = S.lang === 'en';
+    var labels = {
+      same_primary:en?'same primary muscle':'та же основная мышца',
+      same_group:en?'same muscle group':'та же группа мышц',
+      supporting_muscle:en?'overlapping supporting muscles':'совпадают вспомогательные мышцы',
+      same_movement:en?'same movement pattern':'тот же паттерн движения',
+      same_role:en?'same exercise role':'та же роль упражнения',
+      same_laterality:en?'same side pattern':'та же схема сторон',
+      same_stability:en?'same support and stability demand':'та же потребность в опоре и стабильности',
+      preferred:en?'marked as preferred':'вы отметили упражнение как предпочтительное',
+      less_often:en?'you asked to see it less often':'приоритет снижен по вашему выбору «реже»',
+      favourite:en?'saved as a favourite':'упражнение в избранном',
+      location_match:en?'fits your training location':'подходит для места тренировок',
+      experience_match:en?'fits your experience level':'соответствует вашему уровню',
+      program_slot:en?'matches the programme slot role':'сохраняет роль упражнения в программе'
+    };
+    var parts=(cand.substitutionReasons||[]).map(function(key){return labels[key];}).filter(Boolean);
+    var profile=databaseEquipmentProfiles.filter(function(item){return item.id===activeEquipmentProfileId;})[0];
+    if(profile){parts.push(en?'available in “'+profile.nameEn+'”':'доступно в профиле «'+profile.nameRu+'»');}
+    else{parts.push((en?'available: ':'доступно: ')+labelEq(cand.equip));}
+    if(reason==='hard')parts.push(en?'beginner-friendly level':'подходит для начального уровня');
+    if(reason==='easy')parts.push(en?'higher difficulty option':'вариант повышенной сложности');
+    return parts.join(' · ');
   }
 
   function renderSwapList() {
@@ -6640,7 +6636,7 @@
      Correctness -> data integrity -> usability -> accessibility -> performance.
      This layer deliberately preserves the proven V4 business logic and contracts.
      ======================================================================== */
-  var APP_VERSION = '2026.09-r13-user-state';
+  var APP_VERSION = '2026.09-r14-substitution-engine';
   var BACKUP_SCHEMA = 9;
   K.restTimer = 'mmg.restTimer.v2';
   K.lastBackup = 'mmg.lastBackup.v1';
@@ -7310,6 +7306,12 @@
       todayDecisionEngine = todayModule.nextWorkoutAction;
     } catch (error) {
       window.dispatchEvent(new CustomEvent('mmg:error', { detail: { key: 'today-decision' } }));
+    }
+    try {
+      var substitutionModule = await import('./src/features/exercise/substitution-engine.mjs');
+      substitutionRanker = substitutionModule.rankSubstitutions;
+    } catch (error) {
+      window.dispatchEvent(new CustomEvent('mmg:error', { detail: { key: 'substitution-engine' } }));
     }
     try {
       var persistence = await import('./src/persistence/history-repository.mjs');

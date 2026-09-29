@@ -13,6 +13,7 @@ MARKOV MADE GYM is a browser-first fitness operating system for planning trainin
 - **Custom exercises** — add bilingual movements with muscle, equipment, movement, laterality, tracking, default dose, load increment, notes and an optional local image; they participate in search, workout, programme, history and backup flows.
 - **Equipment profiles** — switch between gym, home, travel and custom equipment sets; Library filters and generated exercise choices follow the active profile while an in-progress workout remains intact.
 - **Exercise preferences** — mark exercises preferred, less often, avoided, unavailable or uncomfortable; recommendations honor those choices, explain plan selections and preserve preferences in backups.
+- **Transparent substitutions** — deterministic alternatives ranked by muscle overlap, movement pattern, equipment availability, exercise role, laterality, experience and personal preference, with the matching signals shown beside each option.
 - **Workout / Run Mode** — workout building, one-hand set logging, exercise-specific reps/load/duration/distance fields, set roles, RPE/RIR, rest flow and session history.
 - **Program** — persistent weekly training structure.
 - **Progress** — training and body signals from locally recorded data.

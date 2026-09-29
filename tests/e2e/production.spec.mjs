@@ -409,6 +409,9 @@ test('exercise detail shows complete GIF and structured technique guidance', asy
   expect(await page.locator('#modal-cues .modal-cue-card').count()).toBeGreaterThanOrEqual(5);
   expect(await page.locator('#modal-steps li').count()).toBeGreaterThanOrEqual(3);
   await expect(page.locator('#modal-errors .modal-alert-card').first()).toBeVisible();
+  await page.locator('#modal [data-swap="same"]').click();
+  await expect(page.locator('#swap-list .swap-item').first()).toBeVisible();
+  await expect(page.locator('#swap-list .swap-why').first()).toContainText('доступно');
 
   const media = await page.locator('#modal-img').evaluate((img) => ({
     fit: getComputedStyle(img).objectFit,
