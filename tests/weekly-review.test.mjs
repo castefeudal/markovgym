@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { weeklyReviewDecision } from '../src/features/program/weekly-review.mjs';
+import { cleanWeeklyReviews, weeklyReviewDecision } from '../src/features/program/weekly-review.mjs';
 
 const repeatedDecline = [
   { weekStart: '2026-09-14', performance: 'declining', fatigue: 'high', sessionDifficulty: 4, adherence: 0.8 },
@@ -25,6 +25,21 @@ test('weekly review keeps deload suggestions off when data or programme age is i
 });
 
 test('discomfort is surfaced without a diagnosis and improving performance supports continuing the plan', () => {
-  assert.equal(weeklyReviewDecision({ reviews: [{ weekStart: '2026-09-21', jointDiscomfort: true }] }).recommendation, 'review-discomfort');
+  const discomfort = weeklyReviewDecision({ reviews: [{ weekStart: '2026-09-21', jointDiscomfort: true }] });
+  assert.equal(discomfort.recommendation, 'review-discomfort');
+  assert.equal(discomfort.nextAction, 'review-painful-movement');
   assert.equal(weeklyReviewDecision({ reviews: [{ weekStart: '2026-09-21', performance: 'improving', fatigue: 'moderate' }] }).recommendation, 'continue-plan');
+});
+
+test('weekly feedback normalization keeps one bounded, date-ordered record per week', () => {
+  const rows = cleanWeeklyReviews([
+    { weekStart: '2026-09-21', performance: 'declining', plannedDays: 2, completedDays: 2, adherence: 1 },
+    { weekStart: '2026-09-14', performance: 'steady', plannedDays: 3, completedDays: 2, adherence: 2 / 3 },
+    { weekStart: '2026-09-21', performance: 'improving', plannedDays: 4, completedDays: 1, adherence: 0.25 },
+    { weekStart: 'not-a-date', performance: 'declining' },
+  ]);
+  assert.deepEqual(rows.map((row) => row.weekStart), ['2026-09-14', '2026-09-21']);
+  assert.equal(rows[1].performance, 'improving');
+  assert.equal(rows[1].completedDays, 1);
+  assert.equal(rows[1].adherence, 0.25);
 });

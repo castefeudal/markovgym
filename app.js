@@ -333,6 +333,7 @@
     'planReview.reasonDecline': 'Performance has declined in two consecutive weekly check-ins.', 'planReview.reasonFatigue': 'Fatigue was high and sessions felt hard in both weeks.',
     'planReview.reasonAdherence': 'At least 70% of planned sessions were completed in both weeks.', 'planReview.reasonEffort': 'At least half of six or more rated working sets were near the effort limit.',
     'planReview.reasonImprove': 'Performance is improving and fatigue is not high.', 'planReview.needSecond': 'A second consecutive weekly check-in is needed.', 'planReview.needEffort': 'At least six working sets with RIR or RPE are needed for a deload suggestion.',
+    'planReview.needAge': 'Review this signal again after at least three programme weeks.',
 
     'plan.eyebrow': 'Weekly structure', 'plan.title': 'Starting training plan',
     'plan.text': 'The inputs genuinely change the output: split, volume, reps, rest, cardio and the actual exercises are drawn from this same base.',
@@ -641,6 +642,7 @@
     'planReview.reasonImprove': { ru:'Результат растёт, а усталость не высокая.', en:'Performance is improving and fatigue is not high.' },
     'planReview.needSecond': { ru:'Для такого вывода нужна вторая последовательная недельная сверка.', en:'A second consecutive weekly check-in is needed.' },
     'planReview.needEffort': { ru:'Для совета о разгрузке нужны минимум шесть рабочих подходов с RIR или RPE.', en:'At least six working sets with RIR or RPE are needed for a deload suggestion.' },
+    'planReview.needAge': { ru:'Вернись к этой оценке после трёх недель программы.', en:'Review this signal again after at least three programme weeks.' },
     'nutritionTrend.empty': { ru:'Чтобы увидеть сглаженный тренд, отмечай вес регулярно: для среднего нужны минимум 3 замера за 7 дней.', en:'Log weight regularly to see a smoothed trend; the 7-day mean needs at least 3 readings.' },
     'nutritionTrend.scale': { ru:'Вес на весах', en:'Scale weight' }, 'nutritionTrend.mean': { ru:'Среднее за 7 дней', en:'7-day mean' },
     'nutritionTrend.delta': { ru:'Изменение за 7 дней', en:'7-day change' }, 'nutritionTrend.rate': { ru:'Темп за 21 день', en:'21-day rate' },
@@ -4280,7 +4282,7 @@
       var reasonKeys={two_consecutive_weeks_declining_performance:'planReview.reasonDecline',high_fatigue_and_session_difficulty:'planReview.reasonFatigue',adherence_at_least_70_percent:'planReview.reasonAdherence',at_least_half_of_rated_work_sets_near_limit:'planReview.reasonEffort'};
       message='<div class="note"><b>'+esc(t('planReview.deload'))+'</b><ul>'+decision.reasons.map(function(reason){return'<li>'+esc(t(reasonKeys[reason]||'planReview.hold'))+'</li>';}).join('')+'</ul></div>';
     }else if(decision&&decision.recommendation==='continue-plan')message='<p class="note">'+esc(t('planReview.continue'))+' · '+esc(t('planReview.reasonImprove'))+'</p>';
-    else if(saved){var needed=[];if(decision&&decision.missingData.indexOf('second_consecutive_week')!==-1)needed.push(t('planReview.needSecond'));if(decision&&decision.missingData.indexOf('six_rated_working_sets_with_rir_or_rpe')!==-1)needed.push(t('planReview.needEffort'));message='<p class="note">'+esc(t('planReview.hold'))+(needed.length?' · '+esc(needed.join(' ')):'')+'</p>';}
+    else if(saved){var needed=[];if(decision&&decision.missingData.indexOf('second_consecutive_week')!==-1)needed.push(t('planReview.needSecond'));if(decision&&decision.missingData.indexOf('programme_age_under_three_weeks')!==-1)needed.push(t('planReview.needAge'));if(decision&&decision.missingData.indexOf('six_rated_working_sets_with_rir_or_rpe')!==-1)needed.push(t('planReview.needEffort'));message='<p class="note">'+esc(t('planReview.hold'))+(needed.length?' · '+esc(needed.join(' ')):'')+'</p>';}
     var performance=saved?saved.performance:'steady',fatigue=saved?saved.fatigue:'moderate',soreness=saved&&saved.soreness||'',discomfort=saved&&saved.jointDiscomfort?'yes':'no',difficulty=saved?saved.sessionDifficulty:3;
     function option(value,key,selected){return'<option value="'+esc(value)+'"'+(selected===value?' selected':'')+'>'+esc(t(key))+'</option>';}
     var sorenessOptions='<option value=""'+(!soreness?' selected':'')+'>'+esc(S.lang==='en'?'Not specified':'Не указана')+'</option>'+['low','moderate','high'].map(function(value){return option(value,'planReview.'+value,soreness);}).join('');
@@ -7054,7 +7056,7 @@
      Correctness -> data integrity -> usability -> accessibility -> performance.
      This layer deliberately preserves the proven V4 business logic and contracts.
      ======================================================================== */
-  var APP_VERSION = '2026.09-r27-weekly-review';
+  var APP_VERSION = '2026.09-r28-lab-evidence';
   var BACKUP_SCHEMA = 9;
   K.restTimer = 'mmg.restTimer.v2';
   K.lastBackup = 'mmg.lastBackup.v1';

@@ -9,3 +9,4 @@
 #run .run-current-inputs input{min-height:48px;font-variant-numeric:tabular-nums}
 #run .run-set-type{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:10px;color:var(--text-secondary,#aeb8c5);font-size:.8rem}
 #run .run-set-type select{min-height:44px;min-width:138px;padding:0 10px;border:1px solid var(--border-subtle,rgba(255,255,255,.12));border-radius:10px;background:var(--bg-elevated,#151b22);color:var(--text-primary,#f5f7fa);font:inherit}
+.lab-evidence{margin-top:12px;border-top:1px solid var(--border-subtle,rgba(255,255,255,.1));padding-top:10px}.lab-evidence summary{min-height:44px;display:flex;align-items:center;cursor:pointer;color:var(--text-secondary,#aeb8c5);font-size:.86rem}.lab-evidence .tiny{min-height:0;line-height:1.55}.lab-evidence a{color:var(--accent,#86b6ff);text-underline-offset:3px}.lab-evidence li+li{margin-top:8px}

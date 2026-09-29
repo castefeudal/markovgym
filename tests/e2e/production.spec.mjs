@@ -450,6 +450,10 @@ test('hash routes and MARKOV MADE LAB calculators are usable', async ({ page }) 
   await expect(page.locator('#tools')).toBeVisible();
   await expect(page.locator('#gym-tools-title')).toContainText(/Расчёты|Calculations/);
   await expect(page.locator('#lab-e1rm-out')).toContainText(/114[,.]58/);
+  const evidence = page.locator('#tools [data-evidence-id="estimated-1rm"]');
+  await evidence.locator('summary').click();
+  await expect(evidence).toContainText('Brzycki, 1993');
+  await expect(evidence.locator('a[href="https://doi.org/10.1080/07303084.1993.10606684"]')).toHaveAttribute('rel', 'noopener noreferrer');
   await page.locator('[data-lab-form="e1rm"] #e1rm-weight').fill('100');
   await page.locator('[data-lab-form="e1rm"] #e1rm-reps').fill('5');
   await page.locator('[data-lab-form="e1rm"]').getByRole('button', { name: /Рассчитать|Calculate/ }).click();

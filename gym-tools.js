@@ -23,6 +23,7 @@ import {
   waistToHeight,
 } from './tools/lab-calculators.mjs';
 import { joinNutritionAndMeasurements } from './src/features/nutrition/nutrition-analytics.mjs';
+import { getCalculatorEvidenceId, getLocalizedLabEvidence } from './src/features/lab/evidence-registry.mjs';
 
 const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
 const en = () => document.documentElement.lang === 'en';
@@ -56,6 +57,9 @@ function field(id, label, initial, attrs = '', type = 'input') {
 }
 
 function card({ id, cat, kicker, title, description, form = '', body = '', keywords = '' }) {
+  const evidenceId = getCalculatorEvidenceId(id);
+  const evidence = evidenceId ? getLocalizedLabEvidence(evidenceId, en() ? 'en' : 'ru') : null;
+  const methodPanel = evidence ? `<details class="lab-evidence" data-evidence-id="${esc(evidenceId)}"><summary>${t('Метод и источники', 'Method and sources')}</summary><div class="tiny"><p><b>${t('Метод:', 'Method:')}</b> ${esc(evidence.formula)}</p><p><b>${t('Версия формулы:', 'Formula version:')}</b> ${esc(evidence.version)} · <b>${t('Уровень данных:', 'Evidence level:')}</b> ${esc(evidence.evidenceLevel)}</p><p><b>${t('Ограничения:', 'Limitations:')}</b> ${esc(evidence.limitations)}</p>${evidence.references.length ? `<ul>${evidence.references.map((reference) => `<li><a href="${esc(reference.url)}" target="_blank" rel="noopener noreferrer">${esc(reference.title)}</a> · ${esc(reference.organisation)} · ${esc(reference.year)} · ${esc(reference.kind)}</li>`).join('')}</ul>` : `<p>${t('Внешний источник не заявляется: это прозрачное арифметическое преобразование или локальная сводка.', 'No external source is claimed: this is a transparent arithmetic operation or a local-data summary.')}</p>`}<p>${t('Последняя проверка:', 'Last reviewed:')} ${esc(evidence.lastReviewed)}</p></div></details>` : '';
   return `<article class="lab-card" data-lab-card data-category="${cat}" data-search="${esc((title + ' ' + description + ' ' + keywords).toLowerCase())}">
     <p class="eyebrow">${kicker}</p>
     <h2>${title}</h2>
@@ -63,6 +67,7 @@ function card({ id, cat, kicker, title, description, form = '', body = '', keywo
     ${form}
     ${body}
     <div class="lab-result" id="${id}-out" aria-live="polite"></div>
+    ${methodPanel}
   </article>`;
 }
 
