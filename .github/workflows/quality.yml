@@ -29,7 +29,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Syntax, unit, smoke and build
+      - name: Syntax, build, performance budget and unit checks
         run: npm run quality
 
       - name: Generated index must be current
