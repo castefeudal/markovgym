@@ -1,7 +1,7 @@
 import { readFile, writeFile } from 'node:fs/promises';
 
 const body = await readFile(new URL('../app-body.html', import.meta.url), 'utf8');
-const BUILD_VERSION = '2026.09-r29-router-modules';
+const BUILD_VERSION = '2026.09-r30-feature-styles';
 const structuredData = {
   '@context': 'https://schema.org',
   '@type': 'SoftwareApplication',
@@ -105,6 +105,10 @@ const index = `<!doctype html>
   })();
   </script>
   <link rel="stylesheet" href="./app.css?v=${BUILD_VERSION}">
+  <link rel="stylesheet" href="./styles/features/exercise.css?v=${BUILD_VERSION}">
+  <link rel="stylesheet" href="./styles/features/program.css?v=${BUILD_VERSION}">
+  <link rel="stylesheet" href="./styles/features/workout.css?v=${BUILD_VERSION}">
+  <link rel="stylesheet" href="./styles/features/nutrition.css?v=${BUILD_VERSION}">
   <link rel="stylesheet" href="./lab.css?v=${BUILD_VERSION}">
   <style>${bootCss}</style>
   <script type="application/ld+json">${JSON.stringify(structuredData)}</script>

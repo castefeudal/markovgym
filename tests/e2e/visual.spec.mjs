@@ -1,7 +1,9 @@
 import { test, expect } from '@playwright/test';
 
 const sizes = [
+  ['mobile-360', 360, 800],
   ['mobile-390', 390, 844],
+  ['mobile-430', 430, 932],
   ['tablet-768', 768, 1024],
   ['laptop-1440', 1440, 900],
   ['wide-1920', 1920, 1080],

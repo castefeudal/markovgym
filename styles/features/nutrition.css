@@ -1,0 +1,15 @@
+.nutrition-log-panel{display:grid;gap:14px;margin:22px 0;padding:clamp(16px,3vw,26px)}
+.nutrition-log-panel .section-head{margin:0}.nutrition-log-panel .section-head p:last-child{max-width:72ch}
+.nutrition-log-form{display:grid;gap:14px}.nutrition-log-form .form-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.nutrition-log-form .field{min-width:0;margin:0}.nutrition-log-form .span-all{grid-column:1/-1}
+.nutrition-log-form button{justify-self:start;min-height:44px}
+.nutrition-log-list{display:grid;gap:8px}.nutrition-log-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:11px 12px;border:1px solid var(--v8-line);border-radius:10px;background:var(--v8-panel)}
+.nutrition-log-row>div{display:grid;gap:3px;min-width:0}.nutrition-log-row strong{font-size:.75rem}.nutrition-log-row span,.nutrition-log-row small{color:var(--v8-text-2);font-size:.68rem}.nutrition-log-row button{flex:0 0 auto;min-height:36px}
+.nutrition-weekly{display:grid;gap:9px;padding-top:14px;border-top:1px solid var(--v8-line)}.nutrition-weekly h4{margin:0;font-size:.9rem}.nutrition-weekly>div:first-child p{margin:4px 0 0}.nutrition-weekly>p{margin:0;color:var(--v8-muted)}
+.nutrition-week-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.nutrition-week-metrics>div{display:grid;gap:5px;min-width:0;padding:10px;border:1px solid var(--v8-line);border-radius:9px;background:var(--v8-workspace)}.nutrition-week-metrics span{color:var(--v8-muted);font-size:.62rem}.nutrition-week-metrics b{font-size:.83rem;font-variant-numeric:tabular-nums}.nutrition-week-difference[data-over="true"]{color:var(--v8-text-2)}
+.nutrition-trend{display:grid;gap:9px;padding-top:14px;border-top:1px solid var(--v8-line)}.nutrition-trend h4{margin:0;font-size:.9rem}.nutrition-trend>div:first-child p{margin:4px 0 0}
+.nutrition-trend-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.nutrition-trend-metrics>div{display:grid;gap:5px;min-width:0;padding:10px;border:1px solid var(--v8-line);border-radius:9px;background:var(--v8-workspace)}.nutrition-trend-metrics span{color:var(--v8-muted);font-size:.62rem}.nutrition-trend-metrics b{font-size:.83rem;font-variant-numeric:tabular-nums}.nutrition-trend-metrics small{font-size:.62rem;font-weight:500;color:var(--v8-muted)}.nutrition-trend>p{margin:0;color:var(--v8-muted)}
+@media(max-width:680px){.nutrition-log-form .form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.nutrition-log-row{align-items:flex-start}.nutrition-log-row button{font-size:.68rem;padding-inline:9px}}
+@media(max-width:680px){.nutrition-trend-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:420px){.nutrition-week-metrics{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:380px){.nutrition-log-form .form-grid{grid-template-columns:minmax(0,1fr)}.nutrition-log-form .span-all{grid-column:auto}}

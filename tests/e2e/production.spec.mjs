@@ -530,8 +530,11 @@ test('hash routes and MARKOV MADE LAB calculators are usable', async ({ page }) 
 
 test('mobile shell has no horizontal page overflow', async ({ page }) => {
   await page.goto('/index.html#home');
-  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
-  expect(overflow).toBeLessThanOrEqual(1);
+  for (const [width, height] of [[360, 800], [390, 844], [430, 932]]) {
+    await page.setViewportSize({ width, height });
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+    expect(overflow, `page overflow at ${width}x${height}`).toBeLessThanOrEqual(1);
+  }
 });
 
 

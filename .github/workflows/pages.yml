@@ -34,7 +34,7 @@ jobs:
         run: |
           mkdir -p site
           cp index.html app.css lab.css app.js bootstrap.js gym-tools.js sw.js manifest.webmanifest setup.html legacy-base.html site/
-          cp -R data images src tools videos site/
+          cp -R data images src styles tools videos site/
 
       - uses: actions/upload-pages-artifact@v3
         with:

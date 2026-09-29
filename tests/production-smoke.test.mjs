@@ -148,8 +148,20 @@ test('PWA manifest is relative-origin and points to a valid shell', async () => 
 
 test('service worker precaches the same shell resources as the index', async () => {
   const sw = await read('sw.js');
-  for (const resource of ['index.html', 'app.css', 'app.js', 'tools/workout-groups.mjs', 'src/app/router.mjs', 'src/persistence/history-repository.mjs', 'src/features/today/decision-engine.mjs', 'src/features/exercise/substitution-engine.mjs', 'src/features/workout/pr-engine.mjs', 'src/features/nutrition/nutrition-analytics.mjs', 'src/features/progress/weight-trend.mjs', 'data/content.json', 'data/exercises-compact.json']) assert.match(sw, new RegExp(resource.replaceAll('.', '\\.')));
+  const pages = await read('.github/workflows/pages.yml');
+  for (const resource of ['index.html', 'app.css', 'styles/features/exercise.css', 'styles/features/program.css', 'styles/features/workout.css', 'styles/features/nutrition.css', 'app.js', 'tools/workout-groups.mjs', 'src/app/router.mjs', 'src/persistence/history-repository.mjs', 'src/features/today/decision-engine.mjs', 'src/features/exercise/substitution-engine.mjs', 'src/features/workout/pr-engine.mjs', 'src/features/nutrition/nutrition-analytics.mjs', 'src/features/progress/weight-trend.mjs', 'data/content.json', 'data/exercises-compact.json']) assert.match(sw, new RegExp(resource.replaceAll('.', '\\.')));
+  assert.match(pages, /cp -R data images src styles tools videos site\//);
   assert.doesNotMatch(sw, /legacy-base\.html|r2\.payload/);
+});
+
+test('new feature styles are separated and linked after the core stylesheet', async () => {
+  const index = await read('index.html');
+  const build = await read('scripts/build-index.mjs');
+  const base = await read('app.css');
+  assert.ok(index.indexOf('./app.css?v=') < index.indexOf('./styles/features/exercise.css?v='));
+  assert.ok(index.indexOf('./styles/features/nutrition.css?v=') < index.indexOf('./lab.css?v='));
+  assert.match(build, /styles\/features\/exercise\.css/);
+  assert.doesNotMatch(base, /\.custom-exercise-dialog\{|\.run-pr-notice\{|\.nutrition-log-panel\{/);
 });
 
 test('daily nutrition records use a dedicated validated store and survive backup import/export flows', async () => {

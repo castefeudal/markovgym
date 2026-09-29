@@ -35,10 +35,14 @@ Use the system UI stack already declared in `app.css`. Keep body text at a reada
 - Empty states explain the next useful action. Error states preserve entered data and offer a retry or recovery path.
 - Scrollable regions must be keyboard reachable and have an accessible name.
 
+## Stylesheet ownership
+
+`app.css` remains the compatibility foundation while existing component rules are migrated. New or extracted feature rules live under `styles/features/` (`exercise.css`, `program.css`, `workout.css`, `nutrition.css`) and load in that order after the foundation. Keep a rule with the feature that owns its markup; shared color, type, focus, and control rules belong in the foundation until the shared component sheet is split out. Every new stylesheet must be linked in the generated shell, precached by the service worker, copied by Pages, and covered by the artifact drift check.
+
 ## Themes, accessibility, and motion
 
 Obsidian, Soft, and Ivory share component geometry and semantic tokens. Keep text contrast strong in each theme. Use semantic controls, explicit labels, focus indicators, and `aria-live` only for changes the user needs announced. Respect `prefers-reduced-motion`; animation must not carry information by itself.
 
 ## Responsive rules
 
-The layout adapts at the existing 1024, 900, 840, 640, and 520 px breakpoints. Exercise actions and Run Mode controls remain reachable at 360 px. Check both horizontal overflow and the keyboard path through any horizontally scrolling content.
+The layout adapts at the existing 1024, 900, 840, 640, and 520 px breakpoints. Check 360×800, 390×844, and 430×932 phones, tablet, and desktop. Exercise actions and Run Mode controls remain reachable at 360 px. Check both horizontal overflow and the keyboard path through any horizontally scrolling content.

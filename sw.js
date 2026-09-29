@@ -1,4 +1,4 @@
-const VERSION = '2026.09-r29-router-modules';
+const VERSION = '2026.09-r30-feature-styles';
 const PREFIX = 'mmg-gym-';
 const SHELL = `${PREFIX}shell-${VERSION}`;
 const MEDIA = `${PREFIX}media-${VERSION}`;
@@ -6,6 +6,10 @@ const PRECACHE = [
   './',
   './index.html',
   './app.css',
+  './styles/features/exercise.css',
+  './styles/features/program.css',
+  './styles/features/workout.css',
+  './styles/features/nutrition.css',
   './app.js',
   './src/app/router.mjs',
   './lab.css',
