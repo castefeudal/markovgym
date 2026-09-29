@@ -91,3 +91,22 @@ test('ignores warm-up sets when recommending double progression', () => {
   assert.equal(result.action, 'increase-load');
   assert.equal(result.evidence.completedSets, 2);
 });
+
+test('standard double progression only uses working sets', () => {
+  const result = recommendProgression({
+    previousSets: [
+      { weight: 40, reps: 12, completed: true, type: 'warmup' },
+      { weight: 100, reps: 8, completed: true, type: 'working' },
+      { weight: 100, reps: 7, completed: true, type: 'working' },
+      { weight: 70, reps: 12, completed: true, type: 'drop' },
+      { weight: 60, reps: 10, completed: true, type: 'failure' },
+      { weight: 50, reps: 15, completed: true, type: 'backoff' },
+      { weight: 50, reps: 20, completed: true, type: 'amrap' },
+    ],
+    targetRepRange: '8-10',
+    increment: 2.5,
+  });
+  assert.equal(result.action, 'hold-load');
+  assert.equal(result.previousLoad, 100);
+  assert.equal(result.evidence.completedSets, 2);
+});

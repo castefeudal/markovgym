@@ -35,7 +35,7 @@ export function recommendProgression({
   if (!range) return { status: 'insufficient', reason: 'missing-rep-range' };
 
   const completed = previousSets
-    .filter((set) => set && set.completed !== false && set.type !== 'warmup')
+    .filter((set) => set && set.completed !== false && (set.type == null || set.type === 'working'))
     .map((set) => ({
       weight: finite(set.weight),
       reps: finite(set.reps),

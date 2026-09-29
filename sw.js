@@ -1,4 +1,4 @@
-const VERSION = '2026.09-r18-warmup-builder';
+const VERSION = '2026.09-r19-progression-roles';
 const PREFIX = 'mmg-gym-';
 const SHELL = `${PREFIX}shell-${VERSION}`;
 const MEDIA = `${PREFIX}media-${VERSION}`;
