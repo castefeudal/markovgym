@@ -1,4 +1,4 @@
-const VERSION = '2026.09-r19-progression-roles';
+const VERSION = '2026.09-r20-workout-groups';
 const PREFIX = 'mmg-gym-';
 const SHELL = `${PREFIX}shell-${VERSION}`;
 const MEDIA = `${PREFIX}media-${VERSION}`;
@@ -13,6 +13,7 @@ const PRECACHE = [
   './tools/gym-calculators.mjs',
   './tools/lab-calculators.mjs',
   './tools/progression.mjs',
+  './tools/workout-groups.mjs',
   './src/persistence/history-repository.mjs',
   './src/features/today/decision-engine.mjs',
   './src/features/exercise/substitution-engine.mjs',

@@ -88,6 +88,7 @@
   var historyFilters = { query:'', from:'', to:'', programme:'', exercise:'', durationMin:'', durationMax:'', prOnly:false };
   var todayDecisionEngine = null;
   var substitutionRanker = null;
+  var workoutExecutionOrderFn = null;
   var storageOk = (function () {
     try {
       var k = '__mmg_probe__';
@@ -1760,7 +1761,8 @@
   }
   function normalizeWorkoutRecord(item) {
     item=item&&typeof item==='object'?item:{};
-    var record={id:String(item.id||''),sets:clamp(Number(item.sets)||3,1,20),reps:String(item.reps==null?'10–12':item.reps).slice(0,24),weight:String(item.weight==null?'':item.weight).slice(0,40),done:!!item.done,setLog:Array.isArray(item.setLog)?item.setLog.map(cleanSetRecord).slice(0,20):[]};
+    var groupTypes=['superset','tri-set','circuit'],groupType=groupTypes.indexOf(String(item.groupType||''))>=0?String(item.groupType):'',groupId=groupType?String(item.groupId||'').slice(0,48):'';
+    var record={id:String(item.id||''),sets:clamp(Number(item.sets)||3,1,20),reps:String(item.reps==null?'10–12':item.reps).slice(0,24),weight:String(item.weight==null?'':item.weight).slice(0,40),done:!!item.done,groupId:groupId,groupType:groupId?groupType:'',setLog:Array.isArray(item.setLog)?item.setLog.map(cleanSetRecord).slice(0,20):[]};
     ensureSetLog(record); return record;
   }
   function completedSetCount(item){return ensureSetLog(item).filter(function(x){return x.completed;}).length;}
@@ -1834,12 +1836,14 @@
           '<div class="workout-main">' +
             '<button class="workout-name" type="button" data-open="' + esc(item.id) + '">' + esc(exName(ex)) + '</button>' +
             '<p class="workout-sub"><span class="meta-tag">' + esc(labelMu(ex.target)) + '</span><span class="meta-tag">' + premiumIcon('equipment') + esc(labelEq(ex.equip)) + '</span></p>' +
+            (item.groupId?'<p class="workout-group-badge">'+esc(S.lang==='en'?({superset:'Superset', 'tri-set':'Tri-set', circuit:'Circuit'}[item.groupType]||'Group'):({superset:'Суперсет', 'tri-set':'Три-сет', circuit:'Круг'}[item.groupType]||'Группа'))+'</p>':'')+
             '<div class="workout-fields">' +
               '<label>' + esc(t('wSets')) + '<input class="num" type="number" min="1" max="20" step="1" inputmode="numeric" data-field="sets" value="' + esc(item.sets) + '"></label>' +
               '<label>' + esc(t('wReps')) + '<input type="text" inputmode="numeric" data-field="reps" value="' + esc(item.reps) + '"></label>' +
               '<label>' + esc(t('wWeight')) + '<input type="text" inputmode="decimal" data-field="weight" value="' + esc(item.weight) + '"></label>' +
             '</div>' +
             '<div class="workout-set-summary"><span>' + esc(t('workoutSetsDone',{done:completedSetCount(item),total:item.sets})) + '</span><span class="workout-set-dots" aria-hidden="true">' + ensureSetLog(item).map(function(set){return '<i class="workout-set-dot" data-done="'+String(!!set.completed)+'"></i>';}).join('') + '</span></div>' +
+            '<details class="workout-group-menu"><summary>'+esc(S.lang==='en'?'Group exercises':'Сгруппировать упражнения')+'</summary><div><button type="button" data-group-create="superset">'+esc(S.lang==='en'?'Superset with next':'Суперсет со следующим')+'</button><button type="button" data-group-create="tri-set">'+esc(S.lang==='en'?'Tri-set with next two':'Три-сет со следующими двумя')+'</button><button type="button" data-group-create="circuit">'+esc(S.lang==='en'?'Circuit with next two':'Круг со следующими двумя')+'</button>'+(item.groupId?'<button type="button" data-group-clear>'+esc(S.lang==='en'?'Ungroup':'Разъединить')+'</button>':'')+'</div></details>'+
             '<label class="workout-complete"><input type="checkbox" data-field="done"' + (item.done ? ' checked' : '') + '> ' + esc(t('wDone')) + '</label>' +
           '</div>' +
           '<button class="icon-btn" type="button" data-remove aria-label="' + esc(t('wRemove')) + '">' +
@@ -3642,8 +3646,14 @@
     }
     return {reps:prev.reps||'',weight:prev.weight||'',distance:prev.distance||'',duration:prev.duration||'',completed:!!prev.done};
   }
+  function runExecutionOrder(){
+    var order=workoutExecutionOrderFn?workoutExecutionOrderFn(S.workout):[];
+    if(!order.length)for(var k=0;k<S.workout.length;k++){for(var n=1;n<=(Number(S.workout[k].sets)||1);n++)order.push({ex:k,set:n});}
+    return order;
+  }
   function firstIncompletePosition(){
-    for(var i=0;i<S.workout.length;i++){var log=ensureSetLog(S.workout[i]);for(var j=0;j<log.length;j++)if(!log[j].completed)return{ex:i,set:j+1};}
+    var order=runExecutionOrder();
+    for(var i=0;i<order.length;i++){var pos=order[i],log=ensureSetLog(S.workout[pos.ex]),row=log[pos.set-1];if(row&&!row.completed)return{ex:pos.ex,set:pos.set};}
     return {ex:S.workout.length,set:1};
   }
   function completeCurrentSet(){
@@ -3809,19 +3819,20 @@
     var item=S.workout[runState.ex];
     if(!item){if(!runState.saved){finishWorkout();runState.saved=true;}store.remove(K.runSession);S.runSession=null;closeOverlay($('run'),$('w-run'));return;}
     completeCurrentSet(); renderWorkout();
-    var log=ensureSetLog(item),nextInExercise=-1;
-    for(var j=Math.max(0,runState.set);j<log.length;j++){if(!log[j].completed){nextInExercise=j;break;}}
-    if(nextInExercise>=0){runState.set=nextInExercise+1;startTimer(S.rest);}else{item.done=true;saveWorkout();renderWorkout();var pos=firstIncompletePosition();runState.ex=pos.ex;runState.set=pos.set;if(runState.ex<S.workout.length)startTimer(S.rest);else{stopTimer();track('workout_complete',{n:S.workout.length});}}
+    item.done=ensureSetLog(item).every(function(set){return set.completed;});
+    var order=runExecutionOrder(),currentIndex=order.findIndex(function(pos){return pos.ex===runState.ex&&pos.set===runState.set;}),next=null;
+    for(var j=Math.max(0,currentIndex+1);j<order.length;j++){var candidate=order[j],candidateLog=ensureSetLog(S.workout[candidate.ex]);if(candidateLog[candidate.set-1]&&!candidateLog[candidate.set-1].completed){next=candidate;break;}}
+    if(!next){var wrapped=firstIncompletePosition();if(wrapped.ex<S.workout.length)next=wrapped;}
+    if(next){var sameGroup=!!(item.groupId&&S.workout[next.ex]&&S.workout[next.ex].groupId===item.groupId),sameRound=next.set===runState.set;runState.ex=next.ex;runState.set=next.set;if(sameGroup&&sameRound)stopTimer();else startTimer(S.rest);}
+    else{saveWorkout();renderWorkout();runState.ex=S.workout.length;runState.set=1;stopTimer();track('workout_complete',{n:S.workout.length});}
     saveRunSession();renderRun();
   }
 
   function runPrev() {
     saveCurrentSetDraft();
-    if (runState.set > 1) runState.set--;
-    else if (runState.ex > 0) {
-      runState.ex--;
-      runState.set = S.workout[runState.ex] ? Number(S.workout[runState.ex].sets) || 1 : 1;
-    }
+    var order=runExecutionOrder(),current=order.findIndex(function(pos){return pos.ex===runState.ex&&pos.set===runState.set;});
+    if(current<0&&runState.ex>=S.workout.length)current=order.length;
+    if(current>0){runState.ex=order[current-1].ex;runState.set=order[current-1].set;}
     saveRunSession();
     renderRun();
   }
@@ -3856,7 +3867,7 @@
       durationSec: runState && runState.startedAt ? runElapsedSeconds() : 0,
       personalRecords:workoutPersonalRecords(),
       items: S.workout.map(function (w) {
-        var ex=BY_ID[w.id];return { id:w.id, sets:w.sets, reps:w.reps, weight:w.weight, trackingType:ex&&ex.custom?ex.trackingType:(ex&&ex.zone==='cardio'?'duration':'weight-reps'), done:w.done, setLog:ensureSetLog(w).map(function(set){return Object.assign({},set);}) };
+        var ex=BY_ID[w.id];return { id:w.id, sets:w.sets, reps:w.reps, weight:w.weight, groupId:w.groupId, groupType:w.groupType, trackingType:ex&&ex.custom?ex.trackingType:(ex&&ex.zone==='cardio'?'duration':'weight-reps'), done:w.done, setLog:ensureSetLog(w).map(function(set){return Object.assign({},set);}) };
       })
     };
     S.history.unshift(entry);
@@ -3872,12 +3883,13 @@
     var note=String(h.note||'').trim();
     var items=(h.items||[]).map(function(item){
       var ex=BY_ID[item.id],name=ex?exName(ex):item.id,sets=Array.isArray(item.setLog)&&item.setLog.length?item.setLog:null;
+      var groupNames={superset:S.lang==='en'?'Superset':'Суперсет','tri-set':S.lang==='en'?'Tri-set':'Три-сет',circuit:S.lang==='en'?'Circuit':'Круг'};
       var evidence=sets?sets.map(function(row,i){
         var details=[];if(row.rir!==''&&row.rir!=null)details.push('RIR '+row.rir);if(row.rpe!==''&&row.rpe!=null)details.push('RPE '+row.rpe);if(Number(row.restSec)>0)details.push((S.lang==='en'?'Rest ':'Отдых ')+row.restSec+'s');if(row.note)details.push(String(row.note));
         var typeNames={warmup:S.lang==='en'?'Warm-up':'Разминка',working:S.lang==='en'?'Working':'Рабочий',drop:'Drop',failure:S.lang==='en'?'Failure':'Отказ',backoff:'Back-off',amrap:'AMRAP'};
         return '<span class="hist-set-chip" data-done="'+String(!!row.completed)+'"><small>'+esc(t('histSet',{i:i+1}))+' · '+esc(typeNames[row.type]||row.type||'—')+'</small><b>'+esc(setPerformanceSummary(row)||'—')+'</b>'+(details.length?'<small class="hist-set-extra">'+esc(details.join(' · '))+'</small>':'')+'</span>';
       }).join(''):'<span class="hist-set-chip"><small>'+esc(t('sessionSets'))+'</small><b>'+esc(String(item.sets||0)+' × '+String(item.reps||'—'))+'</b></span>';
-      return '<div class="hist-ex"><span><b>'+esc(name)+'</b><small>'+esc(ex?labelMu(ex.target):'')+'</small></span><div class="hist-set-list">'+evidence+'</div></div>';
+      return '<div class="hist-ex"'+(item.groupId?' data-group-id="'+esc(item.groupId)+'"':'')+'><span><b>'+esc(name)+'</b><small>'+esc((ex?labelMu(ex.target):'')+(item.groupType?' · '+groupNames[item.groupType]:''))+'</small></span><div class="hist-set-list">'+evidence+'</div></div>';
     }).join('');
     var prs=(h.personalRecords||[]).map(function(record){return '<span class="hist-pr-chip">'+(S.lang==='en'?'PR':'PR')+' · '+esc(record.type)+' '+esc(String(record.value))+'</span>';}).join('');
     return '<div class="hist-detail" id="hist-detail-'+esc(h.id)+'" hidden>'+(note?'<p class="hist-session-note"><b>'+(S.lang==='en'?'Note':'Заметка')+':</b> '+esc(note)+'</p>':'')+(prs?'<div class="hist-pr-list">'+prs+'</div>':'')+items+'</div>';
@@ -3938,7 +3950,7 @@
   function repeatWorkout(id) {
     var h = S.history.filter(function (x) { return x.id === id; })[0];
     if (!h) return;
-    S.workout=h.items.filter(function(i){return BY_ID[i.id];}).map(function(i){var last=Array.isArray(i.setLog)?i.setLog.filter(function(x){return x&&x.completed;}).slice(-1)[0]:null;return normalizeWorkoutRecord({id:i.id,sets:i.sets,reps:last&&last.reps?last.reps:i.reps,weight:last&&last.weight?last.weight:i.weight,done:false,setLog:[]});});
+    S.workout=h.items.filter(function(i){return BY_ID[i.id];}).map(function(i){var last=Array.isArray(i.setLog)?i.setLog.filter(function(x){return x&&x.completed;}).slice(-1)[0]:null;return normalizeWorkoutRecord({id:i.id,sets:i.sets,reps:last&&last.reps?last.reps:i.reps,weight:last&&last.weight?last.weight:i.weight,groupId:i.groupId,groupType:i.groupType,done:false,setLog:[]});});
     S.meta.name = h.name;
     S.meta.date = todayISO();
     S.meta.note='';S.meta.planDay=null;
@@ -3955,7 +3967,7 @@
       v: 4, kind: 'workout', meta: S.meta,
       items: S.workout.map(function (w) {
         var ex = BY_ID[w.id];
-        return { id:w.id, name:ex?exName(ex):'', sets:w.sets, reps:w.reps, weight:w.weight, done:w.done, setLog:ensureSetLog(w).map(function(set){return Object.assign({},set);}) };
+        return { id:w.id, name:ex?exName(ex):'', sets:w.sets, reps:w.reps, weight:w.weight, done:w.done, groupId:w.groupId, groupType:w.groupType, setLog:ensureSetLog(w).map(function(set){return Object.assign({},set);}) };
       })
     }, null, 2);
   }
@@ -6242,6 +6254,15 @@
       var open = e.target.closest('[data-open]');
       if (open) { openExercise(open.dataset.open, open); return; }
       if (!item) return;
+      var groupAction=e.target.closest('[data-group-create]');
+      if(groupAction){
+        var start=S.workout.findIndex(function(row){return row.id===item.dataset.id;}),type=groupAction.dataset.groupCreate,count=type==='superset'?2:3;
+        var members=S.workout.slice(start,start+count);
+        if(start<0||members.length!==count||members.some(function(row){return row.groupId||ensureSetLog(row).some(function(set){return set.completed;});})){showToast(S.lang==='en'?'This group needs enough adjacent, unstarted exercises.':'Для группы нужны соседние упражнения, которые ещё не начинались.');return;}
+        var groupId='group-'+Date.now().toString(36)+'-'+start;
+        members.forEach(function(row){row.groupId=groupId;row.groupType=type;});saveWorkout();renderWorkout();showToast(S.lang==='en'?'Exercise group saved.':'Группа упражнений сохранена.');return;
+      }
+      if(e.target.closest('[data-group-clear]')){var groupId=item.groupId;if(groupId)S.workout.forEach(function(row){if(row.groupId===groupId){row.groupId='';row.groupType='';}});saveWorkout();renderWorkout();showToast(S.lang==='en'?'Exercises ungrouped.':'Упражнения разделены.');return;}
       var move = e.target.closest('[data-move]');
       if (move) { moveInWorkout(item.dataset.id, Number(move.dataset.move)); return; }
       if (e.target.closest('[data-remove]')) removeFromWorkout(item.dataset.id);
@@ -6795,7 +6816,7 @@
      Correctness -> data integrity -> usability -> accessibility -> performance.
      This layer deliberately preserves the proven V4 business logic and contracts.
      ======================================================================== */
-  var APP_VERSION = '2026.09-r19-progression-roles';
+  var APP_VERSION = '2026.09-r20-workout-groups';
   var BACKUP_SCHEMA = 9;
   K.restTimer = 'mmg.restTimer.v2';
   K.lastBackup = 'mmg.lastBackup.v1';
@@ -7460,6 +7481,12 @@
 
 
   async function init() {
+    try {
+      var workoutGroupModule = await import('./tools/workout-groups.mjs');
+      workoutExecutionOrderFn = workoutGroupModule.workoutExecutionOrder;
+    } catch (error) {
+      window.dispatchEvent(new CustomEvent('mmg:error', { detail: { key: 'workout-groups' } }));
+    }
     try {
       var todayModule = await import('./src/features/today/decision-engine.mjs');
       todayDecisionEngine = todayModule.nextWorkoutAction;

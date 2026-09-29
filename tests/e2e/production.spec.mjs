@@ -579,6 +579,50 @@ test('Lab warm-up can be added before an unstarted weighted exercise', async ({ 
   expect(setLog[setLog.length - 1].type).toBe('working');
 });
 
+test('Workout superset runs in alternating rounds and survives workout storage', async ({ page }) => {
+  await page.goto('/index.html#library');
+  await expect(page.locator('#mmg-boot')).toHaveCount(0);
+  const exerciseIds = await page.locator('#grid [data-add]').evaluateAll(async (buttons) => {
+    const raw = await (await fetch('./data/exercises-compact.json')).json();
+    const strengthIds = new Set(raw.x.filter((row) => raw.bp[row[3]] !== 'cardio').map((row) => row[0]));
+    return buttons.filter((button) => strengthIds.has(button.getAttribute('data-add'))).slice(0, 2).map((button) => button.getAttribute('data-add'));
+  });
+  expect(exerciseIds).toHaveLength(2);
+  const exerciseNames = [];
+  for (const id of exerciseIds) {
+    const card = page.locator('#grid [data-add="' + id + '"]').locator('xpath=ancestor::article[contains(@class,"card")]');
+    exerciseNames.push(await card.locator('.card-title').innerText());
+    await page.locator('#grid [data-add="' + id + '"]').click();
+  }
+  await page.goto('/index.html#workout');
+  for (const workoutItem of await page.locator('.workout-item').all()) {
+    await workoutItem.locator('[data-field="sets"]').fill('1');
+    await workoutItem.locator('[data-field="sets"]').press('Tab');
+  }
+  const firstItem = page.locator('.workout-item').first();
+  await firstItem.locator('.workout-group-menu summary').click();
+  await firstItem.locator('[data-group-create="superset"]').click();
+  const savedWorkout = await page.evaluate(() => JSON.parse(localStorage.getItem('mmg.workout.v2') || '[]'));
+  expect(savedWorkout[0].groupType).toBe('superset');
+  expect(savedWorkout[1].groupId).toBe(savedWorkout[0].groupId);
+  await page.locator('[data-v8-start-run]:visible, #w-run:visible').first().click();
+  await expect(page.locator('.run-name')).toHaveText(exerciseNames[0]);
+  await page.locator('#run-next').click();
+  await expect(page.locator('.run-name')).toHaveText(exerciseNames[1]);
+  const afterFirstSet = await page.evaluate(() => JSON.parse(localStorage.getItem('mmg.workout.v2') || '[]'));
+  expect(afterFirstSet[0].setLog[0].completed).toBe(true);
+  expect(afterFirstSet[1].setLog[0].completed).toBe(false);
+  await page.locator('#run-next').click();
+  await expect(page.locator('.run-finish-summary')).toBeVisible();
+  await page.locator('#run-next').click();
+  await page.locator('[data-hist-detail]').first().click();
+  await expect(page.locator('.hist-detail [data-group-id]')).toHaveCount(2);
+  await page.locator('[data-hist-repeat]').first().click();
+  const repeatedWorkout = await page.evaluate(() => JSON.parse(localStorage.getItem('mmg.workout.v2') || '[]'));
+  expect(repeatedWorkout[0].groupType).toBe('superset');
+  expect(repeatedWorkout[1].groupId).toBe(repeatedWorkout[0].groupId);
+});
+
 test('exercise detail has no horizontal overflow on a 390px viewport', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/index.html#library');
