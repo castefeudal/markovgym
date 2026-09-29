@@ -1,6 +1,21 @@
 import { test, expect } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 
+async function chooseLanguage(page, locale) {
+  const desktopControl = page.locator(`#lang-switch [data-lang="${locale}"]`);
+  if (await desktopControl.isVisible()) {
+    await desktopControl.click();
+    return;
+  }
+  await page.goto('/index.html#settings');
+  await expect(page.locator('html')).toHaveAttribute('data-app-ready', 'true');
+  await expect(page.locator('html')).toHaveAttribute('data-route-ready', 'settings');
+  await expect(page.locator('#settings')).toBeVisible();
+  const control = page.locator(`#v7-language-actions [data-lang="${locale}"]`);
+  await control.scrollIntoViewIfNeeded();
+  await control.click();
+}
+
 test('home boots with the full exercise dataset and no page errors', async ({ page }) => {
   const errors = [];
   const failed = [];
@@ -541,15 +556,18 @@ test('RU and EN runtime translations follow the saved language', async ({ page }
   await page.goto('/index.html#workout');
   await expect(page.locator('html')).toHaveAttribute('data-app-ready', 'true');
   await expect(page.locator('#workout-list .empty b')).toContainText('Тренировка пока пустая');
-  await page.locator('[data-lang="en"]:visible').first().click();
+  await chooseLanguage(page, 'en');
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+  await page.goto('/index.html#workout');
   await expect(page.locator('#workout-list .empty b')).toContainText('The workout is empty');
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('data-app-ready', 'true');
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
   await expect(page.locator('#workout-list .empty b')).toContainText('The workout is empty');
-  await page.locator('[data-lang="ru"]:visible').first().click();
+  await page.goto('/index.html#settings');
+  await chooseLanguage(page, 'ru');
   await expect(page.locator('html')).toHaveAttribute('lang', 'ru');
+  await page.goto('/index.html#workout');
   await expect(page.locator('#workout-list .empty b')).toContainText('Тренировка пока пустая');
 });
 

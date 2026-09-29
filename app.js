@@ -5973,7 +5973,8 @@
       applyTheme();
     });
 
-    [qs('#lang-switch'), qs('#lang-switch-m')].forEach(function (group) {
+    [qs('#lang-switch'), qs('#lang-switch-m'), qs('#v7-language-actions')].forEach(function (group) {
+      if (!group) return;
       group.addEventListener('click', function (e) {
         var btn = e.target.closest('[data-lang]');
         if (!btn || btn.dataset.lang === S.lang) return;
@@ -7589,6 +7590,9 @@
   }
   function renderV7Settings(){
     if(!$('settings'))return;
+    if($('v7-language-title'))$('v7-language-title').textContent=S.lang==='en'?'Language':'Язык';
+    if($('v7-language-actions'))$('v7-language-actions').setAttribute('aria-label',S.lang==='en'?'Interface language':'Язык интерфейса');
+    if($('v7-language-actions'))$('v7-language-actions').innerHTML=[['ru',S.lang==='en'?'Russian':'Русский'],['en','English']].map(function(item){return'<button type="button" data-lang="'+item[0]+'" aria-pressed="'+String(S.lang===item[0])+'">'+esc(item[1])+'</button>';}).join('');
     $('v7-settings-sub').textContent=v7c('settingsSub');
     $('v7-theme-title').textContent=v7c('appearance');
     $('v7-log-title').textContent=v7c('logging');
