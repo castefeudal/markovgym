@@ -85,6 +85,7 @@
   var activeEquipmentProfileId = '';
   var cleanCustomExercises = function (rows) { return Array.isArray(rows) ? rows.filter(function (row) { return row && typeof row === 'object'; }) : []; };
   var historyVisibleCount = 20;
+  var historyFilters = { query:'', from:'', to:'', programme:'', exercise:'', durationMin:'', durationMax:'', prOnly:false };
   var todayDecisionEngine = null;
   var substitutionRanker = null;
   var storageOk = (function () {
@@ -1749,7 +1750,7 @@
     raw = raw && typeof raw === 'object' ? raw : {};
     var setTypes=['warmup','working','drop','failure','backoff','amrap'];
     var type=setTypes.indexOf(String(raw.type||'working'))!==-1?String(raw.type||'working'):'working';
-    return { reps:String(raw.reps==null?'':raw.reps).slice(0,24), weight:String(raw.weight==null?'':raw.weight).slice(0,40), distance:String(raw.distance==null?'':raw.distance).slice(0,32), duration:String(raw.duration==null?'':raw.duration).slice(0,32), rir:String(raw.rir==null?'':raw.rir).slice(0,8), rpe:String(raw.rpe==null?'':raw.rpe).slice(0,8), type:type, completed:!!raw.completed, completedAt:Number(raw.completedAt)>0?Number(raw.completedAt):0 };
+    return { reps:String(raw.reps==null?'':raw.reps).slice(0,24), weight:String(raw.weight==null?'':raw.weight).slice(0,40), distance:String(raw.distance==null?'':raw.distance).slice(0,32), duration:String(raw.duration==null?'':raw.duration).slice(0,32), rir:String(raw.rir==null?'':raw.rir).slice(0,8), rpe:String(raw.rpe==null?'':raw.rpe).slice(0,8), restSec:Math.max(0,Number(raw.restSec)||0), note:String(raw.note==null?'':raw.note).slice(0,500), type:type, completed:!!raw.completed, completedAt:Number(raw.completedAt)>0?Number(raw.completedAt):0 };
   }
   function ensureSetLog(item) {
     if (!item) return [];
@@ -3654,7 +3655,7 @@
       var field=qs('[data-run-field="'+name+'"]',stage);if(field)row[name]=String(field.value||'').slice(0,name==='reps'?24:40);
     });
     if(typeInput)row.type=String(typeInput.value||'working').slice(0,12);
-    row.completed=true; row.completedAt=Date.now(); item.reps=row.reps||item.reps; item.weight=row.weight||item.weight; item.done=log.every(function(x){return x.completed;});
+    row.completed=true; row.completedAt=Date.now(); row.restSec=Math.max(0,Number(S.rest)||0); item.reps=row.reps||item.reps; item.weight=row.weight||item.weight; item.done=log.every(function(x){return x.completed;});
     if(!wasCompleted&&detectSetPersonalRecords){
       var exercise=BY_ID[item.id],tracking=exercise&&exercise.custom?exercise.trackingType:(exercise&&exercise.zone==='cardio'?'duration':'weight-reps');
       var records=detectSetPersonalRecords({exerciseId:item.id,set:row,trackingType:tracking,history:S.history});
@@ -3827,19 +3828,70 @@
   }
 
   function historyDetailHtml(h){
-    return '<div class="hist-detail" id="hist-detail-'+esc(h.id)+'" hidden>'+h.items.map(function(item){var ex=BY_ID[item.id],name=ex?exName(ex):item.id,sets=Array.isArray(item.setLog)&&item.setLog.length?item.setLog:null;var evidence=sets?sets.map(function(row,i){return '<span class="hist-set-chip" data-done="'+String(!!row.completed)+'"><small>'+esc(t('histSet',{i:i+1}))+'</small><b>'+esc(setPerformanceSummary(row)||'—')+'</b></span>';}).join(''):'<span class="hist-set-chip"><small>'+esc(t('sessionSets'))+'</small><b>'+esc(String(item.sets||0)+' × '+String(item.reps||'—'))+'</b></span>';return '<div class="hist-ex"><span><b>'+esc(name)+'</b><small>'+esc(ex?labelMu(ex.target):'')+'</small></span><div class="hist-set-list">'+evidence+'</div></div>';}).join('')+'</div>';
+    var note=String(h.note||'').trim();
+    var items=(h.items||[]).map(function(item){
+      var ex=BY_ID[item.id],name=ex?exName(ex):item.id,sets=Array.isArray(item.setLog)&&item.setLog.length?item.setLog:null;
+      var evidence=sets?sets.map(function(row,i){
+        var details=[];if(row.rir!==''&&row.rir!=null)details.push('RIR '+row.rir);if(row.rpe!==''&&row.rpe!=null)details.push('RPE '+row.rpe);if(Number(row.restSec)>0)details.push((S.lang==='en'?'Rest ':'Отдых ')+row.restSec+'s');if(row.note)details.push(String(row.note));
+        var typeNames={warmup:S.lang==='en'?'Warm-up':'Разминка',working:S.lang==='en'?'Working':'Рабочий',drop:'Drop',failure:S.lang==='en'?'Failure':'Отказ',backoff:'Back-off',amrap:'AMRAP'};
+        return '<span class="hist-set-chip" data-done="'+String(!!row.completed)+'"><small>'+esc(t('histSet',{i:i+1}))+' · '+esc(typeNames[row.type]||row.type||'—')+'</small><b>'+esc(setPerformanceSummary(row)||'—')+'</b>'+(details.length?'<small class="hist-set-extra">'+esc(details.join(' · '))+'</small>':'')+'</span>';
+      }).join(''):'<span class="hist-set-chip"><small>'+esc(t('sessionSets'))+'</small><b>'+esc(String(item.sets||0)+' × '+String(item.reps||'—'))+'</b></span>';
+      return '<div class="hist-ex"><span><b>'+esc(name)+'</b><small>'+esc(ex?labelMu(ex.target):'')+'</small></span><div class="hist-set-list">'+evidence+'</div></div>';
+    }).join('');
+    var prs=(h.personalRecords||[]).map(function(record){return '<span class="hist-pr-chip">'+(S.lang==='en'?'PR':'PR')+' · '+esc(record.type)+' '+esc(String(record.value))+'</span>';}).join('');
+    return '<div class="hist-detail" id="hist-detail-'+esc(h.id)+'" hidden>'+(note?'<p class="hist-session-note"><b>'+(S.lang==='en'?'Note':'Заметка')+':</b> '+esc(note)+'</p>':'')+(prs?'<div class="hist-pr-list">'+prs+'</div>':'')+items+'</div>';
+  }
+
+  function renderHistoryFilterOptions(){
+    var programme=$('history-programme'),exercise=$('history-exercise');if(!programme||!exercise)return;
+    var currentProgram=historyFilters.programme,currentExercise=historyFilters.exercise;
+    var days=Array.from(new Set(S.history.map(function(h){return h.planDay;}).filter(function(day){return day!=null&&Number.isFinite(Number(day));}))).sort(function(a,b){return Number(a)-Number(b);});
+    programme.innerHTML='<option value="">'+(S.lang==='en'?'All programmes':'Все программы')+'</option><option value="unplanned">'+(S.lang==='en'?'Unplanned':'Без программы')+'</option>'+days.map(function(day){return'<option value="day:'+esc(String(day))+'">'+esc(S.lang==='en'?'Day ':'День ')+esc(String(Number(day)+1))+'</option>';}).join('');
+    var exerciseIds=Array.from(new Set(S.history.flatMap(function(h){return(h.items||[]).map(function(item){return String(item.id||'');}).filter(Boolean);}))).sort(function(a,b){return exName(BY_ID[a]||{id:a}).localeCompare(exName(BY_ID[b]||{id:b}),S.lang);});
+    exercise.innerHTML='<option value="">'+(S.lang==='en'?'All exercises':'Все упражнения')+'</option>'+exerciseIds.map(function(id){var ex=BY_ID[id];return'<option value="'+esc(id)+'">'+esc(ex?exName(ex):id)+'</option>';}).join('');
+    programme.value=currentProgram;exercise.value=currentExercise;
+    var strings=S.lang==='en'?{search:'Search',placeholder:'Workout, exercise or note',from:'From date',to:'To date',programme:'Programme',exercise:'Exercise',min:'Minutes from',max:'to',pr:'Has PR'}:{search:'Поиск',placeholder:'Тренировка, упражнение, заметка',from:'С даты',to:'По дату',programme:'Программа',exercise:'Упражнение',min:'Минуты от',max:'до',pr:'Есть PR'};
+    var labelMap=[['history-query',strings.search],['history-from',strings.from],['history-to',strings.to],['history-programme',strings.programme],['history-exercise',strings.exercise],['history-duration-min',strings.min],['history-duration-max',strings.max]];
+    labelMap.forEach(function(pair){var input=$(pair[0]);if(input){var label=input.closest('label'),span=label&&qs('span',label);if(span)span.textContent=pair[1];}});
+    var query=$('history-query'),queryFocused=query&&document.activeElement===query,queryStart=queryFocused?query.selectionStart:null,queryEnd=queryFocused?query.selectionEnd:null;if(query){query.placeholder=strings.placeholder;query.value=historyFilters.query;if(queryFocused&&queryStart!=null)query.setSelectionRange(queryStart,queryEnd);}
+    $('history-from').value=historyFilters.from;$('history-to').value=historyFilters.to;$('history-duration-min').value=historyFilters.durationMin;$('history-duration-max').value=historyFilters.durationMax;$('history-pr-only').checked=historyFilters.prOnly;
+    var prLabel=$('history-pr-only').closest('label');if(prLabel){var prText=qs('span',prLabel);if(prText)prText.textContent=strings.pr;}
+  }
+
+  function filteredHistory(){
+    var q=historyFilters.query.trim().toLocaleLowerCase();
+    return S.history.filter(function(h){
+      var items=h.items||[],duration=Number(h.durationSec)||0;
+      if(historyFilters.from&&String(h.date||'')<historyFilters.from)return false;
+      if(historyFilters.to&&String(h.date||'')>historyFilters.to)return false;
+      if(historyFilters.programme==='unplanned'&&h.planDay!=null)return false;
+      if(historyFilters.programme.indexOf('day:')===0&&(h.planDay==null||Number(h.planDay)!==Number(historyFilters.programme.slice(4))))return false;
+      if(historyFilters.exercise&&!items.some(function(item){return String(item.id)===historyFilters.exercise;}))return false;
+      if(historyFilters.prOnly&&!(h.personalRecords||[]).length)return false;
+      if(historyFilters.durationMin&&duration<Number(historyFilters.durationMin)*60)return false;
+      if(historyFilters.durationMax&&duration>Number(historyFilters.durationMax)*60)return false;
+      if(q){var searchable=[h.name,h.date,h.note].concat(items.map(function(item){var ex=BY_ID[item.id];return(ex?exName(ex):item.id)+' '+(item.setLog||[]).map(function(set){return[setPerformanceSummary(set),set.note,set.type].join(' ');}).join(' ');})).concat((h.personalRecords||[]).map(function(record){return record.type+' '+record.value;})).join(' ').toLocaleLowerCase();if(searchable.indexOf(q)<0)return false;}
+      return true;
+    });
+  }
+
+  function updateHistoryFilterState(){
+    historyFilters={query:$('history-query').value,from:$('history-from').value,to:$('history-to').value,programme:$('history-programme').value,exercise:$('history-exercise').value,durationMin:$('history-duration-min').value,durationMax:$('history-duration-max').value,prOnly:$('history-pr-only').checked};
+    historyVisibleCount=20;renderHistory();
   }
 
   function renderHistory() {
     var host = $('hist');
     if (!host) return;
+    renderHistoryFilterOptions();
     if (!S.history.length) { host.innerHTML = '<p class="tiny">' + esc(t('histEmpty')) + '</p>'; return; }
-    var visible = S.history.slice(0, historyVisibleCount);
+    var filtered=filteredHistory(),visible=filtered.slice(0,historyVisibleCount);
+    if(!filtered.length){host.innerHTML='<p class="tiny">'+(S.lang==='en'?'No workouts match these filters.':'Нет тренировок по этим условиям.')+'</p>';return;}
     host.innerHTML = visible.map(function (h) {
-      var done=h.items.filter(function(i){return i.done;}).length, doneSets=totalCompletedHistorySets(h), totalSets=totalHistorySets(h);
-      var duration=Number(h.durationSec)>0?Math.max(1,Math.round(Number(h.durationSec)/60)):0;
-      return '<div class="hist-item"><span><b class="hist-name">' + esc(h.name) + '</b><span class="hist-meta">' + esc(h.date) + ' · ' + esc(t('histMeta', { n: h.items.length, d: done })) + '</span><span class="hist-evidence"><b>'+esc(t('histSetsDone',{done:doneSets,total:totalSets}))+'</b>'+(duration?'<span>'+esc(t('histDuration',{v:duration}))+'</span>':'')+'</span></span><span class="hist-actions"><button class="btn btn-quiet btn-sm" type="button" data-hist-detail="'+esc(h.id)+'" aria-expanded="false" aria-controls="hist-detail-'+esc(h.id)+'">'+esc(t('histDetails'))+'</button><button class="btn btn-quiet btn-sm" type="button" data-hist-repeat="' + esc(h.id) + '">' + esc(t('histRepeat')) + '</button><button class="btn btn-quiet btn-sm btn-danger" type="button" data-hist-del="' + esc(h.id) + '" aria-label="' + esc(t('histDelete')) + '">×</button></span>'+historyDetailHtml(h)+'</div>';
-    }).join('') + (visible.length < S.history.length ? '<button class="btn btn-quiet btn-sm" type="button" data-history-more>' + esc(t('histMore', { shown: visible.length, total: S.history.length })) + '</button>' : '');
+      var done=(h.items||[]).filter(function(i){return i.done;}).length, doneSets=totalCompletedHistorySets(h), totalSets=totalHistorySets(h);
+      var duration=Number(h.durationSec)>0?Math.max(1,Math.round(Number(h.durationSec)/60)):0,prCount=(h.personalRecords||[]).length;
+      return '<div class="hist-item"><span><b class="hist-name">' + esc(h.name) + '</b><span class="hist-meta">' + esc(h.date) + ' · ' + esc(t('histMeta', { n: h.items.length, d: done })) + '</span><span class="hist-evidence"><b>'+esc(t('histSetsDone',{done:doneSets,total:totalSets}))+'</b>'+(duration?'<span>'+esc(t('histDuration',{v:duration}))+'</span>':'')+(prCount?'<span class="hist-pr-count">'+(S.lang==='en'?'PRs: ':'PR: ')+prCount+'</span>':'')+'</span></span><span class="hist-actions"><button class="btn btn-quiet btn-sm" type="button" data-hist-detail="'+esc(h.id)+'" aria-expanded="false" aria-controls="hist-detail-'+esc(h.id)+'">'+esc(t('histDetails'))+'</button><button class="btn btn-quiet btn-sm" type="button" data-hist-repeat="' + esc(h.id) + '">' + esc(t('histRepeat')) + '</button><button class="btn btn-quiet btn-sm btn-danger" type="button" data-hist-del="' + esc(h.id) + '" aria-label="' + esc(t('histDelete')) + '">×</button></span>'+historyDetailHtml(h)+'</div>';
+    }).join('') + (visible.length < filtered.length ? '<button class="btn btn-quiet btn-sm" type="button" data-history-more>' + esc(t('histMore', { shown: visible.length, total: filtered.length })) + '</button>' : '');
   }
 
   function repeatWorkout(id) {
@@ -5401,6 +5453,8 @@
         saveHistory(); renderHistory(); renderDashIfVisible();
       }
     });
+    $('history-filters').addEventListener('input', updateHistoryFilterState);
+    $('history-filters').addEventListener('change', updateHistoryFilterState);
 
     /* --- недельная сверка --- */
     $('checkin-form').addEventListener('submit', function (e) { e.preventDefault(); runCheckin(); });
@@ -6656,7 +6710,7 @@
      Correctness -> data integrity -> usability -> accessibility -> performance.
      This layer deliberately preserves the proven V4 business logic and contracts.
      ======================================================================== */
-  var APP_VERSION = '2026.09-r15-personal-records';
+  var APP_VERSION = '2026.09-r16-history-workspace';
   var BACKUP_SCHEMA = 9;
   K.restTimer = 'mmg.restTimer.v2';
   K.lastBackup = 'mmg.lastBackup.v1';

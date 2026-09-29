@@ -1,4 +1,4 @@
-const VERSION = '2026.09-r15-personal-records';
+const VERSION = '2026.09-r16-history-workspace';
 const PREFIX = 'mmg-gym-';
 const SHELL = `${PREFIX}shell-${VERSION}`;
 const MEDIA = `${PREFIX}media-${VERSION}`;

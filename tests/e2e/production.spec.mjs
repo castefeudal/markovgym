@@ -30,7 +30,11 @@ test('legacy workout history migrates to IndexedDB without a 20-session cap', as
     id: `legacy-${index}`,
     name: `Session ${index}`,
     date: `2026-09-${String(28 - (index % 28)).padStart(2, '0')}`,
-    items: [{ id: '0001', done: true, setLog: [{ completed: true, reps: 8, weight: 40 }] }],
+    note: index === 0 ? 'bench note' : '',
+    planDay: index % 2 === 0 ? 0 : null,
+    durationSec: index * 60,
+    personalRecords: index === 0 ? [{ type: 'e1rm', value: 52.3 }] : [],
+    items: [{ id: index % 2 === 0 ? '0001' : '0002', done: true, setLog: [{ completed: true, type: 'working', reps: 8, weight: 40, rir: 2, rpe: 8, restSec: 90, note: index === 0 ? 'bench note' : '' }] }],
   }));
   const customExercise = {
     id: 'custom-legacy-example', nameRu: 'Старое пользовательское упражнение', nameEn: 'Legacy custom exercise',
@@ -113,6 +117,27 @@ test('legacy workout history migrates to IndexedDB without a 20-session cap', as
   await expect(page.locator('#hist .hist-item')).toHaveCount(20);
   await page.locator('#hist [data-history-more]').click();
   await expect(page.locator('#hist .hist-item')).toHaveCount(28);
+  await page.locator('#history-query').fill('Session 27');
+  await expect(page.locator('#hist .hist-item')).toHaveCount(1);
+  await page.locator('#history-query').fill('');
+  await page.locator('#history-from').fill('2026-09-28');
+  await expect(page.locator('#hist .hist-item')).toHaveCount(1);
+  await page.locator('#history-from').fill('');
+  await page.locator('#history-programme').selectOption('day:0');
+  await expect(page.locator('#hist .hist-item')).toHaveCount(14);
+  await page.locator('#history-programme').selectOption('');
+  await page.locator('#history-exercise').selectOption('0001');
+  await expect(page.locator('#hist .hist-item')).toHaveCount(14);
+  await page.locator('#history-duration-min').fill('20');
+  await expect(page.locator('#hist .hist-item')).toHaveCount(4);
+  await page.locator('#history-duration-min').fill('');
+  await page.locator('#history-pr-only').check();
+  await expect(page.locator('#hist .hist-item')).toHaveCount(1);
+  await page.locator('#hist [data-hist-detail]').click();
+  await expect(page.locator('.hist-detail')).toContainText('RIR 2');
+  await expect(page.locator('.hist-detail')).toContainText('RPE 8');
+  await expect(page.locator('.hist-detail')).toContainText(/Rest 90s|Отдых 90s/);
+  await expect(page.locator('.hist-detail')).toContainText('bench note');
 });
 
 test('custom exercise joins the Library, saved workout, Run Mode, history and schema v9 backup', async ({ page }) => {
