@@ -148,7 +148,7 @@ test('PWA manifest is relative-origin and points to a valid shell', async () => 
 
 test('service worker precaches the same shell resources as the index', async () => {
   const sw = await read('sw.js');
-  for (const resource of ['index.html', 'app.css', 'app.js', 'tools/workout-groups.mjs', 'src/persistence/history-repository.mjs', 'src/features/today/decision-engine.mjs', 'src/features/exercise/substitution-engine.mjs', 'src/features/workout/pr-engine.mjs', 'src/features/nutrition/nutrition-analytics.mjs', 'src/features/progress/weight-trend.mjs', 'data/content.json', 'data/exercises-compact.json']) assert.match(sw, new RegExp(resource.replaceAll('.', '\\.')));
+  for (const resource of ['index.html', 'app.css', 'app.js', 'tools/workout-groups.mjs', 'src/app/router.mjs', 'src/persistence/history-repository.mjs', 'src/features/today/decision-engine.mjs', 'src/features/exercise/substitution-engine.mjs', 'src/features/workout/pr-engine.mjs', 'src/features/nutrition/nutrition-analytics.mjs', 'src/features/progress/weight-trend.mjs', 'data/content.json', 'data/exercises-compact.json']) assert.match(sw, new RegExp(resource.replaceAll('.', '\\.')));
   assert.doesNotMatch(sw, /legacy-base\.html|r2\.payload/);
 });
 

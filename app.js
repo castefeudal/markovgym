@@ -97,6 +97,8 @@
   var weeklyNutritionBudgetFn = null;
   var substitutionRanker = null;
   var workoutExecutionOrderFn = null;
+  var routeIsKnown = null;
+  var normalizeRouteHash = null;
   var storageOk = (function () {
     try {
       var k = '__mmg_probe__';
@@ -7056,7 +7058,7 @@
      Correctness -> data integrity -> usability -> accessibility -> performance.
      This layer deliberately preserves the proven V4 business logic and contracts.
      ======================================================================== */
-  var APP_VERSION = '2026.09-r28-lab-evidence';
+  var APP_VERSION = '2026.09-r29-router-modules';
   var BACKUP_SCHEMA = 9;
   K.restTimer = 'mmg.restTimer.v2';
   K.lastBackup = 'mmg.lastBackup.v1';
@@ -7490,8 +7492,8 @@
      V7 state contracts retained; V8 owns the canonical presentation and shell.
      No network. No fake AI. Existing storage contracts remain readable.
      ======================================================================== */
-  var V7_ROUTES={home:['home'],library:['library'],workout:['workout'],progress:['progress'],more:['more'],tools:['tools'],program:['program'],nutrition:['nutrition'],knowledge:['knowledge'],method:['method'],about:['about'],how:['how'],faq:['faq'],contact:['contact'],settings:['settings']};
-  var V7_ROUTE_IDS=Object.keys(V7_ROUTES).reduce(function(a,k){a[k]=1;return a;},{});
+  var V7_ROUTES={};
+  var V7_ROUTE_IDS={};
   var v7ProgramStartTracked=false;
   var V7_COPY={
     ru:{home:'Сегодня',library:'Библиотека',workout:'Тренировка',progress:'Прогресс',more:'Ещё',program:'Программа',nutrition:'Питание',knowledge:'База знаний',method:'Метод',settings:'Настройки',about:'Павел Марков',moreTitle:'Разделы системы',homeSub:'Следующее действие, текущий план и обратная связь — без лишней навигации.',moreSub:'Программа, питание, знания и настройки — вторичный уровень, когда он действительно нужен.',settingsSub:'Интерфейс, расширенное логирование и контроль данных.',next:'Следующее действие',continueRun:'Продолжить тренировку',continueRunWhy:'Активная сессия сохранена на этом устройстве.',startReady:'Начать подготовленную тренировку',startReadyWhy:'Упражнения уже собраны — можно переходить в Run Mode.',startPlan:'Начать следующий день программы',startPlanWhy:'План уже готов. Следующий день можно перенести в тренировку одним действием.',finishProfile:'Завершить настройку',finishProfileWhy:'Цель и условия нужны, чтобы программа и рекомендации использовали один контекст.',checkin:'Сделать недельный check-in',checkinWhy:'Свежая обратная связь важнее ещё одного нового инструмента.',buildPlan:'Собрать программу',buildPlanWhy:'Программа свяжет библиотеку с сегодняшней тренировкой и следующими днями.',discover:'Найти первое упражнение',discoverWhy:'Начни с целевой мышцы и доступного оборудования.',open:'Открыть',plan:'План',last:'Последняя сессия',trend:'Динамика',kcal:'Питание',noPlan:'Нет активной программы',noHistory:'Пока нет завершённых тренировок',noTrend:'Недостаточно данных',notCalculated:'Не рассчитано',completed:'выполнено',days:'дней',sets:'подходов',quickLibrary:'Найти упражнение',quickLibraryS:'По мышце или оборудованию',quickWorkout:'Моя тренировка',quickWorkoutS:'Собрать или продолжить',quickProgram:'Программа',quickProgramS:'Следующий тренировочный день',quickProgress:'Check-in',quickProgressS:'Вес, талия и восстановление',appearance:'Оформление',logging:'Логирование',coach:'Рекомендации',data:'Мои данные',rir:'Показывать RIR',rpe:'Показывать RPE',coachOn:'Контекстные подсказки',export:'Скачать резервную копию',import:'Импортировать',clear:'Удалить все данные',advanced:'Расширенный check-in',recovery:'Восстановление',recoveryLow:'Низкое',recoveryMid:'Нормальное',recoveryHigh:'Хорошее',utilities:'Дополнительно',whyProgress:'Почему',tryWeight:'Можно попробовать',evidenceTwo:'2 тренировки подряд — верх диапазона во всех завершённых подходах.',programmeDay:'День программы',startDay:'Начать день',settingsDataText:'Данные остаются в браузере. Экспорт создаёт резервную копию перед переносом или очисткой устройства.',confidenceLow:'Мало данных',confidenceMedium:'Средняя уверенность',confidenceEnough:'Данных достаточно',exerciseHistory:'Прошлый результат',nutritionFeedback:'Связь с динамикой',nutritionKeep:'Не меняй калории автоматически: сначала проверь соблюдение и накопи устойчивый тренд.',weekComplete:'Неделя выполнена — сверить прогресс',weekCompleteWhy:'Все дни программы на этой неделе завершены. Следующий полезный шаг — короткая обратная связь, а не ещё одна тренировка.'},
@@ -7500,7 +7502,7 @@
   V7_COPY.ru.tools='Lab';
   V7_COPY.en.tools='Lab';
   function v7c(key){var pack=V7_COPY[S.lang==='en'?'en':'ru'];return pack[key]||key;}
-  function v7RouteFromHash(){var h=(location.hash||'#home').slice(1).split('?')[0];if(h==='top'||!h)return'home';return V7_ROUTE_IDS[h]?h:'home';}
+  function v7RouteFromHash(){return normalizeRouteHash?normalizeRouteHash(location.hash):'home';}
   function v7Returning(){return !!(profileComplete()||S.workout.length||S.history.length||S.diary.length||databaseNutritionDays.length||S.plan||S.kbjuLast||S.favorites.length);}
   function v7CurrentWeekKey(){var d=new Date(),day=(d.getDay()+6)%7;d.setHours(12,0,0,0);d.setDate(d.getDate()-day);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
   function v7MesocycleStatus(){if(!S.plan||!mesocycleStatusFn)return null;var ctx=S.plan.ctx||{};return mesocycleStatusFn({startWeek:ctx.blockStartWeek||S.plan.weekKey,durationWeeks:Number(ctx.blockWeeks)||4,today:todayISO()});}
@@ -7630,7 +7632,7 @@
   function renderV7Nav(){qsa('[data-v7-nav]').forEach(function(el){el.textContent=v7c(el.dataset.v7Nav);});var moreSub={tools:S.lang==='en'?'Strength, nutrition, body, cardio and my data':'Сила, питание, состав тела, кардио и мои данные',program:S.lang==='en'?'Weekly structure and the next workout':'Структура недели и следующая тренировка',nutrition:S.lang==='en'?'Calories, macros and feedback':'Калории, макросы и обратная связь',knowledge:S.lang==='en'?'Practical contextual guides':'Практические разборы по контексту',method:S.lang==='en'?'Decision framework':'Логика принятия решений',settings:S.lang==='en'?'Interface, logging and data':'Интерфейс, логирование и данные',about:S.lang==='en'?'Author and system boundaries':'Автор и границы системы'};qsa('[data-v7-more]').forEach(function(el){el.textContent=v7c(el.dataset.v7More);});qsa('[data-v7-more-sub]').forEach(function(el){el.textContent=moreSub[el.dataset.v7MoreSub]||'';});var mt=qs('[data-v7-mobile-title]');if(mt)mt.textContent=v7c('moreTitle');}
   function v7FocusRoute(route){var el=$(route==='home'&&!v7Returning()? 'hero-title' : route==='home'?'v7-home-title': route==='more'?'v7-more-title':route==='settings'?'v7-settings-title':route+'-title');if(el){el.setAttribute('tabindex','-1');requestAnimationFrame(function(){try{el.focus({preventScroll:true});}catch(e){}var anchor=el.closest('section')||el;anchor.scrollIntoView({block:'start',behavior:'auto'});});}else window.scrollTo(0,0);}
   function applyV7Route(focus){var route=v7RouteFromHash();document.body.dataset.v7Route=route;document.documentElement.dataset.routeReady=route;var ids=['home','system','start','method','muscles','library','workout','nutrition','program','progress','knowledge','about','how','faq','contact','more','settings'];ids.forEach(function(id){var el=$(id);if(el)el.hidden=true;});var hero=qs('.hero');if(hero)hero.hidden=true;var returning=v7Returning();if(route==='home'){if(returning){$('home').hidden=false;renderV7Home();}else{if(hero)hero.hidden=false;$('start').hidden=false;}}else{(V7_ROUTES[route]||[]).forEach(function(id){var el=$(id);if(el)el.hidden=false;});}if(route==='program'){if(!v7ProgramStartTracked){track('program_start',{});v7ProgramStartTracked=true;}var pf=$('plan-form');if(pf&&!pf.dataset.v7Prefilled){prefillPlan();pf.dataset.v7Prefilled='true';renderProgramWizard();}}var footer=qs('.footer');if(footer)footer.hidden=!(['more','settings','about','method','knowledge','how','faq','contact'].indexOf(route)!==-1);qsa('.v7-primary-nav>.v7-nav-link').forEach(function(a){var on=a.getAttribute('href')==='#'+route;a.toggleAttribute('aria-current',on);if(on)a.setAttribute('aria-current','page');});var nav=$('mobile-app-nav');if(nav)qsa('[data-mobile-dest]',nav).forEach(function(a){var on=a.dataset.mobileDest===route;a.classList.toggle('is-active',on);if(on)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');});syncV7Floating();renderV8Shell(route,!!focus);if(focus)v7FocusRoute(route);}
-  function navigateV7(route,focus){route=V7_ROUTE_IDS[route]?route:'home';if(location.hash!=='#'+route)location.hash=route;else{applyV7Route(focus!==false);}}
+  function navigateV7(route,focus){route=routeIsKnown&&routeIsKnown(route)?route:'home';if(location.hash!=='#'+route)location.hash=route;else{applyV7Route(focus!==false);}}
   function syncV7Floating(){var route=v7RouteFromHash(),bar=$('mfb');if(bar){var show=MOBILE_MQ.matches&&route==='library';bar.setAttribute('data-open',String(show));}var sticky=$('mobile-rest-timer');if(sticky)sticky.classList.toggle('is-raised',!!(bar&&bar.getAttribute('data-open')==='true'));}
   function startPlanDayV7(dayIndex,startRun){if(!S.plan||!S.plan.days)return;v7EnsurePlanWeek();var day=S.plan.days[dayIndex];if(!day)return;S.workout=day.items.map(function(it){return normalizeWorkoutRecord({id:it.ex.id,sets:it.sets,reps:it.reps,weight:'',done:false,setLog:[]});});S.meta.name=(S.lang==='en'?'Day ':'День ')+(dayIndex+1)+' · '+(DAY_NAMES[day.key]?(DAY_NAMES[day.key][S.lang]||DAY_NAMES[day.key].ru):day.key);S.meta.date=todayISO();S.meta.note='';S.meta.planDay=dayIndex;saveWorkout();saveMeta();renderWorkout();renderResults();track('program_day_start',{day:dayIndex+1});navigateV7('workout',true);showToast(t('planDayAdded',{n:dayIndex+1}));if(startRun)setTimeout(openRun,80);}
   function progressionIncrementForExercise(ex){if(ex&&ex.custom&&Number(ex.loadIncrement)>0)return Number(ex.loadIncrement);var lower=ex&&['upper legs','lower legs'].indexOf(ex.zone)!==-1,compound=ex&&exKind(ex)==='compound';return lower?2.5:(compound?2:1);}
@@ -7744,12 +7746,22 @@
   var _decorateKbjuProductOSV7=decorateKbju;decorateKbju=function(ctx){var result=_decorateKbjuProductOSV7(ctx);renderV7NutritionContext(ctx);renderV7Home();return result;};
   var _progressIntelligenceHtmlProductOSV7=progressIntelligenceHtml;progressIntelligenceHtml=function(){var html=_progressIntelligenceHtmlProductOSV7();if(!html)return html;var c=v7DiaryConfidence(),badge='<div class="v7-confidence" data-level="'+c.level+'"><b>'+esc(c.label)+'</b><span>'+esc(c.detail)+'</span></div>';return html.replace('<div class="intel-metrics">',badge+'<div class="intel-metrics">');};
   var _applyLangProductOSV7=applyLang;applyLang=function(initial){_applyLangProductOSV7(initial);renderV7All();renderNutritionLog();renderWeeklyNutritionBudget();renderNutritionTrend();if(S.activeId)renderV7ExerciseHistory(S.activeId);};
-  var _scrollToIdProductOSV7=scrollToId;scrollToId=function(id){if(V7_ROUTE_IDS[id]){navigateV7(id,true);return;}_scrollToIdProductOSV7(id);};
+  var _scrollToIdProductOSV7=scrollToId;scrollToId=function(id){if(routeIsKnown&&routeIsKnown(id)){navigateV7(id,true);return;}_scrollToIdProductOSV7(id);};
   var _scrollToLibraryProductOSV7=scrollToLibrary;scrollToLibrary=function(){navigateV7('library',false);requestAnimationFrame(function(){var el=$('library');if(el)el.scrollIntoView({block:'start',behavior:REDUCED_MOTION.matches?'auto':'smooth'});});};
 
 
   async function init() {
     window.addEventListener('mmg:error',function(event){lastLocalError=String(event&&event.detail&&event.detail.key||'unknown');renderV7Diagnostics();});
+    try {
+      var router = await import('./src/app/router.mjs');
+      var routeViews = router.ROUTE_VIEWS;
+      routeIsKnown = router.isKnownRoute;
+      normalizeRouteHash = router.normalizeRouteHash;
+      V7_ROUTES = routeViews;
+      V7_ROUTE_IDS = Object.keys(routeViews).reduce(function(a,k){a[k]=1;return a;},{});
+    } catch (error) {
+      window.dispatchEvent(new CustomEvent('mmg:error', { detail: { key: 'router' } }));
+    }
     try {
       var workoutGroupModule = await import('./tools/workout-groups.mjs');
       workoutExecutionOrderFn = workoutGroupModule.workoutExecutionOrder;

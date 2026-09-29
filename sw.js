@@ -1,4 +1,4 @@
-const VERSION = '2026.09-r28-lab-evidence';
+const VERSION = '2026.09-r29-router-modules';
 const PREFIX = 'mmg-gym-';
 const SHELL = `${PREFIX}shell-${VERSION}`;
 const MEDIA = `${PREFIX}media-${VERSION}`;
@@ -7,6 +7,7 @@ const PRECACHE = [
   './index.html',
   './app.css',
   './app.js',
+  './src/app/router.mjs',
   './lab.css',
   './bootstrap.js',
   './gym-tools.js',
