@@ -1,10 +1,11 @@
 export const HISTORY_DATABASE = 'markov-made-gym';
-export const HISTORY_SCHEMA_VERSION = 4;
+export const HISTORY_SCHEMA_VERSION = 5;
 
 const HISTORY_STORE = 'history';
 const CUSTOM_EXERCISE_STORE = 'customExercises';
 const EQUIPMENT_PROFILE_STORE = 'equipmentProfiles';
 const EXERCISE_PREFERENCE_STORE = 'exercisePreferences';
+const USER_STATE_STORE = 'userState';
 const EXERCISE_PREFERENCE_VALUES = new Set(['prefer', 'neutral', 'lessOften', 'avoid', 'unavailable', 'discomfort']);
 const TRACKING_TYPES = new Set([
   'weight-reps', 'reps-only', 'duration', 'distance-duration',
@@ -51,6 +52,7 @@ function openDatabase() {
       if (!db.objectStoreNames.contains(CUSTOM_EXERCISE_STORE)) db.createObjectStore(CUSTOM_EXERCISE_STORE, { keyPath: 'id' });
       if (!db.objectStoreNames.contains(EQUIPMENT_PROFILE_STORE)) db.createObjectStore(EQUIPMENT_PROFILE_STORE, { keyPath: 'id' });
       if (!db.objectStoreNames.contains(EXERCISE_PREFERENCE_STORE)) db.createObjectStore(EXERCISE_PREFERENCE_STORE, { keyPath: 'id' });
+      if (!db.objectStoreNames.contains(USER_STATE_STORE)) db.createObjectStore(USER_STATE_STORE, { keyPath: 'key' });
     };
     request.onsuccess = () => {
       const db = request.result;
@@ -241,6 +243,59 @@ export async function createHistoryRepository() {
     return readExercisePreferences();
   }
 
+  async function readUserState() {
+    const tx = db.transaction(USER_STATE_STORE, 'readonly');
+    const records = await requestResult(tx.objectStore(USER_STATE_STORE).getAll());
+    return Object.fromEntries(records.filter((record) => record && typeof record.key === 'string' && typeof record.value === 'string' && record.value.length <= 50_000_000).map(({ key, value }) => [key, value]));
+  }
+
+  async function migrateLegacyUserState(legacyState) {
+    const existing = await readUserState();
+    const missing = Object.entries(legacyState || {}).filter(([key, value]) => typeof value === 'string' && value.length <= 50_000_000 && !Object.hasOwn(existing, key));
+    if (missing.length) {
+      await new Promise((resolve, reject) => {
+        const tx = db.transaction(USER_STATE_STORE, 'readwrite');
+        const store = tx.objectStore(USER_STATE_STORE);
+        missing.forEach(([key, value]) => store.put({ key, value }));
+        tx.oncomplete = resolve;
+        tx.onerror = () => reject(tx.error || new Error('Could not migrate local user state'));
+        tx.onabort = () => reject(tx.error || new Error('User state migration was aborted'));
+      });
+    }
+    return readUserState();
+  }
+
+  async function writeUserState(key, value) {
+    if (typeof key !== 'string' || !key || key.length > 160 || typeof value !== 'string' || value.length > 50_000_000) throw new TypeError('Invalid user state record');
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction(USER_STATE_STORE, 'readwrite');
+      tx.objectStore(USER_STATE_STORE).put({ key, value });
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error || new Error('Could not save user state'));
+      tx.onabort = () => reject(tx.error || new Error('User state save was aborted'));
+    });
+  }
+
+  async function deleteUserState(key) {
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction(USER_STATE_STORE, 'readwrite');
+      tx.objectStore(USER_STATE_STORE).delete(key);
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error || new Error('Could not delete user state'));
+      tx.onabort = () => reject(tx.error || new Error('User state deletion was aborted'));
+    });
+  }
+
+  async function clearUserState() {
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction(USER_STATE_STORE, 'readwrite');
+      tx.objectStore(USER_STATE_STORE).clear();
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error || new Error('Could not clear user state'));
+      tx.onabort = () => reject(tx.error || new Error('User state clear was aborted'));
+    });
+  }
+
   return Object.freeze({
     schemaVersion: HISTORY_SCHEMA_VERSION,
     readAll,
@@ -255,6 +310,11 @@ export async function createHistoryRepository() {
     readExercisePreferences,
     replaceExercisePreferences,
     migrateLegacyExercisePreferences,
+    readUserState,
+    migrateLegacyUserState,
+    writeUserState,
+    deleteUserState,
+    clearUserState,
     close: () => db.close(),
   });
 }

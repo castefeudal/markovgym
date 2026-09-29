@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { cleanCustomExercises, cleanEquipmentProfiles, cleanExercisePreferences, cleanHistory, HISTORY_SCHEMA_VERSION, newestFirst } from '../src/persistence/history-repository.mjs';
 
 test('history schema is explicitly versioned', () => {
-  assert.equal(HISTORY_SCHEMA_VERSION, 4);
+  assert.equal(HISTORY_SCHEMA_VERSION, 5);
 });
 
 test('exercise preferences are bounded, normalized and drop neutral entries', () => {

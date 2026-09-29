@@ -39,11 +39,16 @@ test('legacy workout history migrates to IndexedDB without a 20-session cap', as
     defaultSets: 3, defaultRepRange: '8–12', defaultRest: 90, loadIncrement: 2.5,
     notes: 'Контролируемая амплитуда', createdAt: '2026-09-01T00:00:00.000Z', updatedAt: '2026-09-01T00:00:00.000Z',
   };
-  await page.addInitScript(({ history, custom, preferences }) => {
+  const profile = { goal: 'muscle', level: 'middle', place: 'gym', days: '3', typicalSessionMinutes: '60', equipmentAvailability: [], focus: 'balanced', limitations: [], recoveryBaseline: 'mid', done: true, skipped: false };
+  const diary = [{ date: '2026-09-27', weight: 82, waist: 86, sleep: 7, recovery: 3 }];
+  await page.addInitScript(({ history, custom, preferences, profile, diary }) => {
     localStorage.setItem('mmg.history.v1', JSON.stringify(history));
     localStorage.setItem('mmg.customExercises.v1', JSON.stringify([custom]));
     localStorage.setItem('mmg.exercisePreferences.v1', JSON.stringify(preferences));
-  }, { history: sessions, custom: customExercise, preferences: { '0001': 'prefer', 'custom-legacy-example': 'lessOften' } });
+    localStorage.setItem('mmg.profile.v1', JSON.stringify(profile));
+    localStorage.setItem('mmg.diary.v1', JSON.stringify(diary));
+    localStorage.setItem('mmg.workout.v2', JSON.stringify([{ id: '0001', sets: 3, reps: '8–12', weight: '40', done: false }]));
+  }, { history: sessions, custom: customExercise, preferences: { '0001': 'prefer', 'custom-legacy-example': 'lessOften' }, profile, diary });
   await page.goto('/index.html#home');
   await expect(page.locator('#mmg-boot')).toHaveCount(0);
   await expect.poll(() => page.evaluate(() => window.mmgDiagnostics?.historyCount)).toBe(28);
@@ -74,10 +79,23 @@ test('legacy workout history migrates to IndexedDB without a 20-session cap', as
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
     });
+    const userState = await new Promise((resolve, reject) => {
+      const request = db.transaction('userState', 'readonly').objectStore('userState').getAll();
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
     db.close();
-    return { version: db.version, count, customCount, profileCount, exercisePreferences };
+    return { version: db.version, count, customCount, profileCount, exercisePreferences, userState };
   });
-  expect(persistedCount).toEqual({ version: 4, count: 28, customCount: 1, profileCount: 4, exercisePreferences: [{ id: '0001', preference: 'prefer' }, { id: 'custom-legacy-example', preference: 'lessOften' }] });
+  expect(persistedCount.version).toBe(5);
+  expect(persistedCount.count).toBe(28);
+  expect(persistedCount.customCount).toBe(1);
+  expect(persistedCount.profileCount).toBe(4);
+  expect(persistedCount.exercisePreferences).toEqual([{ id: '0001', preference: 'prefer' }, { id: 'custom-legacy-example', preference: 'lessOften' }]);
+  const migratedState = Object.fromEntries(persistedCount.userState.map(record => [record.key, record.value]));
+  expect(JSON.parse(migratedState['mmg.profile.v1'])).toMatchObject({ goal: 'muscle', place: 'gym', done: true });
+  expect(JSON.parse(migratedState['mmg.diary.v1'])).toEqual(diary);
+  expect(JSON.parse(migratedState['mmg.workout.v2'])).toHaveLength(1);
   await page.reload();
   await expect.poll(() => page.evaluate(() => window.mmgDiagnostics?.historyCount)).toBe(28);
 
@@ -203,8 +221,9 @@ test('equipment profiles constrain Library choices, survive reload and preserve 
       request.onerror = () => reject(request.error);
     });
     await new Promise((resolve, reject) => {
-      const tx = db.transaction('equipmentProfiles', 'readwrite');
+      const tx = db.transaction(['equipmentProfiles', 'userState'], 'readwrite');
       tx.objectStore('equipmentProfiles').clear();
+      tx.objectStore('userState').delete('mmg.equipmentProfileActive.v1');
       tx.oncomplete = resolve;
       tx.onerror = () => reject(tx.error);
     });
@@ -224,6 +243,12 @@ test('equipment profiles constrain Library choices, survive reload and preserve 
 });
 
 test('exercise preferences persist, affect library ranking and round-trip through backups', async ({ page }) => {
+  const savedProfile = { goal: 'muscle', level: 'middle', place: 'gym', days: '3', typicalSessionMinutes: '60', equipmentAvailability: [], focus: 'balanced', limitations: [], recoveryBaseline: 'mid', done: true, skipped: false };
+  await page.addInitScript(profile => {
+    if (sessionStorage.getItem('__mmg_profile_seeded')) return;
+    localStorage.setItem('mmg.profile.v1', JSON.stringify(profile));
+    sessionStorage.setItem('__mmg_profile_seeded', '1');
+  }, savedProfile);
   await page.goto('/index.html#library');
   await expect(page.locator('#mmg-boot')).toHaveCount(0);
   const preferredCard = page.locator('#grid .card').nth(5);
@@ -255,11 +280,13 @@ test('exercise preferences persist, affect library ranking and round-trip throug
   const backup = JSON.parse(await readFile(await download.path(), 'utf8'));
   expect(backup.schemaVersion).toBe(9);
   expect(JSON.parse(backup.data.exercisePreferences)[exerciseId]).toBe('discomfort');
+  expect(JSON.parse(backup.data.profile)).toMatchObject({ goal: 'muscle', place: 'gym', done: true });
 
   await page.evaluate(async () => {
     localStorage.setItem('mmg.exercisePreferences.v1', '{}');
+    localStorage.removeItem('mmg.profile.v1');
     const db = await new Promise((resolve, reject) => { const request = indexedDB.open('markov-made-gym'); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); });
-    await new Promise((resolve, reject) => { const tx = db.transaction('exercisePreferences', 'readwrite'); tx.objectStore('exercisePreferences').clear(); tx.oncomplete = resolve; tx.onerror = () => reject(tx.error); });
+    await new Promise((resolve, reject) => { const tx = db.transaction(['exercisePreferences', 'userState'], 'readwrite'); tx.objectStore('exercisePreferences').clear(); tx.objectStore('userState').clear(); tx.oncomplete = resolve; tx.onerror = () => reject(tx.error); });
     db.close();
   });
   await page.reload();
@@ -268,14 +295,50 @@ test('exercise preferences persist, affect library ranking and round-trip throug
   const importChooser = page.waitForEvent('filechooser');
   await page.locator('#data-import').click();
   const chooser = await importChooser;
+  const importNavigation = page.waitForNavigation();
   await chooser.setFiles({ name: 'exercise-preferences.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(backup)) });
   await expect.poll(() => importPreview).toMatch(/Резервная копия проверена|Backup validated/);
+  await importNavigation;
+  await expect(page.locator('#mmg-boot')).toHaveCount(0);
   await expect.poll(() => page.evaluate(id => JSON.parse(localStorage.getItem('mmg.exercisePreferences.v1'))[id], exerciseId)).toBe('discomfort');
   await expect.poll(() => page.evaluate(async id => {
     const db = await new Promise((resolve, reject) => { const request = indexedDB.open('markov-made-gym'); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); });
     const record = await new Promise((resolve, reject) => { const request = db.transaction('exercisePreferences', 'readonly').objectStore('exercisePreferences').get(id); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); });
     db.close(); return record?.preference;
   }, exerciseId)).toBe('discomfort');
+  await expect.poll(() => page.evaluate(async () => {
+    const db = await new Promise((resolve, reject) => { const request = indexedDB.open('markov-made-gym'); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); });
+    const record = await new Promise((resolve, reject) => { const request = db.transaction('userState', 'readonly').objectStore('userState').get('mmg.profile.v1'); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); });
+    db.close(); return JSON.parse(record?.value || '{}');
+  })).toMatchObject({ goal: 'muscle', place: 'gym', done: true });
+
+  page.once('dialog', dialog => dialog.accept());
+  const clearedNavigation = page.waitForNavigation();
+  await page.locator('#data-clear').click();
+  await clearedNavigation;
+  await expect(page.locator('#mmg-boot')).toHaveCount(0);
+  await expect.poll(() => page.evaluate(async () => {
+    const db = await new Promise((resolve, reject) => { const request = indexedDB.open('markov-made-gym'); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); });
+    const count = await new Promise((resolve, reject) => { const request = db.transaction('equipmentProfiles', 'readonly').objectStore('equipmentProfiles').count(); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); });
+    db.close(); return count;
+  })).toBe(4);
+  const clearedState = await page.evaluate(async () => {
+    const db = await new Promise((resolve, reject) => { const request = indexedDB.open('markov-made-gym'); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); });
+    const counts = await Promise.all(['history', 'customExercises', 'equipmentProfiles', 'exercisePreferences', 'userState'].map(name => new Promise((resolve, reject) => {
+      const request = db.transaction(name, 'readonly').objectStore(name).count(); request.onsuccess = () => resolve([name, request.result]); request.onerror = () => reject(request.error);
+    })));
+    const userState = await new Promise((resolve, reject) => { const request = db.transaction('userState', 'readonly').objectStore('userState').getAll(); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); });
+    const localProfile = localStorage.getItem('mmg.profile.v1');
+    db.close(); return { counts: Object.fromEntries(counts), userState: Object.fromEntries(userState.map(record => [record.key, record.value])), localProfile };
+  });
+  expect(clearedState.counts).toMatchObject({ history: 0, customExercises: 0, equipmentProfiles: 4, exercisePreferences: 0 });
+  expect(JSON.parse(clearedState.userState['mmg.diary.v1'] || '[]')).toEqual([]);
+  expect(JSON.parse(clearedState.userState['mmg.plan.v1'] || 'null')).toBeNull();
+  expect(JSON.parse(clearedState.userState['mmg.workout.v2'] || '[]')).toEqual([]);
+  expect(JSON.parse(clearedState.userState['mmg.favorites.v8'] || '[]')).toEqual([]);
+  expect(JSON.parse(clearedState.userState['mmg.exercisePreferences.v1'] || '{}')).toEqual({});
+  expect(clearedState.localProfile).toBeNull();
+  expect(JSON.parse(clearedState.userState['mmg.profile.v1'] || 'null')?.goal || '').not.toBe('muscle');
 });
 
 test('distance and duration tracking stay structured from Run Mode into workout history', async ({ page }) => {

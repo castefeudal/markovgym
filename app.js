@@ -54,10 +54,32 @@
   var memoryStore = {};
   var storageWarnings = [];
   var historyRepository = null;
+  var indexedAppStateKeys = Object.create(null);
+  var indexedAppStateReady = false;
+  var pendingAppStateWrites = [];
+  function queueAppStateWrite(key, value, remove) {
+    if (!indexedAppStateReady || !historyRepository || !indexedAppStateKeys[key]) return;
+    var write = remove ? historyRepository.deleteUserState(key) : historyRepository.writeUserState(key, String(value));
+    pendingAppStateWrites.push(write.then(function () {
+      if (remove) delete databaseAppState[key]; else databaseAppState[key] = String(value);
+      return null;
+    }).catch(function (error) {
+      storageWarnings.push({ key: key, type: 'indexeddb-write', at: Date.now() });
+      return error;
+    }));
+  }
+  function flushAppStateWrites() {
+    var writes = pendingAppStateWrites.splice(0);
+    return Promise.all(writes).then(function (results) {
+      var failure = results.filter(Boolean)[0];
+      if (failure) throw failure;
+    });
+  }
   var databaseHistory = null;
   var databaseCustomExercises = [];
   var databaseEquipmentProfiles = [];
   var databaseExercisePreferences = {};
+  var databaseAppState = {};
   var cleanIdbExercisePreferences = function (value) { return value && typeof value === 'object' && !Array.isArray(value) ? value : {}; };
   var cleanEquipmentProfiles = function (rows) { return Array.isArray(rows) ? rows.filter(function (row) { return row && typeof row === 'object'; }) : []; };
   var activeEquipmentProfileId = '';
@@ -82,15 +104,18 @@
       memoryStore[key] = value;
       try {
         if (storageOk) window.localStorage.setItem(key, value);
+        queueAppStateWrite(key, value, false);
         return true;
       } catch (e) {
         storageWarnings.push({ key: key, type: 'write', at: Date.now() });
+        queueAppStateWrite(key, value, false);
         return !storageOk;
       }
     },
     remove: function (key) {
       delete memoryStore[key];
       try { if (storageOk) window.localStorage.removeItem(key); } catch (e) {}
+      queueAppStateWrite(key, '', true);
     },
     json: function (key, fallback) {
       var raw = store.get(key);
@@ -2507,6 +2532,7 @@
   K.settings = 'mmg.settings.v1';
   K.workoutSchema = 'mmg.workoutSchema.v4';
   K.historySchema = 'mmg.historySchema.v2';
+  [K.fav,K.workout,K.profile,K.meta,K.equipmentProfileActive,K.diary,K.kbju,K.tips,K.coach,K.rest,K.recentSearch,K.recentExercises,K.runSession,K.plan,K.settings].forEach(function(key){indexedAppStateKeys[key]=true;});
 
   var DEFAULT_PROFILE = { goal:'', level:'', place:'', days:'', typicalSessionMinutes:'', equipmentAvailability:[], focus:'balanced', limitations:[], recoveryBaseline:'mid', done:false, skipped:false };
 
@@ -5507,7 +5533,6 @@
       if (area.hidden || !area.value.trim()) { area.hidden = false; area.value = ''; area.focus(); return; }
       importAll(area.value);
     });
-    $('data-clear').addEventListener('click', clearAll);
 
     /* --- быстрые действия --- */
     document.addEventListener('click', function (e) {
@@ -6615,7 +6640,7 @@
      Correctness -> data integrity -> usability -> accessibility -> performance.
      This layer deliberately preserves the proven V4 business logic and contracts.
      ======================================================================== */
-  var APP_VERSION = '2026.09-r12-indexed-preferences';
+  var APP_VERSION = '2026.09-r13-user-state';
   var BACKUP_SCHEMA = 9;
   K.restTimer = 'mmg.restTimer.v2';
   K.lastBackup = 'mmg.lastBackup.v1';
@@ -6892,6 +6917,7 @@
     var importedEquipmentProfiles = report.staged.equipmentProfiles ? jsonValue(report.staged.equipmentProfiles) : null;
     var importedExercisePreferences = report.staged.exercisePreferences ? cleanIdbExercisePreferences(jsonValue(report.staged.exercisePreferences)) : null;
     var indexedWrites = [];
+    indexedWrites.push(flushAppStateWrites());
     if (report.staged.history && historyRepository) indexedWrites.push(historyRepository.replaceAll(importedHistory));
     if (report.staged.customExercises && historyRepository) indexedWrites.push(historyRepository.replaceCustomExercises(importedCustomExercises));
     if (report.staged.equipmentProfiles && historyRepository) indexedWrites.push(historyRepository.replaceEquipmentProfiles(importedEquipmentProfiles));
@@ -6908,6 +6934,7 @@
       if (previous.ok) {
         writeBackupValues(previous.staged);
         var restores = [];
+        restores.push(flushAppStateWrites());
         if (historyRepository && previous.staged.history) restores.push(historyRepository.replaceAll(jsonValue(previous.staged.history)));
         if (historyRepository && previous.staged.customExercises) restores.push(historyRepository.replaceCustomExercises(jsonValue(previous.staged.customExercises)));
         if (historyRepository && previous.staged.equipmentProfiles) restores.push(historyRepository.replaceEquipmentProfiles(jsonValue(previous.staged.equipmentProfiles)));
@@ -6924,12 +6951,17 @@
   };
   clearAll = function(){
     if(!window.confirm(t('dataConfirm')))return;
+    indexedAppStateReady = false;
     DATA_KEYS.forEach(function(name){if(K[name])store.remove(K[name]);});
     [K.restTimer,K.lastBackup,K.rollbackBackup,K.legacyFav,K.legacyWorkout,K.legacyLang,K.legacyTheme].forEach(function(key){if(key)store.remove(key);});
     Object.keys(memoryStore).filter(function(key){return key.indexOf('mmg.recovery.')===0;}).forEach(function(key){store.remove(key);});
     if(storageOk){try{for(var i=window.localStorage.length-1;i>=0;i--){var key=window.localStorage.key(i);if(key&&key.indexOf('mmg.recovery.')===0)window.localStorage.removeItem(key);}}catch(e){}}
-    var cleared = historyRepository ? Promise.all([historyRepository.replaceAll([]), historyRepository.replaceCustomExercises([]), historyRepository.replaceEquipmentProfiles([]), historyRepository.replaceExercisePreferences({})]) : Promise.resolve();
+    var cleared = historyRepository ? flushAppStateWrites().then(function(){
+      return Promise.all([historyRepository.replaceAll([]), historyRepository.replaceCustomExercises([]), historyRepository.replaceEquipmentProfiles([]), historyRepository.replaceExercisePreferences({})]);
+    }).then(function(){return historyRepository.clearUserState();}) : Promise.resolve();
     cleared.then(function(){
+      DATA_KEYS.forEach(function(name){var key=K[name];if(!key)return;delete memoryStore[key];if(storageOk){try{window.localStorage.removeItem(key);}catch(e){}}});
+      databaseAppState = {};
       showToast(t('dataCleared'));
       window.setTimeout(function(){window.location.reload();},550);
     }).catch(function(){
@@ -7291,6 +7323,15 @@
       databaseCustomExercises = await historyRepository.migrateLegacyCustomExercises(databaseCustomExercises);
       databaseEquipmentProfiles = await historyRepository.migrateLegacyEquipmentProfiles(databaseEquipmentProfiles);
       databaseExercisePreferences = await historyRepository.migrateLegacyExercisePreferences(cleanIdbExercisePreferences(store.json(K.exercisePreferences, {})));
+      var legacyAppState = {};
+      Object.keys(indexedAppStateKeys).forEach(function(key){var value=store.get(key);if(value!==null)legacyAppState[key]=value;});
+      databaseAppState = await historyRepository.migrateLegacyUserState(legacyAppState);
+      Object.keys(indexedAppStateKeys).forEach(function(key){
+        if(!Object.prototype.hasOwnProperty.call(databaseAppState,key))return;
+        memoryStore[key]=databaseAppState[key];
+        try{if(storageOk)window.localStorage.setItem(key,databaseAppState[key]);}catch(e){storageWarnings.push({key:key,type:'mirror-write',at:Date.now()});}
+      });
+      indexedAppStateReady = true;
       activeEquipmentProfileId = store.get(K.equipmentProfileActive) || '';
       store.set(K.customExercises, JSON.stringify(databaseCustomExercises));
       store.set(K.equipmentProfiles, JSON.stringify(databaseEquipmentProfiles));
@@ -7300,6 +7341,7 @@
       databaseCustomExercises = cleanCustomExercises(store.json(K.customExercises, []));
       databaseEquipmentProfiles = cleanEquipmentProfiles(store.json(K.equipmentProfiles, []));
       databaseExercisePreferences = cleanIdbExercisePreferences(store.json(K.exercisePreferences, {}));
+      indexedAppStateReady = false;
       storageWarnings.push({ key: K.history, type: 'indexeddb-unavailable', at: Date.now() });
     }
     var initialRoute = (location.hash || '#home').slice(1).split('?')[0];
@@ -7353,6 +7395,7 @@
     initUltimateExperience();
     initProductionV5();
     initProductOSV7();
+    $('data-clear').addEventListener('click', function () { clearAll(); });
 
     $('coach-switch').setAttribute('aria-pressed', String(S.coachOn));
     qsa('.kb-cats [data-kbcat]').forEach(function (b) {
