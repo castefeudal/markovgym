@@ -798,9 +798,31 @@ test('flagship restores saved programme on home and exposes the weekly pulse', a
   await page.locator('#p-block-weeks').selectOption('6');
   await page.locator('#plan-build').click();
   await expect(page.locator('#plan-out [data-mesocycle-status="active"]')).toContainText('Неделя блока 1 из 6');
+  await page.locator('#plan-review-performance').selectOption('improving');
+  await page.locator('#plan-review-fatigue').selectOption('low');
+  await page.locator('#plan-week-review-form button[type="submit"]').click();
+  await expect(page.locator('#plan-week-review-form')).toBeVisible();
   await page.reload();
   await page.goto('/index.html#program');
   await expect(page.locator('#plan-out [data-mesocycle-status="active"]')).toContainText('Неделя блока 1 из 6');
+  await expect(page.locator('#plan-review-performance')).toHaveValue('improving');
+  await expect(page.locator('#plan-review-fatigue')).toHaveValue('low');
+  await expect(page.locator('#plan-out')).toContainText('Продолжай текущий план');
+  const savedReviewCount = await page.evaluate(async () => {
+    const db = await new Promise((resolve, reject) => {
+      const request = indexedDB.open('markov-made-gym');
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    const count = await new Promise((resolve, reject) => {
+      const request = db.transaction('userState').objectStore('userState').get('mmg.plan.v1');
+      request.onsuccess = () => resolve(JSON.parse(request.result.value).ctx.weeklyReviews.length);
+      request.onerror = () => reject(request.error);
+    });
+    db.close();
+    return count;
+  });
+  expect(savedReviewCount).toBe(1);
   const oldBlockStart = await page.evaluate(() => {
     const date = new Date();
     date.setHours(12, 0, 0, 0);
@@ -845,7 +867,8 @@ test('readability choice persists and progress supports multiple chart signals',
   await page.locator('#v7-diagnostics summary').click();
   await expect(page.locator('#v7-diagnostics-output')).toContainText('Версия приложения');
   await expect(page.locator('#v7-diagnostics-output')).toContainText('Состояние хранилища');
-  await expect(page.locator('#v7-diagnostics-output')).toContainText('Service worker');
+  await expect(page.locator('#v7-diagnostics-output')).toContainText('LocalStorage');
+  await expect(page.locator('#v7-diagnostics-output')).toContainText(/service worker/i);
   await page.locator('[data-v10-reading="comfortable"]').click();
   await expect(page.locator('html')).toHaveAttribute('data-reading', 'comfortable');
   await page.reload();

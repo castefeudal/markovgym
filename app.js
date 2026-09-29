@@ -91,6 +91,8 @@
   var historyFilters = { query:'', from:'', to:'', programme:'', exercise:'', durationMin:'', durationMax:'', prOnly:false };
   var todayDecisionEngine = null;
   var mesocycleStatusFn = null;
+  var weeklyReviewDecisionFn = null;
+  var cleanWeeklyReviewsFn = function () { return []; };
   var weightTrendFn = null;
   var weeklyNutritionBudgetFn = null;
   var substitutionRanker = null;
@@ -320,6 +322,17 @@
     'nutritionLog.saved': 'Daily nutrition saved.', 'nutritionLog.saveFailed': 'Could not save the nutrition entry on this device.',
     'nutritionTrend.title': 'Weight trend', 'nutritionTrend.intro': 'The latest scale reading stays visible separately from the smoothed trend.',
     'nutritionWeek.title': 'Weekly target', 'nutritionWeek.intro': 'Compare the weekly total with your current daily target. This is context, not a debt to compensate for.',
+
+    'planReview.title': 'Weekly feedback', 'planReview.intro': 'A short check-in helps decide whether to keep the plan steady or review it. It never changes your programme by itself.',
+    'planReview.performance': 'Performance trend', 'planReview.improving': 'Improving', 'planReview.steady': 'About the same', 'planReview.declining': 'Declining',
+    'planReview.fatigue': 'Fatigue', 'planReview.low': 'Low', 'planReview.moderate': 'Moderate', 'planReview.high': 'High',
+    'planReview.soreness': 'Muscle soreness (optional)', 'planReview.discomfort': 'Joint discomfort', 'planReview.noDiscomfort': 'No', 'planReview.yesDiscomfort': 'Yes',
+    'planReview.difficulty': 'How hard did sessions feel? (1–5)', 'planReview.adherence': 'Programme days completed this week', 'planReview.save': 'Save weekly check-in',
+    'planReview.saved': 'Weekly check-in saved on this device.', 'planReview.deload': 'Consider a lighter week', 'planReview.discomfortResult': 'Review the movement that caused discomfort before repeating it. Stop if the pain is sharp or persistent and seek professional advice.',
+    'planReview.continue': 'Keep the current plan', 'planReview.hold': 'Keep the current setup and review again next week',
+    'planReview.reasonDecline': 'Performance has declined in two consecutive weekly check-ins.', 'planReview.reasonFatigue': 'Fatigue was high and sessions felt hard in both weeks.',
+    'planReview.reasonAdherence': 'At least 70% of planned sessions were completed in both weeks.', 'planReview.reasonEffort': 'At least half of six or more rated working sets were near the effort limit.',
+    'planReview.reasonImprove': 'Performance is improving and fatigue is not high.', 'planReview.needSecond': 'A second consecutive weekly check-in is needed.', 'planReview.needEffort': 'At least six working sets with RIR or RPE are needed for a deload suggestion.',
 
     'plan.eyebrow': 'Weekly structure', 'plan.title': 'Starting training plan',
     'plan.text': 'The inputs genuinely change the output: split, volume, reps, rest, cardio and the actual exercises are drawn from this same base.',
@@ -606,6 +619,28 @@
     'nutritionWeek.difference': { ru:'Разница с ориентиром', en:'Difference to target' },
     'nutritionWeek.days': { ru:'Записано дней: {n}', en:'Days logged: {n}' },
     'nutritionWeek.note': { ru:'Не нужно компенсировать отдельный день ограничением или перееданием; смотри на записи в контексте недели.', en:'Do not compensate for one day with restriction or overeating; read entries in the context of the week.' },
+    'planReview.title': { ru:'Недельная обратная связь', en:'Weekly feedback' },
+    'planReview.intro': { ru:'Короткая сверка помогает решить, оставить план или пересмотреть его. Она не меняет программу автоматически.', en:'A short check-in helps decide whether to keep the plan steady or review it. It never changes your programme by itself.' },
+    'planReview.performance': { ru:'Динамика результата', en:'Performance trend' }, 'planReview.improving': { ru:'Растёт', en:'Improving' },
+    'planReview.steady': { ru:'Примерно без изменений', en:'About the same' }, 'planReview.declining': { ru:'Снижается', en:'Declining' },
+    'planReview.fatigue': { ru:'Усталость', en:'Fatigue' }, 'planReview.low': { ru:'Низкая', en:'Low' },
+    'planReview.moderate': { ru:'Умеренная', en:'Moderate' }, 'planReview.high': { ru:'Высокая', en:'High' },
+    'planReview.soreness': { ru:'Мышечная болезненность (необязательно)', en:'Muscle soreness (optional)' },
+    'planReview.discomfort': { ru:'Дискомфорт в суставах', en:'Joint discomfort' }, 'planReview.noDiscomfort': { ru:'Нет', en:'No' }, 'planReview.yesDiscomfort': { ru:'Да', en:'Yes' },
+    'planReview.difficulty': { ru:'Насколько тяжёлыми ощущались сессии? (1–5)', en:'How hard did sessions feel? (1–5)' },
+    'planReview.adherence': { ru:'Выполнено дней программы на этой неделе', en:'Programme days completed this week' },
+    'planReview.save': { ru:'Сохранить недельную сверку', en:'Save weekly check-in' }, 'planReview.saved': { ru:'Обратная связь сохранена на этом устройстве.', en:'Weekly check-in saved on this device.' },
+    'planReview.deload': { ru:'Можно рассмотреть более лёгкую неделю', en:'Consider a lighter week' },
+    'planReview.discomfortResult': { ru:'Перед повторением пересмотри движение, которое вызвало дискомфорт. При резкой или сохраняющейся боли остановись и обратись за профессиональной помощью.', en:'Review the movement that caused discomfort before repeating it. Stop if the pain is sharp or persistent and seek professional advice.' },
+    'planReview.continue': { ru:'Продолжай текущий план', en:'Keep the current plan' },
+    'planReview.hold': { ru:'Сохрани текущий план и проверь сигналы ещё раз на следующей неделе', en:'Keep the current setup and review again next week' },
+    'planReview.reasonDecline': { ru:'Результат снижался в двух последовательных недельных сверках.', en:'Performance has declined in two consecutive weekly check-ins.' },
+    'planReview.reasonFatigue': { ru:'В обе недели усталость была высокой, а сессии ощущались тяжёлыми.', en:'Fatigue was high and sessions felt hard in both weeks.' },
+    'planReview.reasonAdherence': { ru:'В обе недели выполнено не менее 70% запланированных сессий.', en:'At least 70% of planned sessions were completed in both weeks.' },
+    'planReview.reasonEffort': { ru:'Не менее половины из шести или более оценённых рабочих подходов были близки к пределу усилий.', en:'At least half of six or more rated working sets were near the effort limit.' },
+    'planReview.reasonImprove': { ru:'Результат растёт, а усталость не высокая.', en:'Performance is improving and fatigue is not high.' },
+    'planReview.needSecond': { ru:'Для такого вывода нужна вторая последовательная недельная сверка.', en:'A second consecutive weekly check-in is needed.' },
+    'planReview.needEffort': { ru:'Для совета о разгрузке нужны минимум шесть рабочих подходов с RIR или RPE.', en:'At least six working sets with RIR or RPE are needed for a deload suggestion.' },
     'nutritionTrend.empty': { ru:'Чтобы увидеть сглаженный тренд, отмечай вес регулярно: для среднего нужны минимум 3 замера за 7 дней.', en:'Log weight regularly to see a smoothed trend; the 7-day mean needs at least 3 readings.' },
     'nutritionTrend.scale': { ru:'Вес на весах', en:'Scale weight' }, 'nutritionTrend.mean': { ru:'Среднее за 7 дней', en:'7-day mean' },
     'nutritionTrend.delta': { ru:'Изменение за 7 дней', en:'7-day change' }, 'nutritionTrend.rate': { ru:'Темп за 21 день', en:'21-day rate' },
@@ -2633,6 +2668,7 @@
     var ctx=raw.ctx&&typeof raw.ctx==='object'?Object.assign({},raw.ctx):{};
     if([4,6,8].indexOf(Number(ctx.blockWeeks))===-1)ctx.blockWeeks=4;
     if(typeof ctx.blockStartWeek!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(ctx.blockStartWeek))ctx.blockStartWeek=currentWeek;
+    ctx.weeklyReviews=cleanWeeklyReviewsFn(ctx.weeklyReviews);
     return days.length?{days:days,ctx:ctx,createdAt:Number(raw.createdAt)||Date.now(),weekKey:currentWeek,completedDays:completed}:null;
   }
   function savePlanV7(){var data=serialisePlanV7(S.plan);if(data)store.set(K.plan,JSON.stringify(data));else store.remove(K.plan);}
@@ -4228,6 +4264,45 @@
     return S.lang === 'en' ? '1–2 easy sessions of 20–30 minutes are enough for general conditioning without competing with strength work.' : '1–2 спокойные сессии по 20–30 минут достаточно для общей выносливости без лишней конкуренции с силовой работой.';
   }
 
+  function weeklyReviewSets(){
+    var cutoff=Date.now()-14*86400000;
+    return S.history.filter(function(session){var date=Date.parse(String(session.date||'')+'T12:00:00');return Number.isFinite(date)&&date>=cutoff;})
+      .flatMap(function(session){return(session.items||[]).flatMap(function(item){return Array.isArray(item.setLog)?item.setLog:[];});})
+      .filter(function(set){return set&&set.completed;});
+  }
+  function weeklyReviewPanelHtml(block){
+    var ctx=S.plan&&S.plan.ctx||{},weekStart=v7CurrentWeekKey(),reviews=cleanWeeklyReviewsFn(ctx.weeklyReviews),saved=reviews.filter(function(review){return review.weekStart===weekStart;})[0];
+    var completed=Array.isArray(S.plan&&S.plan.completedDays)?S.plan.completedDays.length:0,planned=S.plan&&Array.isArray(S.plan.days)?S.plan.days.length:0;
+    var decision=weeklyReviewDecisionFn?weeklyReviewDecisionFn({reviews:reviews,completedWorkingSets:weeklyReviewSets(),programmeAgeWeeks:block&&block.weekNumber||1}):null;
+    var message='';
+    if(decision&&decision.recommendation==='review-discomfort')message='<p class="note note-warn">'+esc(t('planReview.discomfortResult'))+'</p>';
+    else if(decision&&decision.recommendation==='consider-deload'){
+      var reasonKeys={two_consecutive_weeks_declining_performance:'planReview.reasonDecline',high_fatigue_and_session_difficulty:'planReview.reasonFatigue',adherence_at_least_70_percent:'planReview.reasonAdherence',at_least_half_of_rated_work_sets_near_limit:'planReview.reasonEffort'};
+      message='<div class="note"><b>'+esc(t('planReview.deload'))+'</b><ul>'+decision.reasons.map(function(reason){return'<li>'+esc(t(reasonKeys[reason]||'planReview.hold'))+'</li>';}).join('')+'</ul></div>';
+    }else if(decision&&decision.recommendation==='continue-plan')message='<p class="note">'+esc(t('planReview.continue'))+' · '+esc(t('planReview.reasonImprove'))+'</p>';
+    else if(saved){var needed=[];if(decision&&decision.missingData.indexOf('second_consecutive_week')!==-1)needed.push(t('planReview.needSecond'));if(decision&&decision.missingData.indexOf('six_rated_working_sets_with_rir_or_rpe')!==-1)needed.push(t('planReview.needEffort'));message='<p class="note">'+esc(t('planReview.hold'))+(needed.length?' · '+esc(needed.join(' ')):'')+'</p>';}
+    var performance=saved?saved.performance:'steady',fatigue=saved?saved.fatigue:'moderate',soreness=saved&&saved.soreness||'',discomfort=saved&&saved.jointDiscomfort?'yes':'no',difficulty=saved?saved.sessionDifficulty:3;
+    function option(value,key,selected){return'<option value="'+esc(value)+'"'+(selected===value?' selected':'')+'>'+esc(t(key))+'</option>';}
+    var sorenessOptions='<option value=""'+(!soreness?' selected':'')+'>'+esc(S.lang==='en'?'Not specified':'Не указана')+'</option>'+['low','moderate','high'].map(function(value){return option(value,'planReview.'+value,soreness);}).join('');
+    return '<section class="plan-week-review" aria-labelledby="plan-week-review-title"><h3 id="plan-week-review-title">'+esc(t('planReview.title'))+'</h3><p class="small">'+esc(t('planReview.intro'))+'</p><p class="tiny">'+esc(t('planReview.adherence'))+': '+completed+' / '+planned+'</p>'+message+'<form id="plan-week-review-form" data-week-start="'+esc(weekStart)+'"><div class="form-grid">'+
+      '<div class="field"><label for="plan-review-performance">'+esc(t('planReview.performance'))+'</label><select class="select" id="plan-review-performance">'+['improving','steady','declining'].map(function(value){return option(value,'planReview.'+value,performance);}).join('')+'</select></div>'+
+      '<div class="field"><label for="plan-review-fatigue">'+esc(t('planReview.fatigue'))+'</label><select class="select" id="plan-review-fatigue">'+['low','moderate','high'].map(function(value){return option(value,'planReview.'+value,fatigue);}).join('')+'</select></div>'+
+      '<div class="field"><label for="plan-review-soreness">'+esc(t('planReview.soreness'))+'</label><select class="select" id="plan-review-soreness">'+sorenessOptions+'</select></div>'+
+      '<div class="field"><label for="plan-review-discomfort">'+esc(t('planReview.discomfort'))+'</label><select class="select" id="plan-review-discomfort">'+option('no','planReview.noDiscomfort',discomfort)+option('yes','planReview.yesDiscomfort',discomfort)+'</select></div>'+
+      '<div class="field"><label for="plan-review-difficulty">'+esc(t('planReview.difficulty'))+'</label><select class="select" id="plan-review-difficulty">'+[1,2,3,4,5].map(function(value){return'<option value="'+value+'"'+(Number(difficulty)===value?' selected':'')+'>'+value+'</option>';}).join('')+'</select></div></div><button class="btn btn-solid btn-sm" type="submit">'+esc(t('planReview.save'))+'</button></form></section>';
+  }
+  function bindWeeklyReviewForm(block){
+    var form=$('plan-week-review-form');if(!form)return;
+    form.addEventListener('submit',function(event){
+      event.preventDefault();
+      var ctx=S.plan&&S.plan.ctx||{},reviews=cleanWeeklyReviewsFn(ctx.weeklyReviews),planned=S.plan&&S.plan.days?S.plan.days.length:0,completed=S.plan&&S.plan.completedDays?S.plan.completedDays.length:0;
+      var review={weekStart:form.dataset.weekStart,performance:$('plan-review-performance').value,fatigue:$('plan-review-fatigue').value,soreness:$('plan-review-soreness').value||null,jointDiscomfort:$('plan-review-discomfort').value==='yes',sessionDifficulty:Number($('plan-review-difficulty').value),completedDays:completed,plannedDays:planned,adherence:planned?completed/planned:0};
+      ctx.weeklyReviews=cleanWeeklyReviewsFn(reviews.filter(function(row){return row.weekStart!==review.weekStart;}).concat([review]));
+      S.plan.ctx=ctx;savePlanV7();renderStoredPlanV10();showToast(t('planReview.saved'));
+      var current=qs('#plan-week-review-form');if(current){var button=current.querySelector('button[type="submit"]');if(button)button.focus();}
+    });
+  }
+
   function renderStoredPlanV10() {
     var out = $('plan-out');
     if (!out || !S.plan || !Array.isArray(S.plan.days) || !S.plan.days.length) return;
@@ -4305,8 +4380,9 @@
         (nextDay>=0?'<button class="btn btn-solid btn-sm" type="button" data-plan-day-add="'+nextDay+'">'+esc(S.lang==='en'?'Load next session':'Загрузить следующую тренировку')+'</button>':'') +
         '<button class="btn btn-solid btn-sm" type="button" id="plan-export">'+esc(t('planExport'))+'</button>' +
         '<button class="btn btn-quiet btn-sm" type="button" id="plan-print">'+esc(t('workout.print'))+'</button>' +
-      '</div>';
+      '</div>' + weeklyReviewPanelHtml(block);
     out.setAttribute('data-filled','true');
+    bindWeeklyReviewForm(block);
     var copy=$('plan-copy'); if(copy)copy.addEventListener('click',function(){copyText(planText());});
     var exp=$('plan-export'); if(exp)exp.addEventListener('click',function(){copyText(JSON.stringify(serialisePlanV7(S.plan),null,2),t('planExported'));});
     var print=$('plan-print'); if(print)print.addEventListener('click',function(){window.print();});
@@ -6978,7 +7054,7 @@
      Correctness -> data integrity -> usability -> accessibility -> performance.
      This layer deliberately preserves the proven V4 business logic and contracts.
      ======================================================================== */
-  var APP_VERSION = '2026.09-r26-block-review';
+  var APP_VERSION = '2026.09-r27-weekly-review';
   var BACKUP_SCHEMA = 9;
   K.restTimer = 'mmg.restTimer.v2';
   K.lastBackup = 'mmg.lastBackup.v1';
@@ -7544,8 +7620,10 @@
     var migration=d.repositoryReady?(d.userStateReady?(S.lang==='en'?'Ready':'Готово'):(S.lang==='en'?'Repository open; state loading':'Хранилище открыто; состояние загружается')):(S.lang==='en'?'Browser storage fallback':'Резервное хранилище браузера');
     var warnings=d.storageWarnings||[],lastWarning=warnings.length?warnings[warnings.length-1]:null;
     var warning=lastWarning?String(lastWarning.type)+' · '+String(lastWarning.key):(S.lang==='en'?'None':'Нет');
-    var rows=S.lang==='en'?[['App version',d.version||APP_VERSION],['Backup / IndexedDB schema',String(d.backupSchema||BACKUP_SCHEMA)+' / '+String(d.historySchema||0)],['Storage migration',migration],['Exercise records',String(d.exerciseCount||EX.length)],['Custom exercises / equipment profiles',String(d.customExerciseCount||0)+' / '+String(d.equipmentProfileCount||0)],['Workout history / nutrition days',String(d.historyCount||0)+' / '+String(d.nutritionCount||0)],['Route',v7RouteFromHash()],['Service worker controller',sw&&sw.controller?'active':'none'],['Latest local error',d.lastLocalError||'None'],['Latest storage warning',warning]]:[['Версия приложения',d.version||APP_VERSION],['Схемы резервной копии / IndexedDB',String(d.backupSchema||BACKUP_SCHEMA)+' / '+String(d.historySchema||0)],['Состояние хранилища',migration],['Упражнения в каталоге',String(d.exerciseCount||EX.length)],['Свои упражнения / профили оборудования',String(d.customExerciseCount||0)+' / '+String(d.equipmentProfileCount||0)],['История тренировок / дни питания',String(d.historyCount||0)+' / '+String(d.nutritionCount||0)],['Текущий раздел',v7RouteFromHash()],['Service worker',sw&&sw.controller?'активен':'не управляет страницей'],['Последняя локальная ошибка',d.lastLocalError||'Нет'],['Последнее предупреждение хранилища',warning]];
-    host.innerHTML=rows.map(function(row){return'<div><dt>'+esc(row[0])+'</dt><dd>'+esc(row[1])+'</dd></div>';}).join('');
+    var rows=S.lang==='en'?[['App version',d.version||APP_VERSION],['Backup / IndexedDB schema',String(d.backupSchema||BACKUP_SCHEMA)+' / '+String(d.historySchema||0)],['Storage migration',migration],['LocalStorage',d.storagePersistent?'Available':'Memory fallback'],['Exercise records',String(d.exerciseCount||EX.length)],['Custom exercises / equipment profiles',String(d.customExerciseCount||0)+' / '+String(d.equipmentProfileCount||0)],['Workout history / nutrition days',String(d.historyCount||0)+' / '+String(d.nutritionCount||0)],['Route',v7RouteFromHash()],['Service worker version',sw&&sw.controller?'Reading cache…':'Not controlling page','sw'],['Latest local error',d.lastLocalError||'None'],['Latest storage warning',warning]]:[['Версия приложения',d.version||APP_VERSION],['Схемы резервной копии / IndexedDB',String(d.backupSchema||BACKUP_SCHEMA)+' / '+String(d.historySchema||0)],['Состояние хранилища',migration],['LocalStorage',d.storagePersistent?'Доступен':'Используется память вкладки'],['Упражнения в каталоге',String(d.exerciseCount||EX.length)],['Свои упражнения / профили оборудования',String(d.customExerciseCount||0)+' / '+String(d.equipmentProfileCount||0)],['История тренировок / дни питания',String(d.historyCount||0)+' / '+String(d.nutritionCount||0)],['Текущий раздел',v7RouteFromHash()],['Версия service worker',sw&&sw.controller?'Загружается из локального кэша…':'Страница не управляется'],['Последняя локальная ошибка',d.lastLocalError||'Нет'],['Последнее предупреждение хранилища',warning]];
+    host.innerHTML=rows.map(function(row){return'<div><dt>'+esc(row[0])+'</dt><dd'+(row[2]==='sw'?' data-diagnostic-sw-version':'')+'>'+esc(row[1])+'</dd></div>';}).join('');
+    var swVersion=host.querySelector('[data-diagnostic-sw-version]');
+    if(swVersion&&window.caches)window.caches.keys().then(function(keys){var prefix='mmg-gym-shell-',found=keys.filter(function(key){return key.indexOf(prefix)===0;}).sort().pop();if(document.contains(swVersion))swVersion.textContent=found?found.slice(prefix.length):(S.lang==='en'?'Active; cache version unavailable':'Активен; версия кэша недоступна');}).catch(function(){if(document.contains(swVersion))swVersion.textContent=S.lang==='en'?'Cache Storage unavailable':'Cache Storage недоступен';});
   }
   function renderV7Nav(){qsa('[data-v7-nav]').forEach(function(el){el.textContent=v7c(el.dataset.v7Nav);});var moreSub={tools:S.lang==='en'?'Strength, nutrition, body, cardio and my data':'Сила, питание, состав тела, кардио и мои данные',program:S.lang==='en'?'Weekly structure and the next workout':'Структура недели и следующая тренировка',nutrition:S.lang==='en'?'Calories, macros and feedback':'Калории, макросы и обратная связь',knowledge:S.lang==='en'?'Practical contextual guides':'Практические разборы по контексту',method:S.lang==='en'?'Decision framework':'Логика принятия решений',settings:S.lang==='en'?'Interface, logging and data':'Интерфейс, логирование и данные',about:S.lang==='en'?'Author and system boundaries':'Автор и границы системы'};qsa('[data-v7-more]').forEach(function(el){el.textContent=v7c(el.dataset.v7More);});qsa('[data-v7-more-sub]').forEach(function(el){el.textContent=moreSub[el.dataset.v7MoreSub]||'';});var mt=qs('[data-v7-mobile-title]');if(mt)mt.textContent=v7c('moreTitle');}
   function v7FocusRoute(route){var el=$(route==='home'&&!v7Returning()? 'hero-title' : route==='home'?'v7-home-title': route==='more'?'v7-more-title':route==='settings'?'v7-settings-title':route+'-title');if(el){el.setAttribute('tabindex','-1');requestAnimationFrame(function(){try{el.focus({preventScroll:true});}catch(e){}var anchor=el.closest('section')||el;anchor.scrollIntoView({block:'start',behavior:'auto'});});}else window.scrollTo(0,0);}
@@ -7687,6 +7765,13 @@
       mesocycleStatusFn = mesocycleModule.mesocycleStatus;
     } catch (error) {
       window.dispatchEvent(new CustomEvent('mmg:error', { detail: { key: 'program-mesocycle' } }));
+    }
+    try {
+      var weeklyReviewModule = await import('./src/features/program/weekly-review.mjs');
+      weeklyReviewDecisionFn = weeklyReviewModule.weeklyReviewDecision;
+      cleanWeeklyReviewsFn = weeklyReviewModule.cleanWeeklyReviews;
+    } catch (error) {
+      window.dispatchEvent(new CustomEvent('mmg:error', { detail: { key: 'program-weekly-review' } }));
     }
     try {
       var weightTrendModule = await import('./src/features/progress/weight-trend.mjs');

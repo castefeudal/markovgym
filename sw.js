@@ -1,4 +1,4 @@
-const VERSION = '2026.09-r26-block-review';
+const VERSION = '2026.09-r27-weekly-review';
 const PREFIX = 'mmg-gym-';
 const SHELL = `${PREFIX}shell-${VERSION}`;
 const MEDIA = `${PREFIX}media-${VERSION}`;
@@ -17,6 +17,7 @@ const PRECACHE = [
   './src/persistence/history-repository.mjs',
   './src/features/today/decision-engine.mjs',
   './src/features/program/mesocycle.mjs',
+  './src/features/program/weekly-review.mjs',
   './src/features/exercise/substitution-engine.mjs',
   './src/features/workout/pr-engine.mjs',
   './src/features/nutrition/nutrition-analytics.mjs',
