@@ -8,6 +8,10 @@ test('home boots with the full exercise dataset and no page errors', async ({ pa
   page.on('requestfailed', (request) => failed.push(request.url()));
   await page.goto('/index.html#home');
   await expect(page.locator('#mmg-boot')).toHaveCount(0);
+  await expect(page.locator('html')).toHaveAttribute('data-app-ready', 'true');
+  await expect(page.locator('html')).toHaveAttribute('data-storage-ready', 'true');
+  await expect(page.locator('html')).toHaveAttribute('data-core-ready', 'true');
+  await expect(page.locator('html')).toHaveAttribute('data-route-ready', 'home');
   await expect(page.locator('#stat-total')).toHaveText('1324');
   expect(errors).toEqual([]);
   expect(failed).toEqual([]);
@@ -67,6 +71,64 @@ test('first service worker install does not reload the active page', async ({ pa
   await page.evaluate(() => navigator.serviceWorker.ready);
   await page.waitForTimeout(300);
   expect(documentNavigations).toBe(1);
+});
+
+test('corrupt backup import leaves the current local profile and workout untouched', async ({ page }) => {
+  const profile = { goal: 'muscle', level: 'middle', place: 'gym', days: '3', done: true, skipped: false };
+  const workout = [{ id: '0001', sets: 3, reps: '8–12', weight: '40', done: false }];
+  await page.addInitScript(({ profileSeed, workoutSeed }) => {
+    localStorage.setItem('mmg.profile.v1', JSON.stringify(profileSeed));
+    localStorage.setItem('mmg.workout.v2', JSON.stringify(workoutSeed));
+  }, { profileSeed: profile, workoutSeed: workout });
+  await page.goto('/index.html#settings');
+  await expect(page.locator('#mmg-boot')).toHaveCount(0);
+  const before = await page.evaluate(() => ({ profile: localStorage.getItem('mmg.profile.v1'), workout: localStorage.getItem('mmg.workout.v2') }));
+  const importChooser = page.waitForEvent('filechooser');
+  await page.locator('#data-import').click();
+  const chooser = await importChooser;
+  await chooser.setFiles({ name: 'corrupt-backup.json', mimeType: 'application/json', buffer: Buffer.from('{ definitely not valid json') });
+  await expect(page.locator('.toast')).toContainText(/Не получилось прочитать JSON|Could not read the JSON/);
+  const after = await page.evaluate(() => ({ profile: localStorage.getItem('mmg.profile.v1'), workout: localStorage.getItem('mmg.workout.v2') }));
+  expect(after).toEqual(before);
+});
+
+test('a waiting service worker update reloads once only after the user accepts it', async ({ page }) => {
+  let documentNavigations = 0;
+  page.on('request', (request) => {
+    if (request.isNavigationRequest() && request.frame() === page.mainFrame()) documentNavigations += 1;
+  });
+  await page.goto('/index.html#home');
+  await expect(page.locator('#mmg-boot')).toHaveCount(0);
+  await page.evaluate(() => navigator.serviceWorker.ready);
+  await expect.poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true);
+  await page.addInitScript(() => {
+    if (sessionStorage.getItem('__mmg_mock_waiting_update__') === 'used') return;
+    sessionStorage.setItem('__mmg_mock_waiting_update__', 'used');
+    const serviceWorker = navigator.serviceWorker;
+    Object.defineProperty(serviceWorker, 'register', {
+      configurable: true,
+      value: async () => ({
+        waiting: {
+          postMessage(message) {
+            sessionStorage.setItem('__mmg_update_message__', message.type);
+            serviceWorker.dispatchEvent(new Event('controllerchange'));
+            serviceWorker.dispatchEvent(new Event('controllerchange'));
+          },
+        },
+        installing: null,
+        addEventListener() {},
+      }),
+    });
+  });
+  await page.reload();
+  await expect(page.locator('#mmg-update')).toContainText('Доступна новая версия');
+  expect(documentNavigations).toBe(2);
+  await page.locator('#mmg-update button').click();
+  await expect(page.locator('#mmg-boot')).toHaveCount(0);
+  await expect.poll(() => page.evaluate(() => sessionStorage.getItem('__mmg_update_message__'))).toBe('SKIP_WAITING');
+  expect(documentNavigations).toBe(3);
+  await page.waitForTimeout(150);
+  expect(documentNavigations).toBe(3);
 });
 
 test('legacy workout history migrates to IndexedDB without a 20-session cap', async ({ page }) => {
@@ -148,6 +210,7 @@ test('legacy workout history migrates to IndexedDB without a 20-session cap', as
   await expect.poll(() => page.evaluate(() => window.mmgDiagnostics?.historyCount)).toBe(28);
 
   await page.goto('/index.html#settings');
+  await expect(page.locator('html')).toHaveAttribute('data-app-ready', 'true');
   const downloadPromise = page.waitForEvent('download');
   await page.locator('#data-export').click();
   const download = await downloadPromise;
@@ -229,6 +292,7 @@ test('custom exercise joins the Library, saved workout, Run Mode, history and sc
   await expect.poll(() => page.evaluate(() => window.mmgDiagnostics?.historyCount)).toBe(1);
 
   await page.goto('/index.html#settings');
+  await expect(page.locator('html')).toHaveAttribute('data-app-ready', 'true');
   const downloadPromise = page.waitForEvent('download');
   await page.locator('#data-export').click();
   const download = await downloadPromise;
@@ -272,6 +336,7 @@ test('equipment profiles constrain Library choices, survive reload and preserve 
   if (await page.locator('#filters-apply').isVisible()) await page.locator('#filters-apply').click();
 
   await page.goto('/index.html#settings');
+  await expect(page.locator('html')).toHaveAttribute('data-app-ready', 'true');
   const downloadPromise = page.waitForEvent('download');
   await page.locator('#data-export').click();
   const download = await downloadPromise;
@@ -795,6 +860,7 @@ test('flagship restores saved programme on home and exposes the weekly pulse', a
   await expect(page.locator('#v10-home-pulse')).toBeVisible();
   await expect(page.locator('#v10-home-pulse')).toContainText(/0\s*\/\s*2/);
   await page.goto('/index.html#program');
+  await expect(page.locator('html')).toHaveAttribute('data-route-ready', 'program');
   await expect(page.locator('#plan-out')).toHaveAttribute('data-filled', 'true');
   await expect(page.locator('#plan-out .v10-plan-day')).toHaveCount(2);
   await expect(page.locator('#plan-out [data-mesocycle-status="active"]')).toContainText('Неделя блока 1 из 4');

@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 
-for (const route of ['home', 'library', 'tools', 'settings']) {
+for (const route of ['home', 'library', 'workout', 'progress', 'program', 'nutrition', 'knowledge', 'tools', 'settings']) {
   test(`axe has no serious or critical violations on ${route}`, async ({ page }) => {
     await page.goto(`/index.html#${route}`);
     await expect(page.locator('#mmg-boot')).toHaveCount(0);
