@@ -3651,8 +3651,8 @@
     var log=ensureSetLog(item), row=log[Math.max(0,runState.set-1)]; if(!row) return false;
     var wasCompleted=!!row.completed;
     var stage=$('run-stage'),typeInput=qs('[data-run-set-type]',stage);
-    ['reps','weight','distance','duration','rir','rpe'].forEach(function(name){
-      var field=qs('[data-run-field="'+name+'"]',stage);if(field)row[name]=String(field.value||'').slice(0,name==='reps'?24:40);
+    ['reps','weight','distance','duration','rir','rpe','note'].forEach(function(name){
+      var field=qs('[data-run-field="'+name+'"]',stage);if(field)row[name]=String(field.value||'').slice(0,name==='reps'?24:(name==='note'?500:40));
     });
     if(typeInput)row.type=String(typeInput.value||'working').slice(0,12);
     row.completed=true; row.completedAt=Date.now(); row.restSec=Math.max(0,Number(S.rest)||0); item.reps=row.reps||item.reps; item.weight=row.weight||item.weight; item.done=log.every(function(x){return x.completed;});
@@ -3674,11 +3674,44 @@
     return '<div class="run-pr-notice" role="status" aria-live="polite">'+runState.lastPRs.map(function(record){var label=(labels[record.type]||labels.load)[S.lang==='en'?'en':'ru'];var unit=record.type==='duration'?(S.lang==='en'?' sec':' сек'):record.type==='distance'?' km':(['load','added-load','e1rm','exercise-volume','session-volume'].indexOf(record.type)>=0?' kg':'');return '<span><b>'+(S.lang==='en'?'New PR':'Новый PR')+'</b> · '+esc(label)+' '+esc(String(record.value))+unit+'</span>';}).join('')+'</div>';
   }
 
+  function adjustRunField(name,direction){
+    var stage=$('run-stage'),field=qs('[data-run-field="'+name+'"]',stage),item=S.workout[runState.ex],ex=item&&BY_ID[item.id];if(!field||!item)return;
+    saveCurrentSetDraft();
+    var text=String(field.value||'').trim().replace(',','.'),match=text.match(/-?\d+(?:\.\d+)?/),current=match?Number(match[0]):0;
+    var step=name==='weight'?Math.max(.1,Number(ex&&ex.loadIncrement)||progressionIncrementForExercise(ex)||2.5):1;
+    var value=Math.max(name==='reps'?1:0,current+direction*step);value=Math.round((value+Number.EPSILON)*100)/100;
+    var row=ensureSetLog(item)[Math.max(0,runState.set-1)];if(row)row[name]=String(value);item[name]=String(value);saveWorkout();renderRun();
+  }
+
+  function addRunSet(){
+    saveCurrentSetDraft();var item=S.workout[runState.ex];if(!item||Number(item.sets)>=20)return;
+    var log=ensureSetLog(item),previous=log[Math.max(0,runState.set-1)]||{};item.setLog.push(cleanSetRecord({reps:previous.reps||item.reps,weight:previous.weight||item.weight,type:previous.type||'working'}));item.sets=item.setLog.length;item.done=false;runState.set=item.sets;saveWorkout();renderWorkout();renderRun();
+  }
+
+  function removeRunSet(){
+    saveCurrentSetDraft();var item=S.workout[runState.ex];if(!item||Number(item.sets)<=1)return;
+    var log=ensureSetLog(item);log.splice(Math.max(0,runState.set-1),1);item.sets=Math.max(1,log.length);item.setLog=log;item.done=log.every(function(row){return row.completed;});runState.set=Math.min(runState.set,item.sets);runState.lastPRs=[];saveWorkout();renderWorkout();renderRun();
+  }
+
+  function undoRunSet(){
+    var item=S.workout[runState.ex];if(!item)return;var row=ensureSetLog(item)[Math.max(0,runState.set-1)];if(!row||!row.completed)return;
+    row.completed=false;row.completedAt=0;item.done=false;runState.lastPRs=[];saveWorkout();renderWorkout();renderRun();
+  }
+
+  function workoutPersonalRecords(){
+    if(!detectSetPersonalRecords||!detectVolumePersonalRecords)return[];
+    var records=[];S.workout.forEach(function(item){var ex=BY_ID[item.id],tracking=ex&&ex.custom?ex.trackingType:(ex&&ex.zone==='cardio'?'duration':'weight-reps');ensureSetLog(item).forEach(function(row){records=records.concat(detectSetPersonalRecords({exerciseId:item.id,set:row,trackingType:tracking,history:S.history}));});
+      if(item.done)records=records.concat(detectVolumePersonalRecords({exerciseId:item.id,currentItems:[Object.assign({},item,{trackingType:tracking})],history:S.history,exerciseComplete:true}));
+    });
+    if(S.workout.every(function(item){return ensureSetLog(item).every(function(row){return row.completed;});}))records=records.concat(detectVolumePersonalRecords({exerciseId:'',currentItems:S.workout.map(function(item){var ex=BY_ID[item.id];return Object.assign({},item,{trackingType:ex&&ex.custom?ex.trackingType:(ex&&ex.zone==='cardio'?'duration':'weight-reps')});}),history:S.history,sessionComplete:true}));
+    var unique=[];records.forEach(function(record){var key=record.type+':'+record.value;if(!unique.some(function(saved){return saved.key===key;}))unique.push({key:key,type:record.type,value:record.value});});return unique.map(function(record){return{type:record.type,value:record.value};});
+  }
+
   function saveCurrentSetDraft(){
     var item=S.workout[runState.ex],stage=$('run-stage'); if(!item||!stage)return;
     var type=qs('[data-run-set-type]',stage),log=ensureSetLog(item),row=log[Math.max(0,runState.set-1)];
     if(!row)return;
-    ['reps','weight','distance','duration','rir','rpe'].forEach(function(name){var field=qs('[data-run-field="'+name+'"]',stage);if(field){row[name]=String(field.value||'').slice(0,name==='reps'?24:40);if(name==='reps'||name==='weight')item[name]=row[name]||item[name];}});
+    ['reps','weight','distance','duration','rir','rpe','note'].forEach(function(name){var field=qs('[data-run-field="'+name+'"]',stage);if(field){row[name]=String(field.value||'').slice(0,name==='reps'?24:(name==='note'?500:40));if(name==='reps'||name==='weight')item[name]=row[name]||item[name];}});
     if(type)row.type=String(type.value||'working').slice(0,12); saveWorkout();saveRunSession();
   }
   function runReferenceForCurrent(){
@@ -3691,6 +3724,12 @@
     ['reps','weight','distance','duration'].forEach(function(name){var field=qs('[data-run-field="'+name+'"]',stage);if(field)field.value=ref[name]||'';});saveCurrentSetDraft();
   }
 
+  function updateRunClock(){
+    if(!runOpen())return;var stage=$('run-stage'),elapsed=fmtClock(runElapsedSeconds()),line=qs('[data-run-elapsed]',stage);
+    if(line)line.textContent=t('runElapsed')+' · '+elapsed;
+    qsa('[data-run-elapsed-full]',stage).forEach(function(node){node.textContent=elapsed;});
+  }
+
   function renderRun() {
     var item = S.workout[runState.ex];
     var stage = $('run-stage');
@@ -3698,7 +3737,7 @@
     if (!item) {
       stage.innerHTML = runPersonalRecordNotice()+'<div class="run-finish-summary">' + premiumIcon('check') +
         '<h3>' + esc(t('runDoneTitle')) + '</h3><p class="small">' + esc(t('runFinishedBody')) + '</p>' +
-        '<div class="run-session-meta"><div><span>' + esc(t('runElapsed')) + '</span><b>' + elapsed + '</b></div>' +
+        '<div class="run-session-meta"><div><span>' + esc(t('runElapsed')) + '</span><b data-run-elapsed-full>' + elapsed + '</b></div>' +
         '<div><span>' + esc(t('sessionExercises')) + '</span><b>' + S.workout.length + '</b></div>' +
         '<div><span>' + esc(t('sessionSets')) + '</span><b>' + runTotalSets() + '</b></div></div></div>';
       $('run-kicker').textContent = t('runFinished');
@@ -3733,7 +3772,8 @@
     };
     var runFields=(trackingFields[tracking]||trackingFields['weight-reps']).map(function(field){
       var initial=currentSet[field.key]||item[field.key]||(field.key==='duration'&&!ex.custom?item.reps:'');
-      return '<label>'+esc(field.label)+'<input type="text" inputmode="'+(field.key==='duration'?'text':'decimal')+'" data-run-field="'+field.key+'" value="'+esc(initial||'')+'"></label>';
+      var adjust=field.key==='weight'||field.key==='reps';
+      return '<label>'+esc(field.label)+(adjust?'<span class="run-value-control"><button type="button" data-run-adjust="'+field.key+'" data-direction="-1" aria-label="'+esc(S.lang==='en'?'Decrease '+field.label:'Уменьшить: '+field.label)+'">−</button>':'')+'<input type="text" inputmode="'+(field.key==='duration'?'text':'decimal')+'" data-run-field="'+field.key+'" value="'+esc(initial||'')+'">'+(adjust?'<button type="button" data-run-adjust="'+field.key+'" data-direction="1" aria-label="'+esc(S.lang==='en'?'Increase '+field.label:'Увеличить: '+field.label)+'">+</button></span>':'')+'</label>';
     }).join('');
     var prev=runReferenceForCurrent();
     var prevValue=setPerformanceSummary(prev),prevText=prevValue||t('runNoPrev');
@@ -3753,12 +3793,13 @@
       '<div class="run-context"><div><div class="run-submeta"><span class="meta-tag">' + esc(labelMu(ex.target)) + '</span><span class="meta-tag">' + premiumIcon('equipment') + esc(labelEq(ex.equip)) + '</span></div>' +
       '<h3 class="run-name">' + esc(exName(ex)) + '</h3></div>' +
       '<div class="run-tech-cues"><div><span>'+esc(detailText('Ключ','Key cue'))+'</span><p>'+esc(runPrimary)+'</p></div><div><span>'+esc(detailText('Дыхание','Breathing'))+'</span><p>'+esc(runTechnique.breathing)+'</p></div></div>' +
-      runPersonalRecordNotice()+'<div class="run-current"><div class="run-setline"><b>' + esc(t('runSetLabel', { i: runState.set, n: item.sets })) + '</b><span>' + esc(t('runElapsed')) + ' · ' + elapsed + '</span></div>' +
+      runPersonalRecordNotice()+'<div class="run-current"><div class="run-setline"><b>' + esc(t('runSetLabel', { i: runState.set, n: item.sets })) + '</b><span data-run-elapsed>' + esc(t('runElapsed')) + ' · ' + elapsed + '</span></div>' +
       '<div class="run-current-inputs">' + runFields + advancedInputs + '</div>'+setTypeSelect +
-      '<div class="run-prev-record"><b>' + esc(t('runPrevPerformance')) + ':</b> ' + esc(prevText) + '</div>' + progressionHtml + usePrev + '<div class="run-set-strip" aria-label="' + esc(t('workoutSetsDone',{done:completedSetCount(item),total:item.sets})) + '">' + setStrip + '</div></div>' +
+      '<label class="run-note-field">'+esc(S.lang==='en'?'Quick note':'Короткая заметка')+'<textarea rows="2" data-run-field="note" maxlength="500" placeholder="'+esc(S.lang==='en'?'Optional set note':'Заметка к подходу, если нужна')+'">'+esc(currentSet.note||'')+'</textarea></label>'+
+      '<div class="run-prev-record"><b>' + esc(t('runPrevPerformance')) + ':</b> ' + esc(prevText) + '</div>' + progressionHtml + usePrev + '<div class="run-set-strip" aria-label="' + esc(t('workoutSetsDone',{done:completedSetCount(item),total:item.sets})) + '">' + setStrip + '</div><div class="run-set-tools"><button type="button" data-run-add-set>'+(S.lang==='en'?'Add set':'Добавить подход')+'</button><button type="button" data-run-remove-set'+(Number(item.sets)<=1?' disabled':'')+'>'+(S.lang==='en'?'Remove set':'Убрать подход')+'</button>'+(currentSet.completed?'<button type="button" data-run-undo>'+(S.lang==='en'?'Undo completed set':'Отменить подход')+'</button>':'')+'</div></div>' +
       '<div class="run-session-meta"><div><span>' + esc(t('sessionExercises')) + '</span><b>' + (runState.ex + 1) + ' / ' + S.workout.length + '</b></div>' +
       '<div><span>' + esc(t('sessionSets')) + '</span><b>' + runDoneSets() + ' / ' + total + '</b></div>' +
-      '<div><span>' + esc(t('runElapsed')) + '</span><b>' + elapsed + '</b></div></div>' +
+      '<div><span>' + esc(t('runElapsed')) + '</span><b data-run-elapsed-full>' + elapsed + '</b></div></div>' +
       '<div class="run-actions"><button class="btn btn-solid btn-sm" type="button" data-run-open="' + esc(ex.id) + '">' + premiumIcon('technique') + esc(t('openTechnique')) + '</button>' +
       '<button class="btn btn-quiet btn-sm" type="button" data-run-skip="1">' + premiumIcon('skip') + esc(t('runSkip')) + '</button></div></div></div>';
     saveRunSession();
@@ -3813,7 +3854,7 @@
       note:S.meta.note,
       planDay:Number.isInteger(Number(S.meta.planDay))?Number(S.meta.planDay):null,
       durationSec: runState && runState.startedAt ? runElapsedSeconds() : 0,
-      personalRecords:(runState.personalRecords||[]).map(function(record){return Object.assign({},record);}),
+      personalRecords:workoutPersonalRecords(),
       items: S.workout.map(function (w) {
         var ex=BY_ID[w.id];return { id:w.id, sets:w.sets, reps:w.reps, weight:w.weight, trackingType:ex&&ex.custom?ex.trackingType:(ex&&ex.zone==='cardio'?'duration':'weight-reps'), done:w.done, setLog:ensureSetLog(w).map(function(set){return Object.assign({},set);}) };
       })
@@ -5403,7 +5444,7 @@
     $('run-stage').addEventListener('input', function (e) {
       var field=e.target.closest('[data-run-field]');if(!field)return;
       var item=S.workout[runState.ex];if(!item)return;
-      var name=field.dataset.runField,value=String(field.value||'').slice(0,name==='reps'?24:40);
+      var name=field.dataset.runField,value=String(field.value||'').slice(0,name==='reps'?24:(name==='note'?500:40));
       var log=ensureSetLog(item),set=log[Math.max(0,runState.set-1)];if(set)set[name]=value;
       if(name==='reps'||name==='weight')item[name]=value;
       saveWorkout();saveRunSession();
@@ -5422,6 +5463,10 @@
       saveCurrentSetDraft();
     });
     $('run-stage').addEventListener('click', function (e) {
+      var adjust=e.target.closest('[data-run-adjust]');if(adjust){adjustRunField(adjust.dataset.runAdjust,Number(adjust.dataset.direction)||1);return;}
+      if(e.target.closest('[data-run-add-set]')){addRunSet();return;}
+      if(e.target.closest('[data-run-remove-set]')){removeRunSet();return;}
+      if(e.target.closest('[data-run-undo]')){undoRunSet();return;}
       var jump=e.target.closest('[data-run-set]'); if(jump){saveCurrentSetDraft();runState.set=Math.max(1,Number(jump.dataset.runSet)||1);saveRunSession();renderRun();return;}
       var reuse=e.target.closest('[data-run-copy-prev]'); if(reuse){reusePreviousRunResult();return;}
       var open = e.target.closest('[data-run-open]');
@@ -6701,7 +6746,7 @@
   function initProductionV3(){
     decorateConsoleIcons(); initDiscovery(); initFilterResets(); initProgramWizard(); initBodyMapTooltip(); initV3Units(); ensureMobileRestTimer();
     var nav=$('muscle-navigator'); if(nav){ nav.addEventListener('pointerdown',function(e){ var z=e.target.closest('[data-body-zone]'); if(!z)return; e.preventDefault(); var value=z.dataset.bodyZone; S.zones=[value];S.muscles=[];S.limit=PAGE;renderMuscleBoard();renderFilters();renderResults(); }); }
-    window.setInterval(function(){ if(runOpen())renderRun(); },1000);
+    window.setInterval(updateRunClock,1000);
   }
 
 
@@ -6710,7 +6755,7 @@
      Correctness -> data integrity -> usability -> accessibility -> performance.
      This layer deliberately preserves the proven V4 business logic and contracts.
      ======================================================================== */
-  var APP_VERSION = '2026.09-r16-history-workspace';
+  var APP_VERSION = '2026.09-r17-run-mode-controls';
   var BACKUP_SCHEMA = 9;
   K.restTimer = 'mmg.restTimer.v2';
   K.lastBackup = 'mmg.lastBackup.v1';

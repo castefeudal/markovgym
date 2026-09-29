@@ -526,12 +526,28 @@ test('Run Mode announces a history-backed estimated one-rep-max record', async (
   await page.locator('#grid [data-add="' + exerciseId + '"]').click();
   await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('mmg.workout.v2') || '[]').length), { timeout: 10_000 }).toBe(1);
   await page.goto('/index.html#workout');
+  const workoutSets = page.locator('.workout-item [data-field="sets"]');
+  await workoutSets.fill('1');
+  await workoutSets.press('Tab');
   await page.locator('[data-v8-start-run]:visible, #w-run:visible').first().click();
   await page.locator('[data-run-field="weight"]').fill('105');
+  const beforeStep = Number(await page.locator('[data-run-field="weight"]').inputValue());
+  await page.locator('[data-run-adjust="weight"][data-direction="1"]').click();
+  expect(Number(await page.locator('[data-run-field="weight"]').inputValue())).toBeGreaterThan(beforeStep);
+  await page.locator('[data-run-add-set]').click();
+  await expect(page.locator('[data-run-set]')).toHaveCount(2);
+  await page.locator('[data-run-remove-set]').click();
+  await expect(page.locator('[data-run-set]')).toHaveCount(1);
   await page.locator('[data-run-field="reps"]').fill('5');
+  await page.locator('[data-run-field="note"]').fill('Keep the next rep controlled');
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('mmg.workout.v2'))[0].setLog[0].note)).toBe('Keep the next rep controlled');
   await page.locator('#run-next').click();
   await expect(page.locator('.run-pr-notice')).toContainText('Новый PR');
   await expect(page.locator('.run-pr-notice')).toContainText('e1RM');
+  await page.locator('#run-prev').click();
+  await expect(page.locator('[data-run-undo]')).toBeVisible();
+  await page.locator('[data-run-undo]').click();
+  await expect(page.locator('.run-pr-notice')).toHaveCount(0);
 });
 
 test('exercise detail has no horizontal overflow on a 390px viewport', async ({ page }) => {
