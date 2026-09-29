@@ -89,6 +89,7 @@
   var historyVisibleCount = 20;
   var historyFilters = { query:'', from:'', to:'', programme:'', exercise:'', durationMin:'', durationMax:'', prOnly:false };
   var todayDecisionEngine = null;
+  var weightTrendFn = null;
   var substitutionRanker = null;
   var workoutExecutionOrderFn = null;
   var storageOk = (function () {
@@ -314,6 +315,7 @@
     'nutritionLog.save': 'Save day', 'nutritionLog.empty': 'No entries yet. Add today’s intake in a few seconds.',
     'nutritionLog.delete': 'Delete', 'nutritionLog.invalid': 'Check the date and nutrition values.',
     'nutritionLog.saved': 'Daily nutrition saved.', 'nutritionLog.saveFailed': 'Could not save the nutrition entry on this device.',
+    'nutritionTrend.title': 'Weight trend', 'nutritionTrend.intro': 'The latest scale reading stays visible separately from the smoothed trend.',
 
     'plan.eyebrow': 'Weekly structure', 'plan.title': 'Starting training plan',
     'plan.text': 'The inputs genuinely change the output: split, volume, reps, rest, cardio and the actual exercises are drawn from this same base.',
@@ -588,9 +590,17 @@
     'nutritionLog.invalid': { ru:'Проверь дату и значения питания.', en:'Check the date and nutrition values.' },
     'nutritionLog.saved': { ru:'Рацион за день сохранён.', en:'Daily nutrition saved.' },
     'nutritionLog.saveFailed': { ru:'Не удалось сохранить запись на этом устройстве.', en:'Could not save the nutrition entry on this device.' },
+    'nutritionLog.calorieUnit': { ru:'ккал', en:'kcal' }, 'nutritionLog.gramUnit': { ru:'г', en:'g' },
+    'nutritionLog.proteinLabel': { ru:'белка', en:'protein' }, 'nutritionLog.fatLabel': { ru:'жиров', en:'fat' },
+    'nutritionLog.carbsLabel': { ru:'углеводов', en:'carbohydrates' },
     nextNutritionLog: { ru:'Записать питание за сегодня', en:'Log today’s nutrition' },
     nextNutritionLogWhy: { ru:'Добавь калории и белок; вес за эту дату поможет точнее увидеть динамику.', en:'Add calories and protein; a same-day weigh-in can also strengthen the trend.' },
-    actNutritionLog: { ru:'Записать питание', en:'Log nutrition' }
+    actNutritionLog: { ru:'Записать питание', en:'Log nutrition' },
+    'nutritionTrend.empty': { ru:'Чтобы увидеть сглаженный тренд, отмечай вес регулярно: для среднего нужны минимум 3 замера за 7 дней.', en:'Log weight regularly to see a smoothed trend; the 7-day mean needs at least 3 readings.' },
+    'nutritionTrend.scale': { ru:'Вес на весах', en:'Scale weight' }, 'nutritionTrend.mean': { ru:'Среднее за 7 дней', en:'7-day mean' },
+    'nutritionTrend.delta': { ru:'Изменение за 7 дней', en:'7-day change' }, 'nutritionTrend.rate': { ru:'Темп за 21 день', en:'21-day rate' },
+    'nutritionTrend.coverage': { ru:'Замеры: {n7}/7 за 7 дней · {n21}/21 за 21 день', en:'Readings: {n7}/7 over 7 days · {n21}/21 over 21 days' },
+    'nutritionTrend.method': { ru:'Метод: простое среднее записанных взвешиваний в календарных окнах; сравнение показывается при наличии минимум 3 замеров в каждом окне.', en:'Method: arithmetic means of recorded weigh-ins in calendar windows; comparisons require at least 3 readings in each window.' },
   });
 
   function t(key, vals) {
@@ -6334,12 +6344,27 @@
       return;
     }
     host.innerHTML = rows.map(function (row) {
-      var day = row.date.split('-').reverse().join('.');
-      var weight = row.weightKg == null ? '' : ' · ' + esc(row.weightKg) + ' кг';
-      var macros = [row.fat == null ? '' : esc(row.fat) + ' г жиров', row.carbs == null ? '' : esc(row.carbs) + ' г углеводов'].filter(Boolean).join(' · ');
+      var day = new Intl.DateTimeFormat(S.lang==='en'?'en-GB':'ru-RU').format(new Date(row.date+'T00:00:00'));
+      var grams = t('nutritionLog.gramUnit');
+      var weight = row.weightKg == null ? '' : ' · ' + esc(row.weightKg) + ' ' + esc(t('kg'));
+      var macros = [row.fat == null ? '' : esc(row.fat) + ' ' + esc(grams) + ' ' + esc(t('nutritionLog.fatLabel')), row.carbs == null ? '' : esc(row.carbs) + ' ' + esc(grams) + ' ' + esc(t('nutritionLog.carbsLabel'))].filter(Boolean).join(' · ');
       var confidence = row.accuracy === 'accurate' ? t('nutritionLog.accurate') : row.accuracy === 'estimated' ? t('nutritionLog.estimated') : row.accuracy === 'rough' ? t('nutritionLog.rough') : '';
-      return '<article class="nutrition-log-row"><div><strong>' + esc(day) + '</strong><span>' + esc(row.calories) + ' ккал · ' + esc(row.protein) + ' г белка' + weight + '</span>' + (macros ? '<small>' + macros + '</small>' : '') + (confidence ? '<small>' + esc(confidence) + '</small>' : '') + (row.note ? '<small>' + esc(row.note) + '</small>' : '') + '</div><button class="btn btn-quiet" type="button" data-nutrition-delete="' + esc(row.date) + '" aria-label="' + esc(t('nutritionLog.delete')) + '">' + esc(t('nutritionLog.delete')) + '</button></article>';
+      return '<article class="nutrition-log-row"><div><strong>' + esc(day) + '</strong><span>' + esc(row.calories) + ' ' + esc(t('nutritionLog.calorieUnit')) + ' · ' + esc(row.protein) + ' ' + esc(grams) + ' ' + esc(t('nutritionLog.proteinLabel')) + weight + '</span>' + (macros ? '<small>' + macros + '</small>' : '') + (confidence ? '<small>' + esc(confidence) + '</small>' : '') + (row.note ? '<small>' + esc(row.note) + '</small>' : '') + '</div><button class="btn btn-quiet" type="button" data-nutrition-delete="' + esc(row.date) + '" aria-label="' + esc(t('nutritionLog.delete')) + '">' + esc(t('nutritionLog.delete')) + '</button></article>';
     }).join('');
+  }
+
+  function renderNutritionTrend() {
+    var host = $('nutrition-trend');
+    if (!host) return;
+    var trend = weightTrendFn ? weightTrendFn(S.diary) : null;
+    if (!trend || trend.status !== 'ok') {
+      host.innerHTML = '<p class="small">' + esc(t('nutritionTrend.empty')) + '</p>';
+      return;
+    }
+    var fmtWeight = function (value) { return value == null ? '—' : esc(Number(value).toFixed(1)) + ' ' + esc(t('kg')); };
+    var fmtDelta = function (value) { return value == null ? '—' : (value > 0 ? '+' : '') + esc(Number(value).toFixed(1)) + ' ' + esc(t('kg')); };
+    var coverage = t('nutritionTrend.coverage', { n7: trend.observations7d, n21: trend.observations21d });
+    host.innerHTML = '<div class="nutrition-trend-metrics"><div><span>' + esc(t('nutritionTrend.scale')) + '</span><b>' + fmtWeight(trend.scaleWeightKg) + '</b></div><div><span>' + esc(t('nutritionTrend.mean')) + '</span><b>' + fmtWeight(trend.trendWeightKg) + '</b></div><div><span>' + esc(t('nutritionTrend.delta')) + '</span><b>' + fmtDelta(trend.delta7dKg) + '</b></div><div><span>' + esc(t('nutritionTrend.rate')) + '</span><b>' + fmtDelta(trend.rate21dKgPerWeek) + (trend.rate21dKgPerWeek == null ? '' : '<small> / ' + esc(S.lang==='en'?'week':'нед.') + '</small>') + '</b></div></div><p class="tiny">' + esc(coverage) + '</p><p class="tiny">' + esc(t('nutritionTrend.method')) + '</p>';
   }
 
   async function saveNutritionDay() {
@@ -6359,7 +6384,7 @@
         if (diary) diary.weight = weightKg;
         else S.diary.push({ date: date, weight: weightKg, waist: null, recovery: null, sleep: null, mood: 3, hunger: 3, fatigue: 3, lift: '', note: '' });
         S.diary.sort(function (a, b) { return a.date < b.date ? 1 : -1; });
-        saveDiary(); renderProgress(); renderDashIfVisible();
+        saveDiary(); renderProgress(); renderDashIfVisible(); renderNutritionTrend();
       }
       renderNutritionLog();
       $('nlog-note').value = '';
@@ -6385,6 +6410,7 @@
         .catch(function () { showToast(t('nutritionLog.saveFailed')); });
     });
     renderNutritionLog();
+    renderNutritionTrend();
   }
 
   function bindTools() {
@@ -6903,7 +6929,7 @@
      Correctness -> data integrity -> usability -> accessibility -> performance.
      This layer deliberately preserves the proven V4 business logic and contracts.
      ======================================================================== */
-  var APP_VERSION = '2026.09-r21-nutrition-log';
+  var APP_VERSION = '2026.09-r22-weight-trend';
   var BACKUP_SCHEMA = 9;
   K.restTimer = 'mmg.restTimer.v2';
   K.lastBackup = 'mmg.lastBackup.v1';
@@ -7574,7 +7600,7 @@
   var _openExerciseProductOSV7=openExercise;openExercise=function(id,trigger,silent){var result=_openExerciseProductOSV7(id,trigger,silent);renderV7ExerciseHistory(id);return result;};
   var _decorateKbjuProductOSV7=decorateKbju;decorateKbju=function(ctx){var result=_decorateKbjuProductOSV7(ctx);renderV7NutritionContext(ctx);renderV7Home();return result;};
   var _progressIntelligenceHtmlProductOSV7=progressIntelligenceHtml;progressIntelligenceHtml=function(){var html=_progressIntelligenceHtmlProductOSV7();if(!html)return html;var c=v7DiaryConfidence(),badge='<div class="v7-confidence" data-level="'+c.level+'"><b>'+esc(c.label)+'</b><span>'+esc(c.detail)+'</span></div>';return html.replace('<div class="intel-metrics">',badge+'<div class="intel-metrics">');};
-  var _applyLangProductOSV7=applyLang;applyLang=function(initial){_applyLangProductOSV7(initial);renderV7All();renderNutritionLog();if(S.activeId)renderV7ExerciseHistory(S.activeId);};
+  var _applyLangProductOSV7=applyLang;applyLang=function(initial){_applyLangProductOSV7(initial);renderV7All();renderNutritionLog();renderNutritionTrend();if(S.activeId)renderV7ExerciseHistory(S.activeId);};
   var _scrollToIdProductOSV7=scrollToId;scrollToId=function(id){if(V7_ROUTE_IDS[id]){navigateV7(id,true);return;}_scrollToIdProductOSV7(id);};
   var _scrollToLibraryProductOSV7=scrollToLibrary;scrollToLibrary=function(){navigateV7('library',false);requestAnimationFrame(function(){var el=$('library');if(el)el.scrollIntoView({block:'start',behavior:REDUCED_MOTION.matches?'auto':'smooth'});});};
 
@@ -7591,6 +7617,12 @@
       todayDecisionEngine = todayModule.nextWorkoutAction;
     } catch (error) {
       window.dispatchEvent(new CustomEvent('mmg:error', { detail: { key: 'today-decision' } }));
+    }
+    try {
+      var weightTrendModule = await import('./src/features/progress/weight-trend.mjs');
+      weightTrendFn = weightTrendModule.weightTrend;
+    } catch (error) {
+      window.dispatchEvent(new CustomEvent('mmg:error', { detail: { key: 'weight-trend' } }));
     }
     try {
       var substitutionModule = await import('./src/features/exercise/substitution-engine.mjs');

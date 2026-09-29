@@ -15,6 +15,7 @@ test('home boots with the full exercise dataset and no page errors', async ({ pa
 
 test('daily nutrition log persists by date and links optional weight to the progress diary', async ({ page }) => {
   await page.goto('/index.html#nutrition');
+  await page.locator('#nutrition-log-form').scrollIntoViewIfNeeded();
   await expect(page.locator('#nutrition-log-title')).toBeVisible();
   await page.locator('#nlog-date').fill('2026-09-29');
   await page.locator('#nlog-calories').fill('2240');
@@ -27,6 +28,8 @@ test('daily nutrition log persists by date and links optional weight to the prog
   await page.locator('#nutrition-log-form button[type="submit"]').click();
   await expect(page.locator('#nutrition-log-list')).toContainText('2240 ккал');
   await expect(page.locator('#nutrition-log-list')).toContainText('80.4 кг');
+  await expect(page.locator('#nutrition-trend')).toContainText('80.4');
+  await expect(page.locator('#nutrition-trend')).toContainText('—');
   const saved = await page.evaluate(async () => {
     const db = await new Promise((resolve, reject) => {
       const request = indexedDB.open('markov-made-gym');
@@ -126,7 +129,7 @@ test('legacy workout history migrates to IndexedDB without a 20-session cap', as
     db.close();
     return { version: db.version, count, customCount, profileCount, exercisePreferences, userState };
   });
-  expect(persistedCount.version).toBe(5);
+  expect(persistedCount.version).toBe(6);
   expect(persistedCount.count).toBe(28);
   expect(persistedCount.customCount).toBe(1);
   expect(persistedCount.profileCount).toBe(4);
