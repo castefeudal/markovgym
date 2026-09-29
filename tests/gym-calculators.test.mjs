@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { calculatePlates, estimateOneRepMax, sessionVolume, warmupRamp } from '../tools/gym-calculators.mjs';
+import { calculatePlates, estimateOneRepMax, sessionVolume, warmupRamp, weeklyMuscleSets } from '../tools/gym-calculators.mjs';
 
 test('e1RM uses Epley and Brzycki and exposes a range', () => {
   const result = estimateOneRepMax(100, 5);
@@ -43,4 +43,19 @@ test('volume counts completed weighted sets only', () => {
     { weight: 80, reps: 8, completed: false },
     { weight: '', reps: 12, completed: true },
   ]), 500);
+});
+
+test('volume excludes completed warm-up sets', () => {
+  assert.equal(sessionVolume([
+    { weight: 40, reps: 8, completed: true, type: 'warmup' },
+    { weight: 100, reps: 5, completed: true, type: 'working' },
+  ]), 500);
+});
+
+test('weekly muscle set totals exclude completed warm-up sets', () => {
+  assert.deepEqual(weeklyMuscleSets([{ items: [{ muscle: 'quads', sets: 4, setLog: [
+    { completed: true, type: 'warmup' },
+    { completed: true, type: 'working' },
+    { completed: false, type: 'working' },
+  ] }] }]), { quads: 1 });
 });

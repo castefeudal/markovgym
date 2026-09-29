@@ -77,3 +77,17 @@ test('refuses to invent a recommendation from mixed working loads', () => {
   assert.equal(result.status, 'insufficient');
   assert.equal(result.reason, 'mixed-working-weights');
 });
+
+test('ignores warm-up sets when recommending double progression', () => {
+  const result = recommendProgression({
+    previousSets: [
+      { weight: 40, reps: 8, completed: true, type: 'warmup' },
+      { weight: 100, reps: 10, completed: true, type: 'working' },
+      { weight: 100, reps: 10, completed: true, type: 'working' },
+    ],
+    targetRepRange: '8-10',
+    increment: 2.5,
+  });
+  assert.equal(result.action, 'increase-load');
+  assert.equal(result.evidence.completedSets, 2);
+});

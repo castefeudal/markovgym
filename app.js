@@ -6196,6 +6196,46 @@
   function bindWorkout() {
     var list = $('workout-list');
 
+    window.addEventListener('mmg:add-warmup', function (event) {
+      if (!DATA_READY) {
+        ensureData().then(function (ready) { if (ready) window.dispatchEvent(new CustomEvent('mmg:add-warmup', { detail: event.detail })); });
+        return;
+      }
+      var rawSets = event.detail && Array.isArray(event.detail.sets) ? event.detail.sets.slice(0, 8) : [];
+      var warmupSets = rawSets.map(function (set) {
+        var weight = Number(set && set.weight), reps = Number(set && set.reps);
+        return Number.isFinite(weight) && weight > 0 && Number.isFinite(reps) && reps > 0
+          ? cleanSetRecord({ weight: weight, reps: reps, type: 'warmup', completed: false }) : null;
+      }).filter(Boolean);
+      if (!warmupSets.length) return;
+      var target = null;
+      S.workout.some(function (item) {
+        var ex = BY_ID[item.id];
+        var tracking = ex && ex.custom ? ex.trackingType : (ex && ex.zone === 'cardio' ? 'duration' : 'weight-reps');
+        var log = ensureSetLog(item);
+        if (tracking !== 'weight-reps' || log.some(function (set) { return set.completed; })) return false;
+        target = { item: item, log: log, name: exName(ex) };
+        return true;
+      });
+      if (!target) {
+        showToast(S.lang === 'en' ? 'Add an unstarted weighted exercise to your workout first.' : 'Сначала добавь в тренировку упражнение с весом, которое ещё не начинал.');
+        return;
+      }
+      var count = Math.min(warmupSets.length, 20 - target.log.length);
+      if (count < 1) {
+        showToast(S.lang === 'en' ? 'There is no room for more sets in this exercise.' : 'В этом упражнении уже достигнут лимит подходов.');
+        return;
+      }
+      target.item.setLog = warmupSets.slice(0, count).concat(target.log).slice(0, 20);
+      target.item.sets = target.item.setLog.length;
+      target.item.done = false;
+      saveWorkout();
+      renderWorkout();
+      renderResults();
+      showToast(S.lang === 'en' ? `Warm-up added before ${target.name}.` : `Разминка добавлена перед упражнением «${target.name}».`);
+      track('warmup_add', { id: target.item.id, sets: count });
+    });
+
     list.addEventListener('click', function (e) {
       if(e.target.closest('[data-resume-session]')){openRun();return;}
       var item = e.target.closest('.workout-item');
@@ -6755,7 +6795,7 @@
      Correctness -> data integrity -> usability -> accessibility -> performance.
      This layer deliberately preserves the proven V4 business logic and contracts.
      ======================================================================== */
-  var APP_VERSION = '2026.09-r17-run-mode-controls';
+  var APP_VERSION = '2026.09-r18-warmup-builder';
   var BACKUP_SCHEMA = 9;
   K.restTimer = 'mmg.restTimer.v2';
   K.lastBackup = 'mmg.lastBackup.v1';

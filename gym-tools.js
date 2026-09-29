@@ -33,6 +33,7 @@ const value = (id) => q('#' + id)?.value;
 const defaultPairs = { 25: 2, 20: 2, 15: 2, 10: 4, 5: 4, 2.5: 4, 1.25: 4 };
 
 let section;
+let lastWarmupSets = [];
 let category = 'strength';
 let search = '';
 let lastLanguage = document.documentElement.lang;
@@ -270,6 +271,11 @@ function filterCards() {
 }
 
 function bind() {
+  section.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-add-warmup]');
+    if (!button || !lastWarmupSets.length) return;
+    window.dispatchEvent(new CustomEvent('mmg:add-warmup', { detail: { sets: lastWarmupSets.map(({ weight, reps }) => ({ weight, reps })) } }));
+  });
   qa('[data-lab-category]').forEach((button) => button.addEventListener('click', () => {
     category = button.dataset.labCategory;
     filterCards();
@@ -329,7 +335,8 @@ function calculate(name) {
   if (name === 'warmup') {
     const sets = warmupRamp({ workingWeight: value('warm-working'), barWeight: value('warm-bar'), increment: value('warm-step') });
     const out = q('#lab-warmup-out');
-    out.innerHTML = sets.length ? `<div class="gym-warmup-list">${sets.map((set, i) => `<div><span>${i + 1}</span><b>${num(set.weight)} kg</b><small>${set.reps} × · ${esc(set.label)}</small></div>`).join('')}</div><p class="tiny">${t('Разминка — редактируемый шаблон, не рабочий объём.', 'Warm-up is an editable template, not working volume.')}</p>` : `<p class="tiny">${t('Проверь рабочий вес.', 'Check the working load.')}</p>`;
+    lastWarmupSets = sets;
+    out.innerHTML = sets.length ? `<div class="gym-warmup-list">${sets.map((set, i) => `<div><span>${i + 1}</span><b>${num(set.weight)} kg</b><small>${set.reps} × · ${esc(set.label)}</small></div>`).join('')}</div><p class="tiny">${t('Разминка — редактируемый шаблон, не рабочий объём.', 'Warm-up is an editable template, not working volume.')}</p><button class="btn btn-primary" type="button" data-add-warmup>${t('Добавить разминку в тренировку', 'Add warm-up to workout')}</button>` : `<p class="tiny">${t('Проверь рабочий вес.', 'Check the working load.')}</p>`;
   }
 
   if (name === 'bmr') {

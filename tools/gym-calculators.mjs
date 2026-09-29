@@ -111,7 +111,7 @@ export function warmupRamp({ workingWeight, barWeight = 20, increment = 2.5 } = 
 
 export function sessionVolume(sets = []) {
   return round(sets.reduce((sum, set) => {
-    if (set && set.completed === false) return sum;
+    if (set && (set.completed === false || set.type === 'warmup')) return sum;
     const weight = finitePositive(set?.weight);
     const reps = finitePositive(set?.reps);
     return weight && reps ? sum + weight * reps : sum;
@@ -123,8 +123,10 @@ export function weeklyMuscleSets(history = []) {
     (session?.items || []).forEach((item) => {
       const muscle = item.muscle || item.target || item.zone;
       if (!muscle) return;
-      const completed = (item.setLog || []).filter((set) => set?.completed !== false && set?.completed).length;
-      totals[muscle] = (totals[muscle] || 0) + (completed || Number(item.sets) || 0);
+      const log = Array.isArray(item.setLog) ? item.setLog : [];
+      const completed = log.filter((set) => set?.completed !== false && set?.completed && set?.type !== 'warmup').length;
+      const legacyFallback = log.length ? 0 : (Number(item.sets) || 0);
+      totals[muscle] = (totals[muscle] || 0) + completed + legacyFallback;
     });
     return totals;
   }, {});

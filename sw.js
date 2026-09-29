@@ -1,4 +1,4 @@
-const VERSION = '2026.09-r17-run-mode-controls';
+const VERSION = '2026.09-r18-warmup-builder';
 const PREFIX = 'mmg-gym-';
 const SHELL = `${PREFIX}shell-${VERSION}`;
 const MEDIA = `${PREFIX}media-${VERSION}`;

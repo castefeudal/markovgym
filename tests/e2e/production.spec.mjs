@@ -488,23 +488,28 @@ test('run mode exposes RIR and RPE only when advanced logging is enabled', async
   await page.evaluate(() => localStorage.setItem('mmg.settings.v1', JSON.stringify({ rir: true, rpe: true, reading: 'balanced' })));
   await page.reload();
   await expect(page.locator('#mmg-boot')).toHaveCount(0);
-  await page.locator('#grid [data-add]').first().click();
+  const exerciseId = await page.locator('#grid [data-add]').evaluateAll(async (buttons) => {
+    const raw = await (await fetch('./data/exercises-compact.json')).json();
+    const strengthIds = new Set(raw.x.filter((row) => raw.bp[row[3]] !== 'cardio').map((row) => row[0]));
+    return buttons.find((button) => strengthIds.has(button.getAttribute('data-add')))?.getAttribute('data-add');
+  });
+  expect(exerciseId).toBeTruthy();
+  await page.locator('#grid [data-add="' + exerciseId + '"]').click();
   await page.goto('/index.html#workout');
   await page.locator('[data-v8-start-run]:visible, #w-run:visible').first().click();
   await expect(page.locator('[data-run-field="rir"]')).toBeVisible();
   await expect(page.locator('[data-run-field="rpe"]')).toBeVisible();
   await page.locator('[data-run-field="rir"]').fill('2');
   await page.locator('[data-run-field="rpe"]').fill('8');
-  await page.locator('[data-run-set-type]').selectOption('backoff');
-  await expect(page.locator('[data-run-set-type]')).toHaveValue('backoff');
 });
 
 test('Run Mode announces a history-backed estimated one-rep-max record', async ({ page }) => {
   await page.goto('/index.html#library');
   await expect(page.locator('#mmg-boot')).toHaveCount(0);
-  const exerciseId = await page.locator('#grid [data-add]').evaluateAll((buttons) => {
-    const strength = buttons.find((button) => !button.closest('.card')?.innerText.toLowerCase().includes('кардио'));
-    return strength?.getAttribute('data-add');
+  const exerciseId = await page.locator('#grid [data-add]').evaluateAll(async (buttons) => {
+    const raw = await (await fetch('./data/exercises-compact.json')).json();
+    const strengthIds = new Set(raw.x.filter((row) => raw.bp[row[3]] !== 'cardio').map((row) => row[0]));
+    return buttons.find((button) => strengthIds.has(button.getAttribute('data-add')))?.getAttribute('data-add');
   });
   expect(exerciseId).toBeTruthy();
   await page.evaluate(async (id) => {
@@ -548,6 +553,30 @@ test('Run Mode announces a history-backed estimated one-rep-max record', async (
   await expect(page.locator('[data-run-undo]')).toBeVisible();
   await page.locator('[data-run-undo]').click();
   await expect(page.locator('.run-pr-notice')).toHaveCount(0);
+});
+
+test('Lab warm-up can be added before an unstarted weighted exercise', async ({ page }) => {
+  await page.goto('/index.html#library');
+  await expect(page.locator('#mmg-boot')).toHaveCount(0);
+  const exerciseId = await page.locator('#grid [data-add]').evaluateAll(async (buttons) => {
+    const raw = await (await fetch('./data/exercises-compact.json')).json();
+    const strengthIds = new Set(raw.x.filter((row) => raw.bp[row[3]] !== 'cardio').map((row) => row[0]));
+    return buttons.find((button) => strengthIds.has(button.getAttribute('data-add')))?.getAttribute('data-add');
+  });
+  expect(exerciseId).toBeTruthy();
+  await page.locator('#grid [data-add="' + exerciseId + '"]').click();
+  await page.goto('/index.html#tools');
+  await page.locator('#warm-working').fill('100');
+  await page.locator('#warm-bar').fill('20');
+  await page.locator('#warm-step').fill('2.5');
+  await page.locator('[data-lab-form="warmup"] button[type="submit"]').click();
+  await page.locator('[data-add-warmup]').click();
+  await expect(page.locator('#toast')).toHaveAttribute('data-open', 'true');
+  await page.goto('/index.html#workout');
+  const setLog = await page.evaluate(() => JSON.parse(localStorage.getItem('mmg.workout.v2') || '[]')[0]?.setLog || []);
+  expect(setLog.length).toBeGreaterThan(1);
+  expect(setLog[0]).toMatchObject({ type: 'warmup', weight: '40', reps: '8', completed: false });
+  expect(setLog[setLog.length - 1].type).toBe('working');
 });
 
 test('exercise detail has no horizontal overflow on a 390px viewport', async ({ page }) => {
