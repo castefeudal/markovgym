@@ -53,6 +53,7 @@
   /* ---------- 2. ХРАНИЛИЩЕ ------------------------------------------------ */
   var memoryStore = {};
   var storageWarnings = [];
+  var lastLocalError = null;
   var historyRepository = null;
   var indexedAppStateKeys = Object.create(null);
   var indexedAppStateReady = false;
@@ -6972,7 +6973,7 @@
      Correctness -> data integrity -> usability -> accessibility -> performance.
      This layer deliberately preserves the proven V4 business logic and contracts.
      ======================================================================== */
-  var APP_VERSION = '2026.09-r24-program-blocks';
+  var APP_VERSION = '2026.09-r25-local-diagnostics';
   var BACKUP_SCHEMA = 9;
   K.restTimer = 'mmg.restTimer.v2';
   K.lastBackup = 'mmg.lastBackup.v1';
@@ -7396,7 +7397,7 @@
     [minus,plus].forEach(function(btn){if(btn)btn.addEventListener('click',function(){if(restTimer.running){restTimer.endsAt=Date.now()+Math.max(0,restTimer.left)*1000;persistRestTimer();}});});
     document.addEventListener('visibilitychange',function(){tickRestTimer();persistRestTimer();},{passive:true});
     window.addEventListener('pageshow',tickRestTimer,{passive:true});
-    window.mmgDiagnostics={version:APP_VERSION,storagePersistent:storageOk,get storageWarnings(){return storageWarnings.slice();},exerciseCount:EX.length,get customExerciseCount(){return databaseCustomExercises.length;},get equipmentProfileCount(){return databaseEquipmentProfiles.length;},get activeEquipmentProfileId(){return activeEquipmentProfileId;},backupSchema:BACKUP_SCHEMA,get historySchema(){return historyRepository?historyRepository.schemaVersion:0;},get historyCount(){return Array.isArray(databaseHistory)?databaseHistory.length:S.history.length;}};
+    window.mmgDiagnostics={version:APP_VERSION,storagePersistent:storageOk,get storageWarnings(){return storageWarnings.slice();},exerciseCount:EX.length,get customExerciseCount(){return databaseCustomExercises.length;},get equipmentProfileCount(){return databaseEquipmentProfiles.length;},get activeEquipmentProfileId(){return activeEquipmentProfileId;},backupSchema:BACKUP_SCHEMA,get historySchema(){return historyRepository?historyRepository.schemaVersion:0;},get historyCount(){return Array.isArray(databaseHistory)?databaseHistory.length:S.history.length;},get nutritionCount(){return databaseNutritionDays.length;},get userStateReady(){return indexedAppStateReady;},get repositoryReady(){return !!historyRepository;},get lastLocalError(){return lastLocalError;}};
   }
 
 
@@ -7526,6 +7527,18 @@
     $('v7-logging-actions').innerHTML='<button class="v7-setting-toggle" type="button" data-v7-setting="rir" aria-pressed="'+String(!!S.settings.rir)+'"><span>'+esc(v7c('rir'))+'</span><b>'+(S.settings.rir?'ON':'OFF')+'</b></button><button class="v7-setting-toggle" type="button" data-v7-setting="rpe" aria-pressed="'+String(!!S.settings.rpe)+'"><span>'+esc(v7c('rpe'))+'</span><b>'+(S.settings.rpe?'ON':'OFF')+'</b></button>';
     $('v7-coach-actions').innerHTML='<button class="v7-setting-toggle" type="button" data-v7-coach aria-pressed="'+String(!!S.coachOn)+'"><span>'+esc(v7c('coachOn'))+'</span><b>'+(S.coachOn?'ON':'OFF')+'</b></button>';
     $('v7-data-actions').innerHTML='<button class="btn btn-solid btn-sm" type="button" data-v7-data="export">'+esc(v7c('export'))+'</button><button class="btn btn-solid btn-sm" type="button" data-v7-data="import">'+esc(v7c('import'))+'</button><button class="btn btn-quiet btn-sm btn-danger" type="button" data-v7-data="clear">'+esc(v7c('clear'))+'</button>';
+    if($('v7-diagnostics-title'))$('v7-diagnostics-title').textContent=S.lang==='en'?'On-device app diagnostics':'Диагностика приложения на этом устройстве';
+    if($('v7-diagnostics-intro'))$('v7-diagnostics-intro').textContent=S.lang==='en'?'Local technical state for troubleshooting. Nothing here is sent anywhere.':'Техническое состояние для локальной проверки. Эти сведения никуда не отправляются.';
+    renderV7Diagnostics();
+  }
+  function renderV7Diagnostics(){
+    var host=$('v7-diagnostics-output');if(!host)return;
+    var d=window.mmgDiagnostics||{},sw=navigator.serviceWorker;
+    var migration=d.repositoryReady?(d.userStateReady?(S.lang==='en'?'Ready':'Готово'):(S.lang==='en'?'Repository open; state loading':'Хранилище открыто; состояние загружается')):(S.lang==='en'?'Browser storage fallback':'Резервное хранилище браузера');
+    var warnings=d.storageWarnings||[],lastWarning=warnings.length?warnings[warnings.length-1]:null;
+    var warning=lastWarning?String(lastWarning.type)+' · '+String(lastWarning.key):(S.lang==='en'?'None':'Нет');
+    var rows=S.lang==='en'?[['App version',d.version||APP_VERSION],['Backup / IndexedDB schema',String(d.backupSchema||BACKUP_SCHEMA)+' / '+String(d.historySchema||0)],['Storage migration',migration],['Exercise records',String(d.exerciseCount||EX.length)],['Custom exercises / equipment profiles',String(d.customExerciseCount||0)+' / '+String(d.equipmentProfileCount||0)],['Workout history / nutrition days',String(d.historyCount||0)+' / '+String(d.nutritionCount||0)],['Route',v7RouteFromHash()],['Service worker controller',sw&&sw.controller?'active':'none'],['Latest local error',d.lastLocalError||'None'],['Latest storage warning',warning]]:[['Версия приложения',d.version||APP_VERSION],['Схемы резервной копии / IndexedDB',String(d.backupSchema||BACKUP_SCHEMA)+' / '+String(d.historySchema||0)],['Состояние хранилища',migration],['Упражнения в каталоге',String(d.exerciseCount||EX.length)],['Свои упражнения / профили оборудования',String(d.customExerciseCount||0)+' / '+String(d.equipmentProfileCount||0)],['История тренировок / дни питания',String(d.historyCount||0)+' / '+String(d.nutritionCount||0)],['Текущий раздел',v7RouteFromHash()],['Service worker',sw&&sw.controller?'активен':'не управляет страницей'],['Последняя локальная ошибка',d.lastLocalError||'Нет'],['Последнее предупреждение хранилища',warning]];
+    host.innerHTML=rows.map(function(row){return'<div><dt>'+esc(row[0])+'</dt><dd>'+esc(row[1])+'</dd></div>';}).join('');
   }
   function renderV7Nav(){qsa('[data-v7-nav]').forEach(function(el){el.textContent=v7c(el.dataset.v7Nav);});var moreSub={tools:S.lang==='en'?'Strength, nutrition, body, cardio and my data':'Сила, питание, состав тела, кардио и мои данные',program:S.lang==='en'?'Weekly structure and the next workout':'Структура недели и следующая тренировка',nutrition:S.lang==='en'?'Calories, macros and feedback':'Калории, макросы и обратная связь',knowledge:S.lang==='en'?'Practical contextual guides':'Практические разборы по контексту',method:S.lang==='en'?'Decision framework':'Логика принятия решений',settings:S.lang==='en'?'Interface, logging and data':'Интерфейс, логирование и данные',about:S.lang==='en'?'Author and system boundaries':'Автор и границы системы'};qsa('[data-v7-more]').forEach(function(el){el.textContent=v7c(el.dataset.v7More);});qsa('[data-v7-more-sub]').forEach(function(el){el.textContent=moreSub[el.dataset.v7MoreSub]||'';});var mt=qs('[data-v7-mobile-title]');if(mt)mt.textContent=v7c('moreTitle');}
   function v7FocusRoute(route){var el=$(route==='home'&&!v7Returning()? 'hero-title' : route==='home'?'v7-home-title': route==='more'?'v7-more-title':route==='settings'?'v7-settings-title':route+'-title');if(el){el.setAttribute('tabindex','-1');requestAnimationFrame(function(){try{el.focus({preventScroll:true});}catch(e){}var anchor=el.closest('section')||el;anchor.scrollIntoView({block:'start',behavior:'auto'});});}else window.scrollTo(0,0);}
@@ -7649,6 +7662,7 @@
 
 
   async function init() {
+    window.addEventListener('mmg:error',function(event){lastLocalError=String(event&&event.detail&&event.detail.key||'unknown');renderV7Diagnostics();});
     try {
       var workoutGroupModule = await import('./tools/workout-groups.mjs');
       workoutExecutionOrderFn = workoutGroupModule.workoutExecutionOrder;

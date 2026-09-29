@@ -812,6 +812,10 @@ test('readability choice persists and progress supports multiple chart signals',
   });
   await page.goto('/index.html#settings');
   await expect(page.locator('#mmg-boot')).toHaveCount(0);
+  await page.locator('#v7-diagnostics summary').click();
+  await expect(page.locator('#v7-diagnostics-output')).toContainText('Версия приложения');
+  await expect(page.locator('#v7-diagnostics-output')).toContainText('Состояние хранилища');
+  await expect(page.locator('#v7-diagnostics-output')).toContainText('Service worker');
   await page.locator('[data-v10-reading="comfortable"]').click();
   await expect(page.locator('html')).toHaveAttribute('data-reading', 'comfortable');
   await page.reload();

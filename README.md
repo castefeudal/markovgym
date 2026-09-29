@@ -25,6 +25,7 @@ MARKOV MADE GYM is a browser-first fitness operating system for planning trainin
 - **All-time workout history** — existing saved sessions migrate from the legacy local-storage key into IndexedDB; the legacy key remains a recent-session compatibility mirror.
 - **Daily nutrition log and weight trend** — record calories and protein with optional macros, confidence and a same-date weigh-in; paired intake and weight flow into the transparent adaptive-expenditure estimate. Progress shows the latest scale reading, 7-day mean, 7-day change, 21-day rate and observation coverage without filling gaps. Nutrition compares logged intake with seven times the current daily calorie target, reports covered days and the remaining difference without treating it as a debt or compensation goal. The date-keyed log is stored in IndexedDB and included in validated backups.
 - **Versioned backup** — exports use the `markov-made-gym` schema envelope and preserve workout history, nutrition days, custom exercises, equipment profiles and exercise preferences.
+- **On-device diagnostics** — Settings shows app and storage schema versions, migration state, local record counts, active route, service worker control and the latest local error or storage warning. Diagnostics remain in the browser.
 - **PWA / offline shell** — installable static web application with controlled caching and update lifecycle.
 - **RU / EN interface** plus 9-language exercise instruction data.
 

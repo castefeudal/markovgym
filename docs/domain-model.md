@@ -37,6 +37,8 @@ The History view renders 20 records at a time and reveals more on request. Progr
 
 The Nutrition weekly budget is derived from the saved daily target and date-keyed nutrition entries. It never fills unlogged dates with estimates and does not persist a second aggregate that could drift from the source records.
 
+Developer diagnostics expose schema and migration state, local record counts, current route, service-worker control and the latest local error/storage warning. The panel reads application state in the browser and does not transmit it.
+
 ## Planned model boundaries
 
 Mesocycle, ProgressSignal, and CalculatorResult history are not yet independent persisted collections. Add them through versioned migrations and repository APIs rather than more unrelated LocalStorage keys. Preserve old backup fields when introducing those collections.
