@@ -25,6 +25,12 @@ test('bootstrap subscribes before the app can emit ready', async () => {
   assert.match(appSource, /^import \{ createInitialState \} from '\.\/src\/app\/state\.mjs';/m);
   assert.match(appSource, /subscribeToHashChanges\(window, v7RouteFromHash/);
   assert.doesNotMatch(appSource, /addEventListener\(['"]hashchange/);
+  const bootstrapSource = await read('bootstrap.js');
+  const labSource = await read('gym-tools.js');
+  for (const source of [bootstrapSource, labSource]) {
+    assert.match(source, /subscribeToHashChanges\(window/);
+    assert.doesNotMatch(source, /addEventListener\(['"]hashchange/);
+  }
 });
 
 test('exercise GIF media uses a fresh revision and cache write failures stay non-fatal', async () => {
@@ -182,7 +188,7 @@ test('stylesheet layers are separated and linked in their original cascade order
   assert.match(build, /styles\/features\/exercise\.css/);
   for (const layer of ['tokens', 'reset', 'base', 'components', 'layout']) assert.match(await read(`styles/${layer}.css`), /\S/);
   assert.match(await read('styles/features/legacy-product.css'), /\.cnote\s*\{/);
-  assert.match(build, /2026\.09-r41-central-router/);
+  assert.match(build, /2026\.09-r42-shared-route-events/);
   assert.doesNotMatch(base, /\.custom-exercise-dialog\{|\.run-pr-notice\{|\.nutrition-log-panel\{/);
 });
 

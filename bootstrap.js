@@ -1,3 +1,5 @@
+import { normalizeRouteHash, subscribeToHashChanges } from './src/app/router.mjs';
+
 (function () {
   'use strict';
 
@@ -40,8 +42,8 @@
   if (retry) retry.addEventListener('click', function () { window.location.reload(); });
 
   var labModulePromise = null;
-  function loadLabForCurrentRoute() {
-    if (((location.hash || '#home').slice(1).split('?')[0]) !== 'tools') {
+  function loadLabForCurrentRoute(route) {
+    if (normalizeRouteHash(route || location.hash) !== 'tools') {
       var inactiveFallback = document.getElementById('lab-load-fallback');
       if (inactiveFallback) inactiveFallback.remove();
       return;
@@ -84,8 +86,8 @@
     return labModulePromise;
   }
 
-  window.addEventListener('mmg:ready', loadLabForCurrentRoute);
-  window.addEventListener('hashchange', loadLabForCurrentRoute);
+  window.addEventListener('mmg:ready', function () { loadLabForCurrentRoute(); });
+  subscribeToHashChanges(window, function () { return location.hash; }, loadLabForCurrentRoute);
 
   function showUpdate(registration) {
     if (!registration || !registration.waiting || document.getElementById('mmg-update')) return;

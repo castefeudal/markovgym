@@ -1,4 +1,4 @@
-const VERSION = '2026.09-r41-central-router';
+const VERSION = '2026.09-r42-shared-route-events';
 const PREFIX = 'mmg-gym-';
 const SHELL = `${PREFIX}shell-${VERSION}`;
 const MEDIA = `${PREFIX}media-${VERSION}`;

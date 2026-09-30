@@ -7024,7 +7024,7 @@ import { subscribeToHashChanges } from './src/app/router.mjs';
      Correctness -> data integrity -> usability -> accessibility -> performance.
      This layer deliberately preserves the proven V4 business logic and contracts.
      ======================================================================== */
-  var APP_VERSION = '2026.09-r41-central-router';
+  var APP_VERSION = '2026.09-r42-shared-route-events';
   var BACKUP_SCHEMA = 10;
   K.restTimer = 'mmg.restTimer.v2';
   K.lastBackup = 'mmg.lastBackup.v1';

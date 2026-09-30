@@ -24,6 +24,7 @@ import {
 } from './tools/lab-calculators.mjs';
 import { joinNutritionAndMeasurements } from './src/features/nutrition/nutrition-analytics.mjs';
 import { getCalculatorEvidenceId, getLocalizedLabEvidence } from './src/features/lab/evidence-registry.mjs';
+import { normalizeRouteHash, subscribeToHashChanges } from './src/app/router.mjs';
 
 const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
 const en = () => document.documentElement.lang === 'en';
@@ -559,8 +560,7 @@ function addNavigation() {
   }
 }
 
-function syncRoute() {
-  const route = (location.hash || '#home').slice(1).split('?')[0];
+function syncRoute(route = normalizeRouteHash(location.hash)) {
   if (section) section.hidden = route !== 'tools';
   addNavigation();
   if (route === 'tools') renderHistoryInsights();
@@ -593,10 +593,10 @@ function init() {
   syncRoute();
   window.addEventListener('mmg:ready', () => {
     pendingCalculatorResults.splice(0).forEach(record => window.mmgLocalData?.saveCalculatorResult?.(record));
-    const route = (location.hash || '#home').slice(1).split('?')[0];
+    const route = normalizeRouteHash(location.hash);
     if (route === 'tools') { renderHistoryInsights(); renderCalculatorHistory(); }
   });
-  window.addEventListener('hashchange', syncRoute);
+  subscribeToHashChanges(window, () => location.hash, syncRoute);
   const observer = new MutationObserver(() => {
     if (lastLanguage !== document.documentElement.lang) {
       lastLanguage = document.documentElement.lang;
