@@ -77,7 +77,10 @@ Key files:
 app-body.html                 source body for the generated shell
 scripts/build-index.mjs       deterministic index builder
 index.html                    generated production entry
-app.js                        current core application runtime
+app.js                        ES module entry and current core UI orchestration
+src/app/state.mjs             versioned initial state shape and defaults
+src/app/router.mjs            route registry and hash parsing
+src/app/i18n.mjs               runtime translation lookup
 styles/tokens.css             semantic colors, type, spacing and motion tokens
 styles/reset.css              normalization and document defaults
 styles/base.css               shared typography and base elements
@@ -87,7 +90,7 @@ styles/features/              feature-owned styles and legacy migration boundary
 app.css                       current presentation and theme overrides
 src/features/today/           pure Today next-action decision rules
 src/features/workout/         pure personal-record detection against completed history
-src/persistence/              versioned IndexedDB repositories for history, nutrition and user-created data
+src/persistence/              local-first key/value adapter and versioned IndexedDB repositories
 gym-tools.js                  MARKOV MADE LAB UI integration
 lab.css                       Lab presentation layer
 tools/gym-calculators.mjs     original pure gym calculations

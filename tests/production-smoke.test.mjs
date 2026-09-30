@@ -22,6 +22,7 @@ test('bootstrap subscribes before the app can emit ready', async () => {
   assert.ok(app >= 0, 'app.js must be loaded as a JavaScript module');
   assert.match(appSource, /^import '\.\/bootstrap\.js';/m);
   assert.match(appSource, /^import \{ createLocalFirstStore \} from '\.\/src\/persistence\/local-first-store\.mjs';/m);
+  assert.match(appSource, /^import \{ createInitialState \} from '\.\/src\/app\/state\.mjs';/m);
 });
 
 test('exercise GIF media uses a fresh revision and cache write failures stay non-fatal', async () => {
@@ -152,7 +153,7 @@ test('PWA manifest is relative-origin and points to a valid shell', async () => 
 test('service worker precaches the same shell resources as the index', async () => {
   const sw = await read('sw.js');
   const pages = await read('.github/workflows/pages.yml');
-  for (const resource of ['index.html', 'app.css', 'styles/tokens.css', 'styles/reset.css', 'styles/base.css', 'styles/components.css', 'styles/layout.css', 'styles/features/legacy-product.css', 'styles/features/exercise.css', 'styles/features/program.css', 'styles/features/workout.css', 'styles/features/nutrition.css', 'app.js', 'tools/workout-groups.mjs', 'src/app/router.mjs', 'src/app/i18n.mjs', 'src/app/load-modules.mjs', 'src/persistence/history-repository.mjs', 'src/persistence/local-first-store.mjs', 'src/features/today/decision-engine.mjs', 'src/features/exercise/substitution-engine.mjs', 'src/features/workout/pr-engine.mjs', 'src/features/nutrition/nutrition-analytics.mjs', 'src/features/progress/weight-trend.mjs', 'data/content.json', 'data/exercises-compact.json']) assert.match(sw, new RegExp(resource.replaceAll('.', '\\.')));
+  for (const resource of ['index.html', 'app.css', 'styles/tokens.css', 'styles/reset.css', 'styles/base.css', 'styles/components.css', 'styles/layout.css', 'styles/features/legacy-product.css', 'styles/features/exercise.css', 'styles/features/program.css', 'styles/features/workout.css', 'styles/features/nutrition.css', 'app.js', 'tools/workout-groups.mjs', 'src/app/router.mjs', 'src/app/state.mjs', 'src/app/i18n.mjs', 'src/app/load-modules.mjs', 'src/persistence/history-repository.mjs', 'src/persistence/local-first-store.mjs', 'src/features/today/decision-engine.mjs', 'src/features/exercise/substitution-engine.mjs', 'src/features/workout/pr-engine.mjs', 'src/features/nutrition/nutrition-analytics.mjs', 'src/features/progress/weight-trend.mjs', 'data/content.json', 'data/exercises-compact.json']) assert.match(sw, new RegExp(resource.replaceAll('.', '\\.')));
   assert.match(pages, /cp -R data images src styles tools videos site\//);
   assert.doesNotMatch(sw, /legacy-base\.html|r2\.payload/);
 });
@@ -179,7 +180,7 @@ test('stylesheet layers are separated and linked in their original cascade order
   assert.match(build, /styles\/features\/exercise\.css/);
   for (const layer of ['tokens', 'reset', 'base', 'components', 'layout']) assert.match(await read(`styles/${layer}.css`), /\S/);
   assert.match(await read('styles/features/legacy-product.css'), /\.cnote\s*\{/);
-  assert.match(build, /2026\.09-r39-persistence-store/);
+  assert.match(build, /2026\.09-r40-central-state/);
   assert.doesNotMatch(base, /\.custom-exercise-dialog\{|\.run-pr-notice\{|\.nutrition-log-panel\{/);
 });
 

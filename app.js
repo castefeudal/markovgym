@@ -9,6 +9,7 @@
    ========================================================================= */
 import './bootstrap.js';
 import { createLocalFirstStore } from './src/persistence/local-first-store.mjs';
+import { createInitialState } from './src/app/state.mjs';
 
 (function () {
   'use strict';
@@ -946,23 +947,7 @@ import { createLocalFirstStore } from './src/persistence/local-first-store.mjs';
   }, true);
 
   /* ---------- 6. СОСТОЯНИЕ ------------------------------------------------ */
-  var S = {
-    lang: 'ru',
-    theme: 'obsidian',
-    density: 'default',
-    query: '',
-    zones: [],
-    muscles: [],
-    equipment: [],
-    favOnly: false,
-    sort: 'recommended',
-    limit: 60,
-    favorites: [],
-    exercisePreferences: {},
-    workout: [],
-    activeId: null,
-    lastFiltered: []
-  };
+  var S = createInitialState();
 
   var PAGE = 60;
 
@@ -2682,28 +2667,6 @@ import { createLocalFirstStore } from './src/persistence/local-first-store.mjs';
   function savePlanV7(){var data=serialisePlanV7(S.plan);if(data)store.set(K.plan,JSON.stringify(data));else store.remove(K.plan);}
 
   /* ---------- 15.4 РАСШИРЕНИЕ СОСТОЯНИЯ ---------------------------------- */
-  S.profile = null;      // цель, уровень, место, дни
-  S.meta = null;         // название, дата и заметка текущей тренировки
-  S.history = [];        // последние сохранённые тренировки
-  S.diary = [];          // дневник прогресса
-  S.kbjuLast = null;     // последний расчёт КБЖУ
-  S.tips = [];           // сохранённые материалы базы знаний
-  S.coachOn = true;      // режим тренера
-  S.console = { goal: '', place: '', level: '', time: '' };
-  S.consoleEditing = false;
-  S.onbStep = 0;
-  S.kbCat = 'all';
-  S.kbQuery = '';
-  S.kbVisible = 12;
-  S.swapReason = '';
-  S.rest = 90;
-  S.planLimits = [];
-  S.plan = null;         // последний собранный план (для редактирования)
-  S.recentSearches = [];
-  S.recentExercises = [];
-  S.runSession = null;
-  S.settings = { rir:false, rpe:false, reading:'balanced' };
-
   function migrateEco() {
     var p = store.json(K.profile, null);
     S.profile = (p && typeof p === 'object') ? {
@@ -7060,7 +7023,7 @@ import { createLocalFirstStore } from './src/persistence/local-first-store.mjs';
      Correctness -> data integrity -> usability -> accessibility -> performance.
      This layer deliberately preserves the proven V4 business logic and contracts.
      ======================================================================== */
-  var APP_VERSION = '2026.09-r39-persistence-store';
+  var APP_VERSION = '2026.09-r40-central-state';
   var BACKUP_SCHEMA = 10;
   K.restTimer = 'mmg.restTimer.v2';
   K.lastBackup = 'mmg.lastBackup.v1';

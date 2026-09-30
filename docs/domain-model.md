@@ -2,6 +2,8 @@
 
 This describes the current browser data model and the persistence boundaries introduced for all-time training history. User records stay on the device.
 
+The browser entry is an ES module. `src/app/state.mjs` owns the versioned initial state shape and defaults; the UI currently mutates one app-owned state object while hydration and feature orchestration remain in `app.js`. `src/persistence/local-first-store.mjs` owns the small key/value compatibility adapter, and `src/persistence/history-repository.mjs` owns IndexedDB schema and structured collection operations. The local-first adapter is covered without a DOM or browser runtime; its storage and IndexedDB ownership decisions are injected by the app.
+
 ## Current entities
 
 | Entity | Current representation and storage |
@@ -35,7 +37,7 @@ This describes the current browser data model and the persistence boundaries int
 
 Completed workouts retain their date, duration, exercises, and structured set logs. IndexedDB database `markov-made-gym`, schema version 6, stores history, nutrition days, custom exercises, named equipment profiles, per-exercise preferences, and structured `userState` records. Existing LocalStorage values are copied only when the corresponding IndexedDB record is missing; missing identities are merged into partial collections without replacing current IndexedDB rows. After successful hydration, IndexedDB-backed app state is cached in memory and its legacy LocalStorage copies are removed; subsequent writes go to IndexedDB. Theme, language, density, and small readability preferences remain available in LocalStorage for first paint. On an IndexedDB write failure, a recovery copy is written to LocalStorage and a diagnostic warning is recorded; these recovery values are not treated as authoritative during normal hydration. Backups use `schemaVersion: 10` and export custom exercises, equipment profiles, exercise preferences, nutrition days, calculator history, and complete IndexedDB-backed workout history.
 
-The History view renders 20 records at a time and reveals more on request. Progression, history lookups, and MARKOV MADE LAB use the complete in-memory history loaded from IndexedDB. If IndexedDB is unavailable during migration, the application attempts the legacy browser-storage fallback and reports the storage limitation through diagnostics.
+The History view renders 20 records at a time and reveals more on request. Progression, history lookups, and MARKOV MADE LAB use the complete in-memory history loaded from IndexedDB. If IndexedDB is unavailable during migration, the application attempts the legacy browser-storage fallback and reports the storage limitation through diagnostics. The compatibility store uses memory for the active tab, LocalStorage for small first-paint keys and recovery copies, and the IndexedDB repository for keys declared database-owned after hydration.
 
 The Nutrition weekly budget is derived from the saved daily target and date-keyed nutrition entries. It never fills unlogged dates with estimates and does not persist a second aggregate that could drift from the source records.
 

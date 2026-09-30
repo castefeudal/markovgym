@@ -1,4 +1,4 @@
-const VERSION = '2026.09-r39-persistence-store';
+const VERSION = '2026.09-r40-central-state';
 const PREFIX = 'mmg-gym-';
 const SHELL = `${PREFIX}shell-${VERSION}`;
 const MEDIA = `${PREFIX}media-${VERSION}`;
@@ -18,6 +18,7 @@ const PRECACHE = [
   './styles/features/nutrition.css',
   './app.js',
   './src/app/router.mjs',
+  './src/app/state.mjs',
   './src/app/i18n.mjs',
   './src/app/load-modules.mjs',
   './lab.css',
