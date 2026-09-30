@@ -3247,7 +3247,7 @@ import { cleanExercisePreferences as normalizeExercisePreferences, exercisePrefe
 
     var next = dashNext();
     $('dash-next').innerHTML = '<p>' + esc(next.text) + '<br><span class="tiny">' + esc(next.why) + '</span></p>' +
-      '<button class="btn btn-primary btn-sm" type="button" data-cact="' + esc(next.act) + '">' + esc(next.label) + '</button>';
+      '<button class="btn btn-primary btn-sm" type="button" data-cact="' + esc(next.act) + '"' + (next.day!=null?' data-cact-day="'+esc(next.day)+'"':'') + '>' + esc(next.label) + '</button>';
 
     var st = dashSignal();
     var sig = $('dash-signal');
@@ -3260,46 +3260,16 @@ import { cleanExercisePreferences as normalizeExercisePreferences, exercisePrefe
 
   /* Следующее действие: контекст важнее линейного чек-листа. */
   function dashNext() {
-    var totalSets=S.workout.reduce(function(sum,w){return sum+(Number(w.sets)||0);},0);
-    var doneSets=S.workout.reduce(function(sum,w){return sum+completedSetCount(w);},0);
-    var runFresh=S.runSession&&Date.now()-Number(S.runSession.startedAt||0)<8*3600000&&doneSets<totalSets;
-    var last=S.diary[0],age=last&&last.date?Math.floor((Date.now()-Date.parse(last.date+'T12:00:00'))/86400000):0;
-    var programmeBlock=S.plan&&v7MesocycleStatus();
-    var decision=todayDecisionEngine?todayDecisionEngine({
-      activeRun:!!runFresh,
-      pendingWorkout:!!(S.workout.length&&doneSets<totalSets),
-      completedWorkout:!!(S.workout.length&&totalSets&&doneSets>=totalSets),
-      hasFavorites:!!S.favorites.length,
-      hasWorkout:!!S.workout.length,
-      hasNutritionTarget:!!S.kbjuLast,
-      hasProgram:!!S.plan,
-      programmeBlockComplete:!!(programmeBlock&&programmeBlock.status==='complete'),
-      diaryEntries:S.diary.length,
-      checkinAgeDays:age,
-      hasNutritionLogToday:databaseNutritionDays.some(function(entry){return entry.date===todayISO();})
-    }):null;
-    var views={
-      resume_run:{text:'nextResume',why:'nextResumeWhy',act:'resumeRun',label:'continuityResume'},
-      start_workout:{text:'nextStart',why:'nextStartWhy',act:'startRun',label:'continuityStart'},
-      save_workout:{text:'nextSave',why:'nextSaveWhy',act:'workout',label:'actWorkout'},
-      find_exercise:{text:'nextLibrary',why:'nextLibraryWhy',act:'library',label:'consoleLibrary'},
-      build_workout:{text:'nextWorkout',why:'nextWorkoutWhy',act:'workout',label:'actWorkout'},
-      set_nutrition:{text:'nextKbju',why:'nextKbjuWhy',act:'kbju',label:'actKbju'},
-      build_program:{text:'nextPlan',why:'nextPlanWhy',act:'plan',label:'actPlan'},
-      review_program_block:{text:'nextBlockReview',why:'nextBlockReviewWhy',act:'plan',label:'actPlan'},
-      record_measurements:{text:'nextDiary',why:'nextDiaryWhy',act:'progress',label:'actProgress'},
-      refresh_measurements:{text:'nextRefresh',why:'nextRefreshWhy',act:'progress',label:'actProgress'},
-      log_nutrition:{text:'nextNutritionLog',why:'nextNutritionLogWhy',act:'nutritionLog',label:'actNutritionLog'},
-      review_progress:{text:'nextKeep',why:'nextKeepWhy',act:'progress',label:'actProgress'}
-    };
-    var view=decision&&views[decision.recommendation];
-    if(!view) return {text:t('nextKeep'),why:t('nextKeepWhy'),act:'progress',label:t('actProgress')};
+    var next=v7NextAction();
+    var actions={resume:'resumeRun',run:'startRun',workout:'workout',planDay:'planDay',profile:'profile',checkin:'checkin',nutrition:'nutritionLog',program:'plan',progress:'progress',library:'library'};
+    var labels={resume:'continuityResume',run:'continuityStart',workout:'actWorkout',checkin:'actProgress',nutrition:'actNutritionLog',program:'actPlan',progress:'actProgress',library:'consoleLibrary'};
     return {
-      text:t(view.text),
-      why:view.text==='nextRefresh'?t(view.why,{n:age}):t(view.why),
-      act:view.act,
-      label:t(view.label),
-      decision:decision
+      text:next.title,
+      why:next.why,
+      act:actions[next.type]||'library',
+      label:labels[next.type]?t(labels[next.type]):next.title,
+      day:next.day,
+      decision:next.decision
     };
   }
 
@@ -5434,9 +5404,12 @@ import { cleanExercisePreferences as normalizeExercisePreferences, exercisePrefe
       if (!act) return;
       var name = act.dataset.cact;
       if (name === 'resumeRun' || name === 'startRun') { openRun(); return; }
+      if (name === 'planDay') { startPlanDayV7(Number(act.dataset.cactDay)||0,false); return; }
+      if (name === 'profile') { scrollToId('top'); window.setTimeout(function(){var field=qs('.console-opt');if(field)field.focus();},80); return; }
+      if (name === 'library') { navigateV7('library',true); return; }
       if (name === 'workout') { scrollToId('workout'); return; }
       if (name === 'progress') { scrollToId('progress'); return; }
-      if (name === 'checkin') { scrollToId('nutrition'); $('c-prev').focus(); return; }
+      if (name === 'checkin') { scrollToId('progress'); window.setTimeout(function(){var field=$('g-weight');if(field)field.focus();},80); return; }
       if (name === 'nutritionLog') { scrollToId('nutrition'); window.setTimeout(function(){var field=$('nlog-calories');if(field)field.focus();},80); return; }
       applyConsoleAction(name);
     });
@@ -6975,7 +6948,7 @@ import { cleanExercisePreferences as normalizeExercisePreferences, exercisePrefe
      Correctness -> data integrity -> usability -> accessibility -> performance.
      This layer deliberately preserves the proven V4 business logic and contracts.
      ======================================================================== */
-  var APP_VERSION = '2026.09-r48-today-decisions';
+  var APP_VERSION = '2026.09-r49-shared-today-action';
   var BACKUP_SCHEMA = 10;
   K.restTimer = 'mmg.restTimer.v2';
   K.lastBackup = 'mmg.lastBackup.v1';

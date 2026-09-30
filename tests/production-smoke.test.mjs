@@ -228,6 +228,9 @@ test('flagship 10 surface includes weekly pulse, contextual actions, workout bal
   assert.match(app, /function renderV10HomePulse\(\)/);
   assert.match(app, /function renderV10ContextAction\(route\)/);
   assert.match(app, /function renderV10WorkoutBalance\(\)/);
+  assert.match(app, /function dashNext\(\)\s*\{\s*var next=v7NextAction\(\)/);
+  assert.match(app, /name === 'planDay'\) \{ startPlanDayV7\(Number\(act\.dataset\.cactDay\)\|\|0,false\)/);
+  assert.match(app, /name === 'checkin'\) \{ scrollToId\('progress'\)[\s\S]*?\$\('g-weight'\)/);
   assert.match(css, /\/\* 22\. FLAGSHIP 10\/10/);
   assert.match(css, /html\[data-reading="comfortable"\]/);
   assert.match(css, /html\[data-reading="large"\]/);
