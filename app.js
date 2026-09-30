@@ -11,6 +11,7 @@ import './bootstrap.js';
 import { createLocalFirstStore } from './src/persistence/local-first-store.mjs';
 import { createInitialState } from './src/app/state.mjs';
 import { subscribeToHashChanges } from './src/app/router.mjs';
+import { searchCommandPalette } from './src/features/command-palette/search.mjs';
 
 (function () {
   'use strict';
@@ -2486,25 +2487,22 @@ import { subscribeToHashChanges } from './src/app/router.mjs';
   function renderCmdk(query) {
     var box = $('cmdk-results');
     var q = norm(query);
-    cmdkItems = [];
-
-    if (!q) {
-      cmdkItems = SECTIONS.map(function (s) {
-        return { type: 'section', hash: s.hash, label: sectionLabel(s), hint: t('cmdkSection') };
-      });
-    } else {
-      SECTIONS.forEach(function (s) {
-        if (norm(sectionLabel(s)).indexOf(q) !== -1) {
-          cmdkItems.push({ type: 'section', hash: s.hash, label: sectionLabel(s), hint: t('cmdkSection') });
-        }
-      });
-      LAB_COMMANDS.filter(function(command){return norm(command.q+' '+command.label.ru+' '+command.label.en).indexOf(q)!==-1;}).slice(0,4).forEach(function(command){
-        cmdkItems.push({type:'lab',query:q,label:S.lang==='en'?command.label.en:command.label.ru,hint:'MARKOV MADE LAB'});
-      });
-      MUSCLES.map(function(m){return {m:m,rank:Math.max(matchRank(q,m),matchRank(q,labelMu(m)))};}).filter(function(x){return x.rank>=0;}).sort(function(a,b){return b.rank-a.rank;}).slice(0,3).forEach(function(x){cmdkItems.push({type:'muscle',muscle:x.m,label:labelMu(x.m),hint:t('discMuscles')});});
-      EX.map(function(ex){return {ex:ex,rank:exerciseDiscoveryRank(ex,q)};}).filter(function(x){return x.rank>=0;}).sort(function(a,b){return b.rank-a.rank;}).slice(0,8).forEach(function(x){cmdkItems.push({type:'exercise',id:x.ex.id,label:exName(x.ex),hint:labelMu(x.ex.target)});});
-    }
-
+    cmdkItems = searchCommandPalette(query, {
+      sections: SECTIONS,
+      labCommands: LAB_COMMANDS,
+      muscles: MUSCLES,
+      exercises: EX,
+      normalize: norm,
+      sectionLabel: sectionLabel,
+      sectionHint: t('cmdkSection'),
+      muscleLabel: labelMu,
+      muscleHint: t('discMuscles'),
+      muscleRank: matchRank,
+      exerciseLabel: exName,
+      exerciseHint: function(exercise) { return labelMu(exercise.target); },
+      exerciseRank: exerciseDiscoveryRank,
+      language: S.lang
+    });
     cmdkIndex = 0;
     if (!cmdkItems.length) {
       box.innerHTML = '<li class="cmdk-empty">' + esc(q ? t('cmdkEmpty') : t('cmdkStart')) + '</li>';
@@ -7024,7 +7022,7 @@ import { subscribeToHashChanges } from './src/app/router.mjs';
      Correctness -> data integrity -> usability -> accessibility -> performance.
      This layer deliberately preserves the proven V4 business logic and contracts.
      ======================================================================== */
-  var APP_VERSION = '2026.09-r42-shared-route-events';
+  var APP_VERSION = '2026.09-r43-command-palette';
   var BACKUP_SCHEMA = 10;
   K.restTimer = 'mmg.restTimer.v2';
   K.lastBackup = 'mmg.lastBackup.v1';

@@ -89,6 +89,7 @@ styles/layout.css             responsive shell and layout rules
 styles/features/              feature-owned styles and legacy migration boundary
 app.css                       current presentation and theme overrides
 src/features/today/           pure Today next-action decision rules
+src/features/command-palette/ pure command-palette candidate search and ranking
 src/features/workout/         pure personal-record detection against completed history
 src/persistence/              local-first key/value adapter and versioned IndexedDB repositories
 gym-tools.js                  MARKOV MADE LAB UI integration

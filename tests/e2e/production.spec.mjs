@@ -1179,3 +1179,17 @@ test('library quick scenarios stay synchronized with filters', async ({ page }) 
   await expect(gym).toHaveAttribute('aria-pressed', 'true');
   await expect(home).toHaveAttribute('aria-pressed', 'false');
 });
+
+test('command palette searches sections and opens the selected route', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name === 'mobile', 'The command palette launcher is a desktop header control.');
+  await page.goto('/index.html#home');
+  await expect(page.locator('html')).toHaveAttribute('data-app-ready', 'true');
+  await page.locator('#cmdk-open').click();
+  await expect(page.locator('#cmdk')).toHaveAttribute('data-open', 'true');
+  await page.locator('#cmdk-input').fill('Прогресс');
+  const result = page.locator('#cmdk-results [role="option"]').filter({ hasText: 'Прогресс' }).first();
+  await expect(result).toBeVisible();
+  await result.click();
+  await expect(page).toHaveURL(/#progress$/);
+  await expect(page.locator('html')).toHaveAttribute('data-route-ready', 'progress');
+});
