@@ -111,6 +111,7 @@
 
   var store = {
     get: function (key) {
+      if (Object.prototype.hasOwnProperty.call(memoryStore, key)) return memoryStore[key];
       try { return storageOk ? window.localStorage.getItem(key) : (memoryStore[key] || null); }
       catch (e) { return memoryStore[key] || null; }
     },

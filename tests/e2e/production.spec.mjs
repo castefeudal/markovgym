@@ -107,6 +107,46 @@ test('corrupt backup import leaves the current local profile and workout untouch
   expect(after).toEqual(before);
 });
 
+test('hydrated IndexedDB state wins over stale or corrupt LocalStorage mirrors', async ({ page }) => {
+  const profile = { goal: 'muscle', level: 'middle', place: 'gym', days: '3', done: true, skipped: false };
+  const workout = [{ id: '0001', sets: 3, reps: '8–12', weight: '40', done: false }];
+  await page.addInitScript(({ profileSeed, workoutSeed }) => {
+    localStorage.setItem('mmg.profile.v1', JSON.stringify(profileSeed));
+    localStorage.setItem('mmg.workout.v2', JSON.stringify(workoutSeed));
+  }, { profileSeed: profile, workoutSeed: workout });
+  await page.goto('/index.html#workout');
+  await expect(page.locator('html')).toHaveAttribute('data-app-ready', 'true');
+  await expect(page.locator('.workout-item')).toHaveCount(1);
+  await expect.poll(() => page.evaluate(() => window.mmgDiagnostics?.userStateReady)).toBe(true);
+
+  await page.evaluate(() => {
+    localStorage.setItem('mmg.profile.v1', '{ stale and corrupt');
+    localStorage.setItem('mmg.workout.v2', '{ stale and corrupt');
+  });
+  await page.reload();
+  await expect(page.locator('html')).toHaveAttribute('data-app-ready', 'true');
+  await expect(page.locator('.workout-item')).toHaveCount(1);
+  await expect.poll(() => page.evaluate(() => window.mmgDiagnostics?.storageWarnings.filter(item => item.type === 'json'))).toEqual([]);
+  const restored = await page.evaluate(async () => {
+    const db = await new Promise((resolve, reject) => {
+      const request = indexedDB.open('markov-made-gym');
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    const state = db.transaction('userState', 'readonly').objectStore('userState');
+    const read = key => new Promise((resolve, reject) => {
+      const request = state.get(key);
+      request.onsuccess = () => resolve(request.result?.value);
+      request.onerror = () => reject(request.error);
+    });
+    const [savedProfile, savedWorkout] = await Promise.all([read('mmg.profile.v1'), read('mmg.workout.v2')]);
+    db.close();
+    return { profile: JSON.parse(savedProfile), workout: JSON.parse(savedWorkout) };
+  });
+  expect(restored.profile).toMatchObject({ goal: 'muscle', place: 'gym', done: true });
+  expect(restored.workout).toHaveLength(1);
+});
+
 test('a waiting service worker update reloads once only after the user accepts it', async ({ page }) => {
   let documentNavigations = 0;
   page.on('request', (request) => {
