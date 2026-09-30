@@ -1,4 +1,4 @@
-const VERSION = '2026.10-r51-conservative-progression';
+const VERSION = '2026.10-r52-portable-backup-export';
 const PREFIX = 'mmg-gym-';
 const SHELL = `${PREFIX}shell-${VERSION}`;
 const MEDIA = `${PREFIX}media-${VERSION}`;

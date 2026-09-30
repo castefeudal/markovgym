@@ -6953,7 +6953,7 @@ import { cleanExercisePreferences as normalizeExercisePreferences, exercisePrefe
      Correctness -> data integrity -> usability -> accessibility -> performance.
      This layer deliberately preserves the proven V4 business logic and contracts.
      ======================================================================== */
-  var APP_VERSION = '2026.10-r51-conservative-progression';
+  var APP_VERSION = '2026.10-r52-portable-backup-export';
   var BACKUP_SCHEMA = 10;
   K.restTimer = 'mmg.restTimer.v2';
   K.lastBackup = 'mmg.lastBackup.v1';
@@ -7314,7 +7314,8 @@ import { cleanExercisePreferences as normalizeExercisePreferences, exercisePrefe
     var text=exportAll(), blob=new Blob([text],{type:'application/json;charset=utf-8'}), url=URL.createObjectURL(blob), a=document.createElement('a');
     a.href=url; a.download='markov-made-gym-backup-'+todayISO()+'.json'; document.body.appendChild(a); a.click(); a.remove();
     window.setTimeout(function(){URL.revokeObjectURL(url);},1200); store.set(K.lastBackup,String(Date.now())); renderDataStatus();
-    showToast(S.lang==='en'?'Backup downloaded.':'Резервная копия скачана.'); track('data_exported',{format:'json'});
+    toggleIo('data-io',text);
+    showToast(S.lang==='en'?'Backup created. JSON is ready below.':'Резервная копия создана. JSON готов ниже.'); track('data_exported',{format:'json'});
   }
   function ensureImportFileInput(){
     var input=$('data-import-file'); if(input)return input;

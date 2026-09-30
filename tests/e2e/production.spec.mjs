@@ -1,5 +1,22 @@
 import { test, expect } from '@playwright/test';
-import { readFile } from 'node:fs/promises';
+
+async function exportBackup(page, selector = '#data-export') {
+  await page.locator(selector).click();
+  const output = page.locator('#data-io');
+  await expect(output).toBeVisible();
+  return JSON.parse(await output.inputValue());
+}
+
+test('backup export attempts a file download and always exposes its JSON fallback', async ({ page }, testInfo) => {
+  if (testInfo.project.name !== 'desktop') test.skip();
+  await page.goto('/index.html#settings');
+  await expect(page.locator('html')).toHaveAttribute('data-app-ready', 'true');
+  const downloadPromise = page.waitForEvent('download');
+  const backup = await exportBackup(page);
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toMatch(/^markov-made-gym-backup-.*\.json$/);
+  expect(backup).toMatchObject({ app: 'markov-made-gym', schemaVersion: 10, kind: 'mmg-backup' });
+});
 
 async function readIndexedUserState(page, key, fallback = null) {
   return page.evaluate(async ({ key, fallback }) => {
@@ -342,10 +359,7 @@ test('legacy workout history migrates to IndexedDB without a 20-session cap', as
 
   await page.goto('/index.html#settings');
   await expect(page.locator('html')).toHaveAttribute('data-app-ready', 'true');
-  const downloadPromise = page.waitForEvent('download');
-  await page.locator('#data-export').click();
-  const download = await downloadPromise;
-  const backup = JSON.parse(await readFile(await download.path(), 'utf8'));
+  const backup = await exportBackup(page);
   expect(backup.app).toBe('markov-made-gym');
   expect(backup.schemaVersion).toBe(10);
   expect(JSON.parse(backup.data.calculatorHistory)).toEqual([]);
@@ -473,10 +487,7 @@ test('custom exercise joins the Library, saved workout, Run Mode, history and sc
 
   await page.goto('/index.html#settings');
   await expect(page.locator('html')).toHaveAttribute('data-app-ready', 'true');
-  const downloadPromise = page.waitForEvent('download');
-  await page.locator('#data-export').click();
-  const download = await downloadPromise;
-  const backup = JSON.parse(await readFile(await download.path(), 'utf8'));
+  const backup = await exportBackup(page);
   const customExercises = JSON.parse(backup.data.customExercises);
   expect(backup.schemaVersion).toBe(10);
   expect(customExercises).toHaveLength(1);
@@ -517,10 +528,7 @@ test('equipment profiles constrain Library choices, survive reload and preserve 
 
   await page.goto('/index.html#settings');
   await expect(page.locator('html')).toHaveAttribute('data-app-ready', 'true');
-  const downloadPromise = page.waitForEvent('download');
-  await page.locator('#v7-data-actions [data-v7-data="export"]').click();
-  const download = await downloadPromise;
-  const backup = JSON.parse(await readFile(await download.path(), 'utf8'));
+  const backup = await exportBackup(page, '#v7-data-actions [data-v7-data="export"]');
   expect(backup.schemaVersion).toBe(10);
   expect(JSON.parse(backup.data.equipmentProfiles)).toHaveLength(5);
   const importedProfileId = backup.data.equipmentProfileActive;
@@ -588,10 +596,7 @@ test('exercise preferences persist, affect library ranking and round-trip throug
   await expect.poll(() => readIndexedExercisePreference(page, exerciseId)).toBe('discomfort');
 
   await page.goto('/index.html#settings');
-  const downloadPromise = page.waitForEvent('download');
-  await page.locator('#data-export').click();
-  const download = await downloadPromise;
-  const backup = JSON.parse(await readFile(await download.path(), 'utf8'));
+  const backup = await exportBackup(page);
   expect(backup.schemaVersion).toBe(10);
   expect(JSON.parse(backup.data.exercisePreferences)[exerciseId]).toBe('discomfort');
   expect(JSON.parse(backup.data.profile)).toMatchObject({ goal: 'muscle', place: 'gym', done: true });
@@ -710,9 +715,7 @@ test('hash routes and MARKOV MADE LAB calculators are usable', async ({ page }) 
   expect(results).toHaveLength(1);
   expect(results[0]).toMatchObject({ calculatorId: 'lab-e1rm', title: 'Оценка одноповторного максимума', evidenceId: 'estimated-1rm' });
   await page.goto('/index.html#settings');
-  const backupPromise = page.waitForEvent('download');
-  await page.locator('#data-export').click();
-  const calculatorBackup = JSON.parse(await readFile(await (await backupPromise).path(), 'utf8'));
+  const calculatorBackup = await exportBackup(page);
   expect(calculatorBackup.schemaVersion).toBe(10);
   expect(JSON.parse(calculatorBackup.data.calculatorHistory)).toHaveLength(1);
   await page.goto('/index.html#library');
