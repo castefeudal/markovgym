@@ -6975,7 +6975,7 @@ import { cleanExercisePreferences as normalizeExercisePreferences, exercisePrefe
      Correctness -> data integrity -> usability -> accessibility -> performance.
      This layer deliberately preserves the proven V4 business logic and contracts.
      ======================================================================== */
-  var APP_VERSION = '2026.09-r46-exercise-preferences';
+  var APP_VERSION = '2026.09-r48-today-decisions';
   var BACKUP_SCHEMA = 10;
   K.restTimer = 'mmg.restTimer.v2';
   K.lastBackup = 'mmg.lastBackup.v1';

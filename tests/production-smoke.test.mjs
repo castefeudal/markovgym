@@ -188,7 +188,12 @@ test('stylesheet layers are separated and linked in their original cascade order
   assert.match(build, /styles\/features\/exercise\.css/);
   for (const layer of ['tokens', 'reset', 'base', 'components', 'layout']) assert.match(await read(`styles/${layer}.css`), /\S/);
   assert.match(await read('styles/features/legacy-product.css'), /\.cnote\s*\{/);
-  assert.match(build, /2026\.09-r46-exercise-preferences/);
+  const version = build.match(/const BUILD_VERSION = '([^']+)'/)?.[1];
+  assert.match(version || '', /^2026\.\d{2}-r\d+-[a-z0-9-]+$/);
+  assert.ok(index.includes(`data-app-version="${version}"`));
+  assert.ok(index.includes(`app.js?v=${version}`));
+  assert.ok((await read('app.js')).includes(`APP_VERSION = '${version}'`));
+  assert.ok((await read('sw.js')).includes(`const VERSION = '${version}'`));
   assert.doesNotMatch(base, /\.custom-exercise-dialog\{|\.run-pr-notice\{|\.nutrition-log-panel\{/);
 });
 
