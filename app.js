@@ -7,6 +7,9 @@
             15 экосистема тренера · 16 инструменты · 17 словари слоя
             18 связывание · 14 инициализация
    ========================================================================= */
+import './bootstrap.js';
+import { createLocalFirstStore } from './src/persistence/local-first-store.mjs';
+
 (function () {
   'use strict';
 
@@ -51,7 +54,7 @@
   var MOBILE_MQ = window.matchMedia ? window.matchMedia('(max-width: 860px)') : { matches: false };
 
   /* ---------- 2. ХРАНИЛИЩЕ ------------------------------------------------ */
-  var memoryStore = {};
+  var memoryStore = null;
   var storageWarnings = [];
   var lastLocalError = null;
   var historyRepository = null;
@@ -113,53 +116,6 @@
     } catch (e) { return false; }
   })();
 
-  var store = {
-    get: function (key) {
-      if (Object.prototype.hasOwnProperty.call(memoryStore, key)) return memoryStore[key];
-      try { return storageOk ? window.localStorage.getItem(key) : (memoryStore[key] || null); }
-      catch (e) { return memoryStore[key] || null; }
-    },
-    set: function (key, value) {
-      memoryStore[key] = value;
-      try {
-        var indexedDbOwned = indexedAppStateReady && key !== K.settings && (Object.prototype.hasOwnProperty.call(indexedAppStateKeys, key) || Object.prototype.hasOwnProperty.call(indexedRepositoryKeys, key));
-        if (storageOk && !indexedDbOwned) window.localStorage.setItem(key, value);
-        queueAppStateWrite(key, value, false);
-        return true;
-      } catch (e) {
-        storageWarnings.push({ key: key, type: 'write', at: Date.now() });
-        if (storageOk && indexedAppStateReady && key !== K.settings && (Object.prototype.hasOwnProperty.call(indexedAppStateKeys, key) || Object.prototype.hasOwnProperty.call(indexedRepositoryKeys, key))) {
-          try { window.localStorage.setItem(key, value); } catch (_fallbackError) {}
-        }
-        queueAppStateWrite(key, value, false);
-        return !storageOk;
-      }
-    },
-    remove: function (key) {
-      delete memoryStore[key];
-      try { if (storageOk) window.localStorage.removeItem(key); } catch (e) {}
-      queueAppStateWrite(key, '', true);
-    },
-    json: function (key, fallback) {
-      var raw = store.get(key);
-      if (!raw) return fallback;
-      try {
-        var parsed = JSON.parse(raw);
-        return parsed == null ? fallback : parsed;
-      } catch (e) {
-        /* Corrupted production data is quarantined before the active key is reset. */
-        var recoveryKey = 'mmg.recovery.' + String(key).replace(/[^a-z0-9_.-]/gi, '_') + '.' + Date.now();
-        try {
-          memoryStore[recoveryKey] = raw;
-          if (storageOk) window.localStorage.setItem(recoveryKey, raw);
-        } catch (_recoveryError) {}
-        storageWarnings.push({ key: key, type: 'json', recoveryKey: recoveryKey, at: Date.now() });
-        store.remove(key);
-        return fallback;
-      }
-    }
-  };
-
   var K = {
     fav: 'mmg.favorites.v8',
     exercisePreferences: 'mmg.exercisePreferences.v1',
@@ -173,6 +129,17 @@
     legacyLang: 'mmg_lang_v1',
     legacyTheme: 'mmg_theme_v7'
   };
+
+  var store = createLocalFirstStore({
+    storage: storageOk ? window.localStorage : null,
+    isIndexedDBOwned: function (key) {
+      return indexedAppStateReady && key !== K.settings &&
+        (Object.prototype.hasOwnProperty.call(indexedAppStateKeys, key) || Object.prototype.hasOwnProperty.call(indexedRepositoryKeys, key));
+    },
+    enqueueIndexedDBWrite: queueAppStateWrite,
+    onWarning: function (warning) { storageWarnings.push(warning); }
+  });
+  memoryStore = store.memory;
 
   /* ---------- 3. СЛОВАРИ -------------------------------------------------- */
   var RU_ZONE = {
@@ -7093,7 +7060,7 @@
      Correctness -> data integrity -> usability -> accessibility -> performance.
      This layer deliberately preserves the proven V4 business logic and contracts.
      ======================================================================== */
-  var APP_VERSION = '2026.09-r38-i18n-catalog';
+  var APP_VERSION = '2026.09-r39-persistence-store';
   var BACKUP_SCHEMA = 10;
   K.restTimer = 'mmg.restTimer.v2';
   K.lastBackup = 'mmg.lastBackup.v1';

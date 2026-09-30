@@ -1,7 +1,7 @@
 import { readFile, writeFile } from 'node:fs/promises';
 
 const body = await readFile(new URL('../app-body.html', import.meta.url), 'utf8');
-const BUILD_VERSION = '2026.09-r38-i18n-catalog';
+const BUILD_VERSION = '2026.09-r39-persistence-store';
 const structuredData = {
   '@context': 'https://schema.org',
   '@type': 'SoftwareApplication',
@@ -134,8 +134,7 @@ const index = `<!doctype html>
     </div>
   </div>
 ${body}
-  <script src="./bootstrap.js" defer></script>
-  <script src="./app.js?v=${BUILD_VERSION}" defer></script>
+  <script type="module" src="./app.js?v=${BUILD_VERSION}"></script>
 </body>
 </html>
 `;

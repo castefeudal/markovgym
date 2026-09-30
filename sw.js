@@ -1,4 +1,4 @@
-const VERSION = '2026.09-r38-i18n-catalog';
+const VERSION = '2026.09-r39-persistence-store';
 const PREFIX = 'mmg-gym-';
 const SHELL = `${PREFIX}shell-${VERSION}`;
 const MEDIA = `${PREFIX}media-${VERSION}`;
@@ -28,6 +28,7 @@ const PRECACHE = [
   './tools/progression.mjs',
   './tools/workout-groups.mjs',
   './src/persistence/history-repository.mjs',
+  './src/persistence/local-first-store.mjs',
   './src/features/today/decision-engine.mjs',
   './src/features/program/mesocycle.mjs',
   './src/features/program/weekly-review.mjs',
