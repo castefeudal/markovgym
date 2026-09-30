@@ -2,7 +2,7 @@
 
 This describes the current browser data model and the persistence boundaries introduced for all-time training history. User records stay on the device.
 
-The browser entry is an ES module. `src/app/state.mjs` owns the versioned initial state shape and defaults; the UI currently mutates one app-owned state object while hydration and feature orchestration remain in `app.js`. `src/persistence/local-first-store.mjs` owns the small key/value compatibility adapter, and `src/persistence/history-repository.mjs` owns IndexedDB schema and structured collection operations. The local-first adapter is covered without a DOM or browser runtime; its storage and IndexedDB ownership decisions are injected by the app.
+The browser entry is an ES module. `src/app/router.mjs` is the shared route registry, hash normalizer, and hash-change subscription adapter used by the app shell, bootstrap, and Lab UI. `src/app/state.mjs` owns the versioned initial state shape and defaults; the UI currently mutates one app-owned state object while hydration and feature orchestration remain in `app.js`. `src/persistence/local-first-store.mjs` owns the small key/value compatibility adapter, and `src/persistence/history-repository.mjs` owns IndexedDB schema and structured collection operations. The local-first adapter is covered without a DOM or browser runtime; its storage and IndexedDB ownership decisions are injected by the app.
 
 ## Current entities
 
@@ -27,7 +27,6 @@ The browser entry is an ES module. `src/app/state.mjs` owns the versioned initia
 | Nutrition calculation | Current macro target calculation and last result. Daily NutritionDay records join by date with body measurements for adaptive expenditure; the Lab requires at least seven paired days and reports coverage, uncertainty, confidence, and its edge-mean smoothing window. |
 | Weight trend | `src/features/progress/weight-trend.mjs` reports the latest scale value, an arithmetic mean of readings in the latest 7 calendar days, a 7-day change against the previous window, a per-week 21-day rate, and measurement coverage. It leaves comparisons blank until each compared window contains at least three measurements; it does not interpolate missing days. |
 | Calculator result | A local result with calculator id, timestamp, submitted inputs, concise output, formula version, and evidence reference when available. The most recent 500 records live in IndexedDB `userState` and are included in version 10 backups. |
-| EvidenceReference | Citation metadata in `data/evidence/calculators.json`, linked to supported calculator outputs. |
 
 ## Today decision contract
 
