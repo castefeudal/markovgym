@@ -16,3 +16,10 @@ test('translator leaves unknown placeholders intact and stringifies values', () 
   const t = createTranslator({ status: { en: '{count} sets · {unknown}' } }, () => 'en-US');
   assert.equal(t('status', { count: 3 }), '3 sets · {unknown}');
 });
+
+test('translator sees legacy strings registered after startup through the same catalog', () => {
+  const catalog = {};
+  const t = createTranslator(catalog, () => 'en');
+  catalog['home.title'] = { ru: 'Домой', en: 'Home' };
+  assert.equal(t('home.title'), 'Home');
+});

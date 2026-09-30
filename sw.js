@@ -1,4 +1,4 @@
-const VERSION = '2026.09-r37-lazy-lab';
+const VERSION = '2026.09-r38-i18n-catalog';
 const PREFIX = 'mmg-gym-';
 const SHELL = `${PREFIX}shell-${VERSION}`;
 const MEDIA = `${PREFIX}media-${VERSION}`;

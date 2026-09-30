@@ -689,6 +689,23 @@
     });
   }
 
+  function registerLegacyEnglishStrings() {
+    Object.keys(EN).forEach(function(key) {
+      if (Object.prototype.hasOwnProperty.call(T, key)) return;
+      var russian = RU_DOM[key];
+      if (russian == null) russian = RU_DOM['ph:' + key];
+      if (russian == null) russian = RU_DOM['aria:' + key];
+      if (russian == null) russian = RU_DOM['alt:' + key];
+      T[key] = { ru: russian == null ? key : russian, en: EN[key] };
+    });
+  }
+
+  function domText(key, fallbackKey) {
+    var translated = t(key);
+    if (translated !== key) return translated;
+    return RU_DOM[fallbackKey || key] || '';
+  }
+
   var SEO_COPY = {
     ru: {
       title: 'MARKOV MADE GYM — 1324 упражнения, техника, КБЖУ и план тренировок',
@@ -766,21 +783,19 @@
 
     qsa('[data-i18n]').forEach(function (el) {
       var k = el.getAttribute('data-i18n');
-      el.textContent = en ? (EN[k] != null ? EN[k] : RU_DOM[k]) : RU_DOM[k];
+      el.textContent = domText(k);
     });
     qsa('[data-i18n-ph]').forEach(function (el) {
       var k = el.getAttribute('data-i18n-ph');
-      el.setAttribute('placeholder', en ? (EN[k] != null ? EN[k] : RU_DOM['ph:' + k]) : RU_DOM['ph:' + k]);
+      el.setAttribute('placeholder', domText(k, 'ph:' + k));
     });
     qsa('[data-i18n-aria]').forEach(function (el) {
       var k = el.getAttribute('data-i18n-aria');
-      var v = en ? (EN[k] != null ? EN[k] : RU_DOM['aria:' + k]) : RU_DOM['aria:' + k];
-      el.setAttribute('aria-label', v);
+      el.setAttribute('aria-label', domText(k, 'aria:' + k));
     });
     qsa('[data-i18n-alt]').forEach(function (el) {
       var k = el.getAttribute('data-i18n-alt');
-      var v = en ? (EN[k] != null ? EN[k] : RU_DOM['alt:' + k]) : RU_DOM['alt:' + k];
-      el.setAttribute('alt', v);
+      el.setAttribute('alt', domText(k, 'alt:' + k));
     });
 
     qsa('[data-lang]').forEach(function (b) {
@@ -2323,7 +2338,7 @@
       '<div class="plan-week">' + weekHtml + '</div>' +
       '<div class="note"><b>' + esc(t('planCardio')) + '.</b> ' + esc(planCardioTextV10({goal:goal,cardio:$('p-cardio')?$('p-cardio').value:'light',steps:$('p-steps')?$('p-steps').value:'mid'})) + '</div>' +
       '<div class="note"><b>' + esc(t('planProgress')) + '.</b> ' + esc(PROGRESS_TEXT[level][S.lang] || PROGRESS_TEXT[level].ru) + '</div>' +
-      '<div class="note note-warn">' + esc(S.lang === 'en' ? (EN['plan.disclaimer'] || '') : (RU_DOM['plan.disclaimer'] || '')) + '</div>' +
+      '<div class="note note-warn">' + esc(t('plan.disclaimer')) + '</div>' +
       '<div class="plan-actions">' +
         '<button class="btn btn-primary btn-sm" type="button" id="plan-copy">' + esc(t('planCopy')) + '</button>' +
         '<button class="btn btn-solid btn-sm" type="button" id="plan-to-workout">' + esc(t('planToWorkout')) + '</button>' +
@@ -2512,7 +2527,7 @@
   function sectionLabel(section) {
     if (section && section.label) return S.lang === 'en' ? section.label.en : section.label.ru;
     var key = section && section.key ? section.key : section;
-    return S.lang === 'en' ? (EN[key] || RU_DOM[key] || key) : (RU_DOM[key] || key);
+    return domText(key) || key;
   }
 
   function renderCmdk(query) {
@@ -4968,7 +4983,7 @@
      Русский по-прежнему берётся из разметки; здесь только английский слой
      и рантайм-строки, которых в разметке нет.
      ====================================================================== */
-  var EN2 = {
+  Object.assign(EN, {
     /* навигация */
     'nav.cta': 'Discuss your goal',
     'nav.gTools': 'Tools', 'nav.gMethod': 'Method', 'nav.gAuthor': 'Pavel Markov',
@@ -5143,11 +5158,9 @@
     /* aria */
     'aria.coach': 'Coach mode', 'aria.rest': 'Rest duration',
     'aria.kbCats': 'Categories', 'aria.swapWhy': 'Reason for the substitution'
-  };
-  for (var _k in EN2) { if (Object.prototype.hasOwnProperty.call(EN2, _k)) EN[_k] = EN2[_k]; }
-
+  });
   /* Рантайм-строки нового слоя. */
-  var T2 = {
+  Object.assign(T, {
     /* единицы */
     kg: { ru: 'кг', en: 'kg' }, cm: { ru: 'см', en: 'cm' }, hrs: { ru: 'ч сна', en: 'h sleep' },
     'ultimate.kbjuBody': { ru: 'Параметры тела', en: 'Body' },
@@ -5430,9 +5443,7 @@
                  en: 'The browser blocked the new tab — open Telegram with the button below' },
     sheetEmpty: { ru: 'Напиши хотя бы пару слов', en: 'Write at least a couple of words' },
     sheetSent: { ru: 'Текст скопирован — вставь его в Telegram', en: 'Text copied — paste it into Telegram' }
-  };
-  for (var _t in T2) { if (Object.prototype.hasOwnProperty.call(T2, _t)) T[_t] = T2[_t]; }
-
+  });
   /* ==========================================================================
      18. СВЯЗЫВАНИЕ НОВОГО СЛОЯ
      ====================================================================== */
@@ -7082,7 +7093,7 @@
      Correctness -> data integrity -> usability -> accessibility -> performance.
      This layer deliberately preserves the proven V4 business logic and contracts.
      ======================================================================== */
-  var APP_VERSION = '2026.09-r37-lazy-lab';
+  var APP_VERSION = '2026.09-r38-i18n-catalog';
   var BACKUP_SCHEMA = 10;
   K.restTimer = 'mmg.restTimer.v2';
   K.lastBackup = 'mmg.lastBackup.v1';
@@ -7520,13 +7531,90 @@
   var V7_ROUTES={};
   var V7_ROUTE_IDS={};
   var v7ProgramStartTracked=false;
-  var V7_COPY={
-    ru:{home:'Сегодня',library:'Библиотека',workout:'Тренировка',progress:'Прогресс',more:'Ещё',program:'Программа',nutrition:'Питание',knowledge:'База знаний',method:'Метод',settings:'Настройки',about:'Павел Марков',moreTitle:'Разделы системы',homeSub:'Следующее действие, текущий план и обратная связь — без лишней навигации.',moreSub:'Программа, питание, знания и настройки — вторичный уровень, когда он действительно нужен.',settingsSub:'Интерфейс, расширенное логирование и контроль данных.',next:'Следующее действие',continueRun:'Продолжить тренировку',continueRunWhy:'Активная сессия сохранена на этом устройстве.',startReady:'Начать подготовленную тренировку',startReadyWhy:'Упражнения уже собраны — можно переходить в Run Mode.',startPlan:'Начать следующий день программы',startPlanWhy:'План уже готов. Следующий день можно перенести в тренировку одним действием.',finishProfile:'Завершить настройку',finishProfileWhy:'Цель и условия нужны, чтобы программа и рекомендации использовали один контекст.',checkin:'Сделать недельный check-in',checkinWhy:'Свежая обратная связь важнее ещё одного нового инструмента.',buildPlan:'Собрать программу',buildPlanWhy:'Программа свяжет библиотеку с сегодняшней тренировкой и следующими днями.',discover:'Найти первое упражнение',discoverWhy:'Начни с целевой мышцы и доступного оборудования.',open:'Открыть',plan:'План',last:'Последняя сессия',trend:'Динамика',kcal:'Питание',noPlan:'Нет активной программы',noHistory:'Пока нет завершённых тренировок',noTrend:'Недостаточно данных',notCalculated:'Не рассчитано',completed:'выполнено',days:'дней',sets:'подходов',quickLibrary:'Найти упражнение',quickLibraryS:'По мышце или оборудованию',quickWorkout:'Моя тренировка',quickWorkoutS:'Собрать или продолжить',quickProgram:'Программа',quickProgramS:'Следующий тренировочный день',quickProgress:'Check-in',quickProgressS:'Вес, талия и восстановление',appearance:'Оформление',logging:'Логирование',coach:'Рекомендации',data:'Мои данные',rir:'Показывать RIR',rpe:'Показывать RPE',coachOn:'Контекстные подсказки',export:'Скачать резервную копию',import:'Импортировать',clear:'Удалить все данные',advanced:'Расширенный check-in',recovery:'Восстановление',recoveryLow:'Низкое',recoveryMid:'Нормальное',recoveryHigh:'Хорошее',utilities:'Дополнительно',whyProgress:'Почему',tryWeight:'Можно попробовать',evidenceTwo:'2 тренировки подряд — верх диапазона во всех завершённых подходах.',programmeDay:'День программы',startDay:'Начать день',settingsDataText:'Данные остаются в браузере. Экспорт создаёт резервную копию перед переносом или очисткой устройства.',confidenceLow:'Мало данных',confidenceMedium:'Средняя уверенность',confidenceEnough:'Данных достаточно',exerciseHistory:'Прошлый результат',nutritionFeedback:'Связь с динамикой',nutritionKeep:'Не меняй калории автоматически: сначала проверь соблюдение и накопи устойчивый тренд.',weekComplete:'Неделя выполнена — сверить прогресс',weekCompleteWhy:'Все дни программы на этой неделе завершены. Следующий полезный шаг — короткая обратная связь, а не ещё одна тренировка.'},
-    en:{home:'Today',library:'Library',workout:'Workout',progress:'Progress',more:'More',program:'Programme',nutrition:'Nutrition',knowledge:'Knowledge',method:'Method',settings:'Settings',about:'Pavel Markov',moreTitle:'System sections',homeSub:'Next action, active plan and feedback — without unnecessary navigation.',moreSub:'Programme, nutrition, knowledge and settings — the secondary layer when you need it.',settingsSub:'Interface, advanced logging and local data controls.',next:'Next action',continueRun:'Resume workout',continueRunWhy:'The active session is preserved on this device.',startReady:'Start prepared workout',startReadyWhy:'The exercises are ready — continue directly into Run Mode.',startPlan:'Start the next programme day',startPlanWhy:'The plan is ready. Move the next day into today’s workout with one action.',finishProfile:'Finish setup',finishProfileWhy:'Goal and context let the programme and recommendations share one source of truth.',checkin:'Do a weekly check-in',checkinWhy:'Fresh feedback is more useful than another new tool.',buildPlan:'Build a programme',buildPlanWhy:'A programme connects the library to today’s workout and the next sessions.',discover:'Find the first exercise',discoverWhy:'Start with the target muscle and equipment you actually have.',open:'Open',plan:'Plan',last:'Last session',trend:'Trend',kcal:'Nutrition',noPlan:'No active programme',noHistory:'No completed sessions yet',noTrend:'Not enough data',notCalculated:'Not calculated',completed:'completed',days:'days',sets:'sets',quickLibrary:'Find exercise',quickLibraryS:'By muscle or equipment',quickWorkout:'My workout',quickWorkoutS:'Build or resume',quickProgram:'Programme',quickProgramS:'Next training day',quickProgress:'Check-in',quickProgressS:'Weight, waist and recovery',appearance:'Appearance',logging:'Logging',coach:'Recommendations',data:'My data',rir:'Show RIR',rpe:'Show RPE',coachOn:'Contextual guidance',export:'Download backup',import:'Import',clear:'Delete all data',advanced:'Advanced check-in',recovery:'Recovery',recoveryLow:'Low',recoveryMid:'Normal',recoveryHigh:'Good',utilities:'More options',whyProgress:'Why',tryWeight:'You can try',evidenceTwo:'2 sessions in a row — top of the rep range in every completed set.',programmeDay:'Programme day',startDay:'Start day',settingsDataText:'Data stays in this browser. Export a backup before moving or clearing the device.',confidenceLow:'Low confidence',confidenceMedium:'Medium confidence',confidenceEnough:'Enough data',exerciseHistory:'Previous performance',nutritionFeedback:'Trend context',nutritionKeep:'Do not change calories automatically: verify adherence and collect a stable trend first.',weekComplete:'Week complete — review progress',weekCompleteWhy:'Every programme day for this week is complete. The next useful action is feedback, not another session.'}
-  };
-  V7_COPY.ru.tools='Lab';
-  V7_COPY.en.tools='Lab';
-  function v7c(key){var pack=V7_COPY[S.lang==='en'?'en':'ru'];return pack[key]||key;}
+  Object.assign(T, {
+    "v7.home": { ru: "Сегодня", en: "Today" },
+    "v7.library": { ru: "Библиотека", en: "Library" },
+    "v7.workout": { ru: "Тренировка", en: "Workout" },
+    "v7.progress": { ru: "Прогресс", en: "Progress" },
+    "v7.more": { ru: "Ещё", en: "More" },
+    "v7.program": { ru: "Программа", en: "Programme" },
+    "v7.nutrition": { ru: "Питание", en: "Nutrition" },
+    "v7.knowledge": { ru: "База знаний", en: "Knowledge" },
+    "v7.method": { ru: "Метод", en: "Method" },
+    "v7.settings": { ru: "Настройки", en: "Settings" },
+    "v7.about": { ru: "Павел Марков", en: "Pavel Markov" },
+    "v7.moreTitle": { ru: "Разделы системы", en: "System sections" },
+    "v7.homeSub": { ru: "Следующее действие, текущий план и обратная связь — без лишней навигации.", en: "Next action, active plan and feedback — without unnecessary navigation." },
+    "v7.moreSub": { ru: "Программа, питание, знания и настройки — вторичный уровень, когда он действительно нужен.", en: "Programme, nutrition, knowledge and settings — the secondary layer when you need it." },
+    "v7.settingsSub": { ru: "Интерфейс, расширенное логирование и контроль данных.", en: "Interface, advanced logging and local data controls." },
+    "v7.next": { ru: "Следующее действие", en: "Next action" },
+    "v7.continueRun": { ru: "Продолжить тренировку", en: "Resume workout" },
+    "v7.continueRunWhy": { ru: "Активная сессия сохранена на этом устройстве.", en: "The active session is preserved on this device." },
+    "v7.startReady": { ru: "Начать подготовленную тренировку", en: "Start prepared workout" },
+    "v7.startReadyWhy": { ru: "Упражнения уже собраны — можно переходить в Run Mode.", en: "The exercises are ready — continue directly into Run Mode." },
+    "v7.startPlan": { ru: "Начать следующий день программы", en: "Start the next programme day" },
+    "v7.startPlanWhy": { ru: "План уже готов. Следующий день можно перенести в тренировку одним действием.", en: "The plan is ready. Move the next day into today’s workout with one action." },
+    "v7.finishProfile": { ru: "Завершить настройку", en: "Finish setup" },
+    "v7.finishProfileWhy": { ru: "Цель и условия нужны, чтобы программа и рекомендации использовали один контекст.", en: "Goal and context let the programme and recommendations share one source of truth." },
+    "v7.checkin": { ru: "Сделать недельный check-in", en: "Do a weekly check-in" },
+    "v7.checkinWhy": { ru: "Свежая обратная связь важнее ещё одного нового инструмента.", en: "Fresh feedback is more useful than another new tool." },
+    "v7.buildPlan": { ru: "Собрать программу", en: "Build a programme" },
+    "v7.buildPlanWhy": { ru: "Программа свяжет библиотеку с сегодняшней тренировкой и следующими днями.", en: "A programme connects the library to today’s workout and the next sessions." },
+    "v7.discover": { ru: "Найти первое упражнение", en: "Find the first exercise" },
+    "v7.discoverWhy": { ru: "Начни с целевой мышцы и доступного оборудования.", en: "Start with the target muscle and equipment you actually have." },
+    "v7.open": { ru: "Открыть", en: "Open" },
+    "v7.plan": { ru: "План", en: "Plan" },
+    "v7.last": { ru: "Последняя сессия", en: "Last session" },
+    "v7.trend": { ru: "Динамика", en: "Trend" },
+    "v7.kcal": { ru: "Питание", en: "Nutrition" },
+    "v7.noPlan": { ru: "Нет активной программы", en: "No active programme" },
+    "v7.noHistory": { ru: "Пока нет завершённых тренировок", en: "No completed sessions yet" },
+    "v7.noTrend": { ru: "Недостаточно данных", en: "Not enough data" },
+    "v7.notCalculated": { ru: "Не рассчитано", en: "Not calculated" },
+    "v7.completed": { ru: "выполнено", en: "completed" },
+    "v7.days": { ru: "дней", en: "days" },
+    "v7.sets": { ru: "подходов", en: "sets" },
+    "v7.quickLibrary": { ru: "Найти упражнение", en: "Find exercise" },
+    "v7.quickLibraryS": { ru: "По мышце или оборудованию", en: "By muscle or equipment" },
+    "v7.quickWorkout": { ru: "Моя тренировка", en: "My workout" },
+    "v7.quickWorkoutS": { ru: "Собрать или продолжить", en: "Build or resume" },
+    "v7.quickProgram": { ru: "Программа", en: "Programme" },
+    "v7.quickProgramS": { ru: "Следующий тренировочный день", en: "Next training day" },
+    "v7.quickProgress": { ru: "Check-in", en: "Check-in" },
+    "v7.quickProgressS": { ru: "Вес, талия и восстановление", en: "Weight, waist and recovery" },
+    "v7.appearance": { ru: "Оформление", en: "Appearance" },
+    "v7.logging": { ru: "Логирование", en: "Logging" },
+    "v7.coach": { ru: "Рекомендации", en: "Recommendations" },
+    "v7.data": { ru: "Мои данные", en: "My data" },
+    "v7.rir": { ru: "Показывать RIR", en: "Show RIR" },
+    "v7.rpe": { ru: "Показывать RPE", en: "Show RPE" },
+    "v7.coachOn": { ru: "Контекстные подсказки", en: "Contextual guidance" },
+    "v7.export": { ru: "Скачать резервную копию", en: "Download backup" },
+    "v7.import": { ru: "Импортировать", en: "Import" },
+    "v7.clear": { ru: "Удалить все данные", en: "Delete all data" },
+    "v7.advanced": { ru: "Расширенный check-in", en: "Advanced check-in" },
+    "v7.recovery": { ru: "Восстановление", en: "Recovery" },
+    "v7.recoveryLow": { ru: "Низкое", en: "Low" },
+    "v7.recoveryMid": { ru: "Нормальное", en: "Normal" },
+    "v7.recoveryHigh": { ru: "Хорошее", en: "Good" },
+    "v7.utilities": { ru: "Дополнительно", en: "More options" },
+    "v7.whyProgress": { ru: "Почему", en: "Why" },
+    "v7.tryWeight": { ru: "Можно попробовать", en: "You can try" },
+    "v7.evidenceTwo": { ru: "2 тренировки подряд — верх диапазона во всех завершённых подходах.", en: "2 sessions in a row — top of the rep range in every completed set." },
+    "v7.programmeDay": { ru: "День программы", en: "Programme day" },
+    "v7.startDay": { ru: "Начать день", en: "Start day" },
+    "v7.settingsDataText": { ru: "Данные остаются в браузере. Экспорт создаёт резервную копию перед переносом или очисткой устройства.", en: "Data stays in this browser. Export a backup before moving or clearing the device." },
+    "v7.confidenceLow": { ru: "Мало данных", en: "Low confidence" },
+    "v7.confidenceMedium": { ru: "Средняя уверенность", en: "Medium confidence" },
+    "v7.confidenceEnough": { ru: "Данных достаточно", en: "Enough data" },
+    "v7.exerciseHistory": { ru: "Прошлый результат", en: "Previous performance" },
+    "v7.nutritionFeedback": { ru: "Связь с динамикой", en: "Trend context" },
+    "v7.nutritionKeep": { ru: "Не меняй калории автоматически: сначала проверь соблюдение и накопи устойчивый тренд.", en: "Do not change calories automatically: verify adherence and collect a stable trend first." },
+    "v7.weekComplete": { ru: "Неделя выполнена — сверить прогресс", en: "Week complete — review progress" },
+    "v7.weekCompleteWhy": { ru: "Все дни программы на этой неделе завершены. Следующий полезный шаг — короткая обратная связь, а не ещё одна тренировка.", en: "Every programme day for this week is complete. The next useful action is feedback, not another session." },
+    "v7.tools": { ru: "Lab", en: "Lab" }
+  });
+  function v7c(key){return t('v7.'+key);}
   function v7RouteFromHash(){return normalizeRouteHash?normalizeRouteHash(location.hash):'home';}
   function v7Returning(){return !!(profileComplete()||S.workout.length||S.history.length||S.diary.length||databaseNutritionDays.length||S.plan||S.kbjuLast||S.favorites.length);}
   function v7CurrentWeekKey(){var d=new Date(),day=(d.getDay()+6)%7;d.setHours(12,0,0,0);d.setDate(d.getDate()-day);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
@@ -7880,6 +7968,7 @@
     }
 
     captureRu();
+    registerLegacyEnglishStrings();
     migrate();
     migrateEco();
     applyTheme();
