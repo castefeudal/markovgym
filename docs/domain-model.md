@@ -34,7 +34,7 @@ The browser entry is an ES module. `src/app/router.mjs` is the shared route regi
 
 ## Progression decision contract
 
-`tools/progression.mjs` applies double progression only to completed working sets for exercises tracked as weight-and-reps or bodyweight-plus-added-load. Warm-up, drop, failure, back-off, and AMRAP roles are excluded; assisted-weight, duration, distance, and reps-only tracking cannot produce a load increase. Mixed working loads or explicit mixed units return insufficient evidence. A recommendation includes the target rep range, next load, unit, reason, completed-set evidence, and a confidence label whose basis is the number of qualifying working sets. Maximal-effort top-range sets (RIR 0 or RPE 10) hold the load.
+`tools/progression.mjs` applies double progression only to completed working sets for exercises tracked as weight-and-reps or bodyweight-plus-added-load. The app resolves built-in tracking conservatively from the dataset: cardio uses duration, assisted equipment uses assisted-weight, bodyweight-only equipment and equipment without a numeric load use reps-only, and recognized loadable equipment uses weight-and-reps. Custom exercises use their declared tracking type. Warm-up, drop, failure, back-off, and AMRAP roles are excluded; assisted-weight, duration, distance, and reps-only tracking cannot produce a load increase. Mixed working loads or explicit mixed units return insufficient evidence. A recommendation includes the target rep range, next load, unit, reason, completed-set evidence, and a confidence label whose basis is the number of qualifying working sets. Maximal-effort top-range sets (RIR 0 or RPE 10) hold the load.
 
 ## Workout history and migration
 

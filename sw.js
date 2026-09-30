@@ -1,4 +1,4 @@
-const VERSION = '2026.09-r50-progression-contract';
+const VERSION = '2026.10-r51-conservative-progression';
 const PREFIX = 'mmg-gym-';
 const SHELL = `${PREFIX}shell-${VERSION}`;
 const MEDIA = `${PREFIX}media-${VERSION}`;
@@ -21,6 +21,7 @@ const PRECACHE = [
   './src/features/command-palette/search.mjs',
   './src/data/exercise-repository.mjs',
   './src/features/workout/workout-records.mjs',
+  './src/features/workout/progression-adapter.mjs',
   './src/features/exercise/preferences.mjs',
   './src/app/state.mjs',
   './src/app/i18n.mjs',

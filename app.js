@@ -14,6 +14,7 @@ import { subscribeToHashChanges } from './src/app/router.mjs';
 import { searchCommandPalette } from './src/features/command-palette/search.mjs';
 import { createCustomExerciseRuntimeRecord, decodeCompactExercises } from './src/data/exercise-repository.mjs';
 import { cleanSetRecord, ensureSetLog, normalizeWorkoutRecord } from './src/features/workout/workout-records.mjs';
+import { progressionTrackingType } from './src/features/workout/progression-adapter.mjs';
 import { cleanExercisePreferences as normalizeExercisePreferences, exercisePreference as getExercisePreference, exercisePreferenceScore as rankByPreference, EXERCISE_PREFERENCE_VALUES } from './src/features/exercise/preferences.mjs';
 
 (function () {
@@ -3570,7 +3571,7 @@ import { cleanExercisePreferences as normalizeExercisePreferences, exercisePrefe
     if (!progressionEngine || !item) return null;
     var previous = previousPerformance(item.id);
     if (!previous || !Array.isArray(previous.setLog)) return null;
-    var exercise=BY_ID[item.id],trackingType=exercise&&exercise.custom?exercise.trackingType:(exercise&&exercise.zone==='cardio'?'duration':'weight-reps');
+    var exercise=BY_ID[item.id],trackingType=progressionTrackingType(exercise);
     return progressionEngine.recommendProgression({
       previousSets: previous.setLog,
       targetRepRange: item.reps,
@@ -6952,7 +6953,7 @@ import { cleanExercisePreferences as normalizeExercisePreferences, exercisePrefe
      Correctness -> data integrity -> usability -> accessibility -> performance.
      This layer deliberately preserves the proven V4 business logic and contracts.
      ======================================================================== */
-  var APP_VERSION = '2026.09-r50-progression-contract';
+  var APP_VERSION = '2026.10-r51-conservative-progression';
   var BACKUP_SCHEMA = 10;
   K.restTimer = 'mmg.restTimer.v2';
   K.lastBackup = 'mmg.lastBackup.v1';
@@ -7243,7 +7244,22 @@ import { cleanExercisePreferences as normalizeExercisePreferences, exercisePrefe
     if (report.staged.customExercises && historyRepository) indexedWrites.push(historyRepository.replaceCustomExercises(importedCustomExercises));
     if (report.staged.equipmentProfiles && historyRepository) indexedWrites.push(historyRepository.replaceEquipmentProfiles(importedEquipmentProfiles));
     if (report.staged.exercisePreferences && historyRepository) indexedWrites.push(historyRepository.replaceExercisePreferences(importedExercisePreferences));
-    Promise.all(indexedWrites).then(function () {
+    Promise.all(indexedWrites).then(async function () {
+      if (importedExercisePreferences && historyRepository) {
+        var persistedPreferences = await historyRepository.readExercisePreferences();
+        var preferenceIds = Object.keys(importedExercisePreferences).sort();
+        var preferencesMatch = function (records) {
+          var ids = Object.keys(records || {}).sort();
+          return ids.length === preferenceIds.length && preferenceIds.every(function (id, index) {
+            return id === ids[index] && records[id] === importedExercisePreferences[id];
+          });
+        };
+        if (!preferencesMatch(persistedPreferences)) {
+          await historyRepository.replaceExercisePreferences(importedExercisePreferences);
+          persistedPreferences = await historyRepository.readExercisePreferences();
+        }
+        if (!preferencesMatch(persistedPreferences)) throw new Error('Imported exercise preferences could not be verified');
+      }
       if (Array.isArray(importedHistory)) databaseHistory = importedHistory;
       if (Array.isArray(importedNutritionDays)) databaseNutritionDays = importedNutritionDays;
       if (Array.isArray(importedCustomExercises)) databaseCustomExercises = cleanCustomExercises(importedCustomExercises);

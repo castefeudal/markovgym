@@ -38,7 +38,7 @@ test('exercise GIF media uses a fresh revision and cache write failures stay non
   const sw = await read('sw.js');
   assert.match(app, /MEDIA_REVISION = '20260927-media4'/);
   assert.match(app, /\.gif\?v=' \+ MEDIA_REVISION/);
-  assert.match(sw, /const VERSION = '2026\.09-r\d+-[a-z0-9-]+'/);
+  assert.match(sw, /const VERSION = '2026\.\d{2}-r\d+-[a-z0-9-]+'/);
   assert.match(sw, /Cache Storage is an optimisation only/);
   assert.match(sw, /ignoreSearch: true/);
 });
@@ -94,8 +94,8 @@ test('exercise detail view keeps full-frame media and structured guidance', asyn
 
 test('detail assets use a cache-busting revision', async () => {
   const index = await read('index.html');
-  assert.match(index, /app\.css\?v=2026\.09-r\d+-[a-z0-9-]+/);
-  assert.match(index, /app\.js\?v=2026\.09-r\d+-[a-z0-9-]+/);
+  assert.match(index, /app\.css\?v=2026\.\d{2}-r\d+-[a-z0-9-]+/);
+  assert.match(index, /app\.js\?v=2026\.\d{2}-r\d+-[a-z0-9-]+/);
 });
 
 test('detail media box itself stays inside the visual frame and step counter increments once', async () => {
@@ -161,7 +161,7 @@ test('PWA manifest is relative-origin and points to a valid shell', async () => 
 test('service worker precaches the same shell resources as the index', async () => {
   const sw = await read('sw.js');
   const pages = await read('.github/workflows/pages.yml');
-  for (const resource of ['index.html', 'app.css', 'styles/tokens.css', 'styles/reset.css', 'styles/base.css', 'styles/components.css', 'styles/layout.css', 'styles/features/legacy-product.css', 'styles/features/exercise.css', 'styles/features/program.css', 'styles/features/workout.css', 'styles/features/nutrition.css', 'app.js', 'tools/workout-groups.mjs', 'src/app/router.mjs', 'src/app/state.mjs', 'src/app/i18n.mjs', 'src/app/load-modules.mjs', 'src/persistence/history-repository.mjs', 'src/persistence/local-first-store.mjs', 'src/features/command-palette/search.mjs', 'src/data/exercise-repository.mjs', 'src/features/workout/workout-records.mjs', 'src/features/exercise/preferences.mjs', 'src/features/today/decision-engine.mjs', 'src/features/exercise/substitution-engine.mjs', 'src/features/workout/pr-engine.mjs', 'src/features/nutrition/nutrition-analytics.mjs', 'src/features/progress/weight-trend.mjs', 'data/content.json', 'data/exercises-compact.json']) assert.match(sw, new RegExp(resource.replaceAll('.', '\\.')));
+  for (const resource of ['index.html', 'app.css', 'styles/tokens.css', 'styles/reset.css', 'styles/base.css', 'styles/components.css', 'styles/layout.css', 'styles/features/legacy-product.css', 'styles/features/exercise.css', 'styles/features/program.css', 'styles/features/workout.css', 'styles/features/nutrition.css', 'app.js', 'tools/workout-groups.mjs', 'src/app/router.mjs', 'src/app/state.mjs', 'src/app/i18n.mjs', 'src/app/load-modules.mjs', 'src/persistence/history-repository.mjs', 'src/persistence/local-first-store.mjs', 'src/features/command-palette/search.mjs', 'src/data/exercise-repository.mjs', 'src/features/workout/workout-records.mjs', 'src/features/workout/progression-adapter.mjs', 'src/features/exercise/preferences.mjs', 'src/features/today/decision-engine.mjs', 'src/features/exercise/substitution-engine.mjs', 'src/features/workout/pr-engine.mjs', 'src/features/nutrition/nutrition-analytics.mjs', 'src/features/progress/weight-trend.mjs', 'data/content.json', 'data/exercises-compact.json']) assert.match(sw, new RegExp(resource.replaceAll('.', '\\.')));
   assert.match(pages, /cp -R data images src styles tools videos site\//);
   assert.doesNotMatch(sw, /legacy-base\.html|r2\.payload/);
 });
@@ -260,7 +260,7 @@ test('first paint restores readability preference before flagship stylesheet', a
   const hydration = index.indexOf("localStorage.getItem('mmg.settings.v1')");
   const stylesheet = index.indexOf('app.css?v=');
   assert.ok(hydration >= 0 && stylesheet > hydration, 'reading preference must hydrate before stylesheet paint');
-  assert.match(index, /data-app-version="2026\.09-r\d+-[a-z0-9-]+"/);
+  assert.match(index, /data-app-version="2026\.\d{2}-r\d+-[a-z0-9-]+"/);
 });
 
 
@@ -283,6 +283,6 @@ test('in-library quick scenarios reuse preset state and session balance flags du
   const block = css.slice(css.lastIndexOf('/* 23. FLAGSHIP LIBRARY REFINEMENT'));
   assert.match(block, /\.v10-library-quick\{/);
   assert.match(block, /\.v10-library-quick-btn\[aria-pressed="true"\]/);
-  assert.match(index, /app\.css\?v=2026\.09-r\d+-[a-z0-9-]+/);
-  assert.match(index, /app\.js\?v=2026\.09-r\d+-[a-z0-9-]+/);
+  assert.match(index, /app\.css\?v=2026\.\d{2}-r\d+-[a-z0-9-]+/);
+  assert.match(index, /app\.js\?v=2026\.\d{2}-r\d+-[a-z0-9-]+/);
 });
