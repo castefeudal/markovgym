@@ -31,3 +31,12 @@ export function normalizeRouteHash(hash) {
   if (!route || route === 'top' || !isKnownRoute(route)) return 'home';
   return route;
 }
+
+export function subscribeToHashChanges(target, routeFromHash, onChange) {
+  if (!target || typeof target.addEventListener !== 'function' || typeof routeFromHash !== 'function' || typeof onChange !== 'function') {
+    return () => {};
+  }
+  const handleChange = () => onChange(routeFromHash());
+  target.addEventListener('hashchange', handleChange);
+  return () => target.removeEventListener?.('hashchange', handleChange);
+}

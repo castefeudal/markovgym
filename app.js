@@ -10,6 +10,7 @@
 import './bootstrap.js';
 import { createLocalFirstStore } from './src/persistence/local-first-store.mjs';
 import { createInitialState } from './src/app/state.mjs';
+import { subscribeToHashChanges } from './src/app/router.mjs';
 
 (function () {
   'use strict';
@@ -7023,7 +7024,7 @@ import { createInitialState } from './src/app/state.mjs';
      Correctness -> data integrity -> usability -> accessibility -> performance.
      This layer deliberately preserves the proven V4 business logic and contracts.
      ======================================================================== */
-  var APP_VERSION = '2026.09-r40-central-state';
+  var APP_VERSION = '2026.09-r41-central-router';
   var BACKUP_SCHEMA = 10;
   K.restTimer = 'mmg.restTimer.v2';
   K.lastBackup = 'mmg.lastBackup.v1';
@@ -7748,8 +7749,11 @@ import { createInitialState } from './src/app/state.mjs';
   function initProductOSV7(){
     document.documentElement.dataset.release='ultimate-2026-08-v8';document.body.dataset.v7Ready='true';document.body.dataset.v8Ready='true';
     ensureMobileAppNav();renderV7All();initV8Keyboard();
-    window.addEventListener('hashchange',function(){applyV7Route(true);track('home_action',{route:v7RouteFromHash()});});
-    window.addEventListener('hashchange',function(){var route=v7RouteFromHash();if(dataRouteNeedsLibrary(route))ensureData().then(refreshDataDependentUI);});
+    subscribeToHashChanges(window, v7RouteFromHash, function(route){
+      applyV7Route(true);
+      track('home_action',{route:route});
+      if(dataRouteNeedsLibrary(route))ensureData().then(refreshDataDependentUI);
+    });
     document.addEventListener('click',function(e){var startRun=e.target.closest('[data-v8-start-run]');if(startRun){e.preventDefault();openRun();return;}var r=e.target.closest('a[data-v7-route],button[data-v7-route]');if(r){e.preventDefault();navigateV7(r.dataset.v7Route,true);return;}var a=e.target.closest('[data-v7-action]');if(a){var type=a.dataset.v7Action;if(type==='resume'||type==='run')openRun();else if(type==='planDay')startPlanDayV7(Number(a.dataset.v7Day)||0,true);else if(type==='profile'){navigateV7('home',false);var panel=qs('.hero-panel');if(panel){panel.scrollIntoView({block:'start'});var first=qs('.console-opt',panel);if(first)first.focus();}}else if(type==='checkin'){navigateV7('progress',true);setTimeout(function(){if($('g-weight'))$('g-weight').focus();},80);}else if(type==='nutrition'){navigateV7('nutrition',true);setTimeout(function(){if($('nlog-calories'))$('nlog-calories').focus();},80);}else navigateV7(V7_ROUTE_IDS[type]?type:(type==='program'?'program':'library'),true);track('home_action',{action:type});return;}var th=e.target.closest('[data-v7-theme]');if(th){S.theme=th.dataset.v7Theme;applyTheme();renderV7Settings();return;}var rd=e.target.closest('[data-v10-reading]');if(rd){var reading=rd.dataset.v10Reading;if(['balanced','comfortable','large'].indexOf(reading)!==-1){S.settings.reading=reading;saveSettings();applyReadability();renderV7Settings();}return;}var focusTarget=e.target.closest('[data-v10-focus]');if(focusTarget){var focusEl=$(focusTarget.dataset.v10Focus);if(focusEl){focusEl.scrollIntoView({block:'center',behavior:REDUCED_MOTION.matches?'auto':'smooth'});window.setTimeout(function(){try{focusEl.focus({preventScroll:true});}catch(_e){}},REDUCED_MOTION.matches?0:220);}return;}var st=e.target.closest('[data-v7-setting]');if(st){var key=st.dataset.v7Setting;S.settings[key]=!S.settings[key];saveSettings();renderV7Settings();if(runOpen())renderRun();return;}if(e.target.closest('[data-v7-coach]')){$('coach-switch').click();renderV7Settings();return;}var data=e.target.closest('[data-v7-data]');if(data){var map={export:'data-export',import:'data-import',clear:'data-clear'};var target=$(map[data.dataset.v7Data]);if(target)target.click();return;}},true);
     if(window.MutationObserver){var mo=new MutationObserver(function(){renderV7Home();syncV7Floating();});['workout-list','hist','prog-out','plan-out'].forEach(function(id){var el=$(id);if(el)mo.observe(el,{childList:true,subtree:false,attributes:true,attributeFilter:['data-filled']});});}
     applyV7Route(false);window.mmgV7={navigate:navigateV7,get route(){return v7RouteFromHash();},render:renderV7All};window.mmgV8=window.mmgV7;
