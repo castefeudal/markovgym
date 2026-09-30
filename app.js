@@ -12,6 +12,7 @@ import { createLocalFirstStore } from './src/persistence/local-first-store.mjs';
 import { createInitialState } from './src/app/state.mjs';
 import { subscribeToHashChanges } from './src/app/router.mjs';
 import { searchCommandPalette } from './src/features/command-palette/search.mjs';
+import { createCustomExerciseRuntimeRecord, decodeCompactExercises } from './src/data/exercise-repository.mjs';
 
 (function () {
   'use strict';
@@ -804,22 +805,8 @@ import { searchCommandPalette } from './src/features/command-palette/search.mjs'
   var DATA_READY = false;
   var DATA_PROMISE = null;
 
-  function customExerciseRuntimeRecord(record, index) {
-    var secondary = Array.isArray(record.secondary) ? record.secondary.slice() : [];
-    var ex = {
-      id: String(record.id), nameEn: record.nameEn, nameRu: record.nameRu,
-      zone: record.zone, equip: record.equip, target: record.target, group: record.target,
-      secondary: secondary, slug: '', stepsEn: [], stepsRu: [], idx: index,
-      custom: true, image: record.image || null, movementPattern: record.movementPattern,
-      trackingType: record.trackingType, laterality: record.laterality,
-      compound: !!record.compound, defaultSets: record.defaultSets,
-      defaultRepRange: record.defaultRepRange, defaultRest: record.defaultRest,
-      loadIncrement: record.loadIncrement, notes: record.notes || '',
-      createdAt: record.createdAt, updatedAt: record.updatedAt
-    };
-    ex.score = (ex.compound ? 10 : 4) + secondary.length * 2 + (EQUIP_WEIGHT[ex.equip] || 1);
-    ex.search = norm([ex.id, ex.nameEn, ex.nameRu, ex.zone, ex.equip, ex.target, ex.group, secondary.join(' '), ex.movementPattern || '', ex.notes, translitRu([ex.nameRu, ex.nameEn, ex.target, secondary.join(' ')].join(' '))].join(' '));
-    return ex;
+  function makeCustomExerciseRuntimeRecord(record, index) {
+    return createCustomExerciseRuntimeRecord(record, index, { equipmentWeight: EQUIP_WEIGHT, normalize: norm, transliterate: translitRu });
   }
 
   var EQUIP_WEIGHT = {
@@ -843,30 +830,19 @@ import { searchCommandPalette } from './src/features/command-palette/search.mjs'
     }
     if (!raw || !Array.isArray(raw.x) || !raw.x.length) return false;
 
-    EX = raw.x.map(function (r, i) {
-      var ex = {
-        id: r[0], nameEn: r[1], nameRu: r[2],
-        zone: raw.bp[r[3]], equip: raw.eq[r[4]],
-        target: raw.mu[r[5]], group: raw.mu[r[6]],
-        secondary: r[7].map(function (j) { return raw.mu[j]; }),
-        slug: r[8], stepsEn: r[9] || [], stepsRu: r[10] || [],
-        idx: i
-      };
-      ex.score = (ex.secondary.length * 2) + (EQUIP_WEIGHT[ex.equip] || 1);
+    EX = decodeCompactExercises(raw, { equipmentWeight: EQUIP_WEIGHT, normalize: norm });
+    EX.forEach(function (ex) {
       ex.search = norm([
-        ex.id, ex.nameEn, ex.nameRu, ex.zone, ex.equip, ex.target, ex.group,
-        RU_ZONE[ex.zone], EN_ZONE[ex.zone], RU_EQ[ex.equip], EN_EQ[ex.equip],
+        ex.search, RU_ZONE[ex.zone], EN_ZONE[ex.zone], RU_EQ[ex.equip], EN_EQ[ex.equip],
         RU_MU[ex.target], EN_MU[ex.target], RU_MU[ex.group],
-        ex.secondary.join(' '),
         ex.secondary.map(function (m) { return RU_MU[m] || ''; }).join(' ')
       ].join(' '));
       BY_ID[ex.id] = ex;
-      return ex;
     });
 
     databaseCustomExercises.forEach(function (record) {
       if (!record || BY_ID[record.id]) return;
-      var ex = customExerciseRuntimeRecord(record, EX.length);
+      var ex = makeCustomExerciseRuntimeRecord(record, EX.length);
       BY_ID[ex.id] = ex;
       EX.push(ex);
     });
@@ -6039,7 +6015,7 @@ import { searchCommandPalette } from './src/features/command-palette/search.mjs'
     var record=cleanCustomExercises([candidate])[0];
     if(!record)throw new Error(copy.customError);
     databaseCustomExercises=await saveCustomExerciseRecords(databaseCustomExercises.concat([record]));
-    var ex=customExerciseRuntimeRecord(record,EX.length);
+    var ex=makeCustomExerciseRuntimeRecord(record,EX.length);
     BY_ID[ex.id]=ex;EX.push(ex);
     COUNT_ZONE[ex.zone]=(COUNT_ZONE[ex.zone]||0)+1;COUNT_MU[ex.target]=(COUNT_MU[ex.target]||0)+1;COUNT_EQ[ex.equip]=(COUNT_EQ[ex.equip]||0)+1;
     ZONES=Object.keys(COUNT_ZONE);MUSCLES=Object.keys(COUNT_MU);EQUIPMENT=Object.keys(COUNT_EQ);
@@ -7022,7 +6998,7 @@ import { searchCommandPalette } from './src/features/command-palette/search.mjs'
      Correctness -> data integrity -> usability -> accessibility -> performance.
      This layer deliberately preserves the proven V4 business logic and contracts.
      ======================================================================== */
-  var APP_VERSION = '2026.09-r43-command-palette';
+  var APP_VERSION = '2026.09-r44-exercise-repository';
   var BACKUP_SCHEMA = 10;
   K.restTimer = 'mmg.restTimer.v2';
   K.lastBackup = 'mmg.lastBackup.v1';
@@ -7233,7 +7209,7 @@ import { searchCommandPalette } from './src/features/command-palette/search.mjs'
         staged.customExercises=customRaw;
         jsonValue(customRaw).forEach(function(record){
           if(!BY_ID[record.id]){
-            BY_ID[record.id]=customExerciseRuntimeRecord(record,EX.length+temporaryCustomIds.length);
+            BY_ID[record.id]=makeCustomExerciseRuntimeRecord(record,EX.length+temporaryCustomIds.length);
             temporaryCustomIds.push(record.id);
           }
         });

@@ -42,6 +42,8 @@ The Nutrition weekly budget is derived from the saved daily target and date-keye
 
 Command-palette candidate search and ranking live in `src/features/command-palette/search.mjs`; the app supplies localized labels and domain match functions, then handles navigation and rendering. The search module has no DOM access.
 
+The compact exercise dataset is decoded by `src/data/exercise-repository.mjs` into the shared runtime shape. Custom exercise records use the same runtime adapter, keeping dataset decoding and custom-record mapping outside the UI layer.
+
 Developer diagnostics expose schema and migration state, local record counts, current route, service-worker control and the latest local error/storage warning. The panel reads application state in the browser and does not transmit it.
 
 ## Planned model boundaries
