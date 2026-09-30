@@ -116,6 +116,36 @@ test('daily nutrition log persists by date and links optional weight to the prog
   await expect(page.locator('#nutrition-log-list')).toContainText('2240 ккал');
 });
 
+test('Lab reads full workout and nutrition data from IndexedDB repositories', async ({ page }) => {
+  await page.goto('/index.html#home');
+  await expect(page.locator('html')).toHaveAttribute('data-app-ready', 'true');
+  await page.evaluate(async () => {
+    const db = await new Promise((resolve, reject) => {
+      const request = indexedDB.open('markov-made-gym');
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction(['history', 'nutritionDays', 'userState'], 'readwrite');
+      tx.objectStore('history').put({
+        id: 'lab-idb-session', date: '2026-09-30', durationMin: 45,
+        items: [{ id: '0001', setLog: [{ completed: true, type: 'working', weight: 80, reps: 8 }] }]
+      });
+      tx.objectStore('nutritionDays').put({ date: '2026-09-30', calories: 2200, protein: 140, weightKg: 80 });
+      tx.objectStore('userState').put({ key: 'mmg.diary.v1', value: JSON.stringify([{ date: '2026-09-30', weight: 80 }]) });
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error);
+      tx.onabort = () => reject(tx.error);
+    });
+    db.close();
+  });
+  await page.reload();
+  await page.goto('/index.html#tools');
+  await expect(page.locator('#lab-volume-kpis')).toContainText('1');
+  await expect(page.locator('#lab-personal-kpis')).toContainText('1');
+  await expect(page.locator('#lab-adaptive-data')).toContainText('1');
+});
+
 test('first service worker install does not reload the active page', async ({ page }) => {
   let documentNavigations = 0;
   page.on('request', (request) => {
@@ -158,6 +188,7 @@ test('hydrated IndexedDB state wins over stale or corrupt LocalStorage mirrors',
   await expect(page.locator('html')).toHaveAttribute('data-app-ready', 'true');
   await expect(page.locator('.workout-item')).toHaveCount(1);
   await expect.poll(() => page.evaluate(() => window.mmgDiagnostics?.userStateReady)).toBe(true);
+  expect(await page.evaluate(() => ['mmg.profile.v1', 'mmg.workout.v2'].map(key => localStorage.getItem(key)))).toEqual([null, null]);
 
   await page.evaluate(() => {
     localStorage.setItem('mmg.profile.v1', '{ stale and corrupt');
@@ -258,6 +289,10 @@ test('legacy workout history migrates to IndexedDB without a 20-session cap', as
   await expect(page.locator('#mmg-boot')).toHaveCount(0);
   await expect.poll(() => page.evaluate(() => window.mmgDiagnostics?.historyCount)).toBe(28);
   await expect.poll(() => page.evaluate(() => window.mmgDiagnostics?.customExerciseCount)).toBe(1);
+  expect(await page.evaluate(() => [
+    'mmg.history.v1', 'mmg.customExercises.v1', 'mmg.exercisePreferences.v1',
+    'mmg.profile.v1', 'mmg.diary.v1', 'mmg.workout.v2'
+  ].map(key => localStorage.getItem(key)))).toEqual([null, null, null, null, null, null]);
   const persistedCount = await page.evaluate(async () => {
     const db = await new Promise((resolve, reject) => {
       const request = indexedDB.open('markov-made-gym');

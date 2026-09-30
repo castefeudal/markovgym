@@ -1,4 +1,4 @@
-const VERSION = '2026.09-r33-indexeddb-state';
+const VERSION = '2026.09-r34-indexeddb-primary';
 const PREFIX = 'mmg-gym-';
 const SHELL = `${PREFIX}shell-${VERSION}`;
 const MEDIA = `${PREFIX}media-${VERSION}`;

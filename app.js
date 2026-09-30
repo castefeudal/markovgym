@@ -56,6 +56,7 @@
   var lastLocalError = null;
   var historyRepository = null;
   var indexedAppStateKeys = Object.create(null);
+  var indexedRepositoryKeys = Object.create(null);
   var indexedAppStateReady = false;
   var pendingAppStateWrites = [];
   function queueAppStateWrite(key, value, remove) {
@@ -66,12 +67,7 @@
       return null;
     }).catch(function (error) {
       storageWarnings.push({ key: key, type: 'indexeddb-write', at: Date.now() });
-      try {
-        if (storageOk) {
-          if (remove) window.localStorage.removeItem(key);
-          else window.localStorage.setItem(key, String(value));
-        }
-      } catch (_fallbackError) {}
+      try { if (storageOk) { if (remove) window.localStorage.removeItem(key); else window.localStorage.setItem(key, String(value)); } } catch (_fallbackError) {}
       return error;
     }));
   }
@@ -124,13 +120,13 @@
     set: function (key, value) {
       memoryStore[key] = value;
       try {
-        var indexedDbOwned = indexedAppStateReady && Object.prototype.hasOwnProperty.call(indexedAppStateKeys, key);
+        var indexedDbOwned = indexedAppStateReady && key !== K.settings && (Object.prototype.hasOwnProperty.call(indexedAppStateKeys, key) || Object.prototype.hasOwnProperty.call(indexedRepositoryKeys, key));
         if (storageOk && !indexedDbOwned) window.localStorage.setItem(key, value);
         queueAppStateWrite(key, value, false);
         return true;
       } catch (e) {
         storageWarnings.push({ key: key, type: 'write', at: Date.now() });
-        if (storageOk && indexedAppStateReady && Object.prototype.hasOwnProperty.call(indexedAppStateKeys, key)) {
+        if (storageOk && indexedAppStateReady && key !== K.settings && (Object.prototype.hasOwnProperty.call(indexedAppStateKeys, key) || Object.prototype.hasOwnProperty.call(indexedRepositoryKeys, key))) {
           try { window.localStorage.setItem(key, value); } catch (_fallbackError) {}
         }
         queueAppStateWrite(key, value, false);
@@ -1006,7 +1002,10 @@
     store.set(K.exercisePreferences, serialized);
     if (historyRepository) historyRepository.replaceExercisePreferences(S.exercisePreferences).then(function () {
       databaseExercisePreferences = cleanIdbExercisePreferences(S.exercisePreferences);
-    }).catch(function () { storageWarnings.push({ key: K.exercisePreferences, type: 'indexeddb-write', at: Date.now() }); });
+    }).catch(function () {
+      storageWarnings.push({ key: K.exercisePreferences, type: 'indexeddb-write', at: Date.now() });
+      try { if (storageOk) window.localStorage.setItem(K.exercisePreferences, serialized); } catch (_fallbackError) {}
+    });
   }
   function cleanExercisePreferences(value) {
     var clean = {};
@@ -2634,23 +2633,27 @@
   K.workoutSchema = 'mmg.workoutSchema.v4';
   K.historySchema = 'mmg.historySchema.v2';
   [K.fav,K.workout,K.profile,K.meta,K.equipmentProfileActive,K.diary,K.kbju,K.tips,K.coach,K.rest,K.recentSearch,K.recentExercises,K.runSession,K.plan,K.settings].forEach(function(key){indexedAppStateKeys[key]=true;});
+  [K.history,K.customExercises,K.equipmentProfiles,K.exercisePreferences,K.nutritionLog].forEach(function(key){indexedRepositoryKeys[key]=true;});
 
   var DEFAULT_PROFILE = { goal:'', level:'', place:'', days:'', typicalSessionMinutes:'', equipmentAvailability:[], focus:'balanced', limitations:[], recoveryBaseline:'mid', done:false, skipped:false };
 
   function saveProfile() { store.set(K.profile, JSON.stringify(S.profile)); }
   function saveMeta() { store.set(K.meta, JSON.stringify(S.meta)); }
   function saveHistory() {
-    store.set(K.history, JSON.stringify(historyRepository ? S.history.slice(0, 20) : S.history));
     databaseHistory = S.history.slice();
     if (historyRepository) {
       historyRepository.replaceAll(databaseHistory).catch(function () {
         storageWarnings.push({ key: K.history, type: 'indexeddb-write', at: Date.now() });
+        try { if (storageOk) window.localStorage.setItem(K.history, JSON.stringify(databaseHistory)); } catch (_fallbackError) {}
       });
-    }
+    } else store.set(K.history, JSON.stringify(databaseHistory));
   }
   async function saveCustomExerciseRecords(records) {
     var clean = cleanCustomExercises(records);
-    if (historyRepository) await historyRepository.replaceCustomExercises(clean);
+    if (historyRepository) {
+      try { await historyRepository.replaceCustomExercises(clean); }
+      catch (error) { try { if (storageOk) window.localStorage.setItem(K.customExercises, JSON.stringify(clean)); } catch (_fallbackError) {} throw error; }
+    }
     databaseCustomExercises = clean;
     if (store.set(K.customExercises, JSON.stringify(clean)) === false && !historyRepository) {
       throw new Error('Custom exercises could not be saved in browser storage');
@@ -2659,7 +2662,10 @@
   }
   async function saveEquipmentProfileRecords(records) {
     var clean = cleanEquipmentProfiles(records);
-    if (historyRepository) await historyRepository.replaceEquipmentProfiles(clean);
+    if (historyRepository) {
+      try { await historyRepository.replaceEquipmentProfiles(clean); }
+      catch (error) { try { if (storageOk) window.localStorage.setItem(K.equipmentProfiles, JSON.stringify(clean)); } catch (_fallbackError) {} throw error; }
+    }
     databaseEquipmentProfiles = clean;
     if (store.set(K.equipmentProfiles, JSON.stringify(clean)) === false && !historyRepository) {
       throw new Error('Equipment profiles could not be saved in browser storage');
@@ -6533,6 +6539,7 @@
       showToast(t('nutritionLog.saved'));
     } catch (error) {
       storageWarnings.push({ key: K.nutritionLog, type: 'indexeddb-write', at: Date.now() });
+      try { if (storageOk) window.localStorage.setItem(K.nutritionLog, JSON.stringify(databaseNutritionDays.filter(function (row) { return row.date !== date; }).concat([record]))); } catch (_fallbackError) {}
       showToast(t('nutritionLog.saveFailed'));
     }
   }
@@ -6549,7 +6556,7 @@
       var remaining = databaseNutritionDays.filter(function (row) { return row.date !== date; });
       var remove = historyRepository ? historyRepository.replaceNutritionDays(remaining) : Promise.resolve();
       remove.then(function () { databaseNutritionDays = remaining; store.set(K.nutritionLog, JSON.stringify(databaseNutritionDays)); renderNutritionLog(); renderWeeklyNutritionBudget(); })
-        .catch(function () { showToast(t('nutritionLog.saveFailed')); });
+        .catch(function () { try { if (storageOk) window.localStorage.setItem(K.nutritionLog, JSON.stringify(remaining)); } catch (_fallbackError) {} showToast(t('nutritionLog.saveFailed')); });
     });
     renderNutritionLog();
     renderWeeklyNutritionBudget();
@@ -7072,7 +7079,7 @@
      Correctness -> data integrity -> usability -> accessibility -> performance.
      This layer deliberately preserves the proven V4 business logic and contracts.
      ======================================================================== */
-  var APP_VERSION = '2026.09-r33-indexeddb-state';
+  var APP_VERSION = '2026.09-r34-indexeddb-primary';
   var BACKUP_SCHEMA = 9;
   K.restTimer = 'mmg.restTimer.v2';
   K.lastBackup = 'mmg.lastBackup.v1';
@@ -7855,9 +7862,10 @@
       Object.keys(indexedAppStateKeys).forEach(function(key){
         if(!Object.prototype.hasOwnProperty.call(databaseAppState,key))return;
         memoryStore[key]=databaseAppState[key];
-        try{if(storageOk)window.localStorage.removeItem(key);}catch(e){storageWarnings.push({key:key,type:'mirror-remove',at:Date.now()});}
+        try{if(storageOk){if(key===K.settings)window.localStorage.setItem(key,databaseAppState[key]);else window.localStorage.removeItem(key);}}catch(e){storageWarnings.push({key:key,type:key===K.settings?'mirror-write':'mirror-remove',at:Date.now()});}
       });
       indexedAppStateReady = true;
+      Object.keys(indexedRepositoryKeys).forEach(function(key){try{if(storageOk)window.localStorage.removeItem(key);}catch(e){storageWarnings.push({key:key,type:'mirror-remove',at:Date.now()});}});
       activeEquipmentProfileId = store.get(K.equipmentProfileActive) || '';
       store.set(K.customExercises, JSON.stringify(databaseCustomExercises));
       store.set(K.equipmentProfiles, JSON.stringify(databaseEquipmentProfiles));
@@ -7940,6 +7948,15 @@
     document.documentElement.dataset.coreReady = 'true';
     document.documentElement.dataset.routeReady = v7RouteFromHash();
     document.documentElement.dataset.appReady = 'true';
+    window.mmgLocalData = Object.freeze({
+      readSnapshot: function () {
+        return {
+          history: S.history.slice(),
+          measurements: S.diary.slice(),
+          nutritionDays: databaseNutritionDays.slice()
+        };
+      }
+    });
     window.dispatchEvent(new CustomEvent('mmg:ready', { detail: { exercises: DATA_READY ? EX.length : DATA_EXPECTED, content: !!contentLoaded, dataReady: DATA_READY } }));
 
     if (!DATA_READY) {

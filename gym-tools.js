@@ -250,11 +250,17 @@ function readJson(keys, fallback) {
 }
 
 function history() {
+  const appData = window.mmgLocalData?.readSnapshot?.();
+  if (Array.isArray(appData?.history)) return appData.history;
   const data = readJson(['mmg.history.v1', 'mmg_history_v7'], []);
   return Array.isArray(data) ? data : [];
 }
 
 function diaryRows() {
+  const appData = window.mmgLocalData?.readSnapshot?.();
+  if (Array.isArray(appData?.measurements) && Array.isArray(appData?.nutritionDays)) {
+    return joinNutritionAndMeasurements(appData.nutritionDays, appData.measurements);
+  }
   const measurementRaw = readJson(['mmg.diary.v1'], []);
   const measurementRows = Array.isArray(measurementRaw) ? measurementRaw : Array.isArray(measurementRaw?.entries) ? measurementRaw.entries : [];
   const legacyNutritionRaw = readJson(['mmg.nutrition.v1', 'mmg_nutrition_v7'], []);
@@ -549,6 +555,10 @@ function init() {
   document.querySelector('main')?.appendChild(section);
   renderShell();
   syncRoute();
+  window.addEventListener('mmg:ready', () => {
+    const route = (location.hash || '#home').slice(1).split('?')[0];
+    if (route === 'tools') renderHistoryInsights();
+  });
   window.addEventListener('hashchange', syncRoute);
   const observer = new MutationObserver(() => {
     if (lastLanguage !== document.documentElement.lang) {
