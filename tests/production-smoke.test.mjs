@@ -6,10 +6,12 @@ const read = (file) => readFile(new URL(`../${file}`, import.meta.url), 'utf8');
 
 test('canonical shell does not use payload bootstrap or document.write', async () => {
   const index = await read('index.html');
+  const bootstrap = await read('bootstrap.js');
   assert.doesNotMatch(index, /document\.write|r2\.payload\.b64/);
+  assert.doesNotMatch(index, /<script[^>]+src=["']\.\/gym-tools\.js/);
   assert.match(index, /app\.css/);
   assert.match(index, /app\.js/);
-  assert.match(index, /gym-tools\.js/);
+  assert.match(bootstrap, /import\('\.\/gym-tools\.js'\)/);
   assert.match(index, /lab\.css/);
 });
 
@@ -176,7 +178,7 @@ test('stylesheet layers are separated and linked in their original cascade order
   assert.match(build, /styles\/features\/exercise\.css/);
   for (const layer of ['tokens', 'reset', 'base', 'components', 'layout']) assert.match(await read(`styles/${layer}.css`), /\S/);
   assert.match(await read('styles/features/legacy-product.css'), /\.cnote\s*\{/);
-  assert.match(build, /2026\.09-r36-parallel-module-loading/);
+  assert.match(build, /2026\.09-r37-lazy-lab/);
   assert.doesNotMatch(base, /\.custom-exercise-dialog\{|\.run-pr-notice\{|\.nutrition-log-panel\{/);
 });
 

@@ -39,6 +39,54 @@
   window.addEventListener('mmg:error', showError, { once: true });
   if (retry) retry.addEventListener('click', function () { window.location.reload(); });
 
+  var labModulePromise = null;
+  function loadLabForCurrentRoute() {
+    if (((location.hash || '#home').slice(1).split('?')[0]) !== 'tools') {
+      var inactiveFallback = document.getElementById('lab-load-fallback');
+      if (inactiveFallback) inactiveFallback.remove();
+      return;
+    }
+    if (typeof window.mmgLabOpen === 'function') return;
+    if (labModulePromise) return labModulePromise;
+
+    var english = document.documentElement.lang === 'en';
+    var main = document.querySelector('main');
+    if (main && !document.getElementById('lab-load-fallback')) {
+      var loading = document.createElement('div');
+      loading.id = 'lab-load-fallback';
+      loading.className = 'container';
+      loading.setAttribute('role', 'status');
+      loading.textContent = english ? 'Loading MARKOV MADE LAB…' : 'Загружается MARKOV MADE LAB…';
+      main.appendChild(loading);
+    }
+
+    labModulePromise = import('./gym-tools.js').then(function () {
+      var fallback = document.getElementById('lab-load-fallback');
+      if (fallback) fallback.remove();
+      if (typeof window.mmgLabOpen !== 'function') throw new Error('Lab module did not initialize');
+    }).catch(function () {
+      labModulePromise = null;
+      var fallback = document.getElementById('lab-load-fallback');
+      if (!fallback || !fallback.isConnected) {
+        fallback = document.createElement('section');
+        fallback.id = 'lab-load-fallback';
+        fallback.className = 'container';
+        document.querySelector('main')?.appendChild(fallback);
+      }
+      fallback.setAttribute('role', 'alert');
+      fallback.innerHTML = '<p>' + (english ? 'MARKOV MADE LAB could not load. Your saved data is unchanged.' : 'Не удалось загрузить MARKOV MADE LAB. Сохранённые данные не изменены.') + '</p><button type="button">' + (english ? 'Retry' : 'Повторить') + '</button>';
+      fallback.querySelector('button').addEventListener('click', function () {
+        fallback.remove();
+        loadLabForCurrentRoute();
+      }, { once: true });
+      window.dispatchEvent(new CustomEvent('mmg:lab-error'));
+    });
+    return labModulePromise;
+  }
+
+  window.addEventListener('mmg:ready', loadLabForCurrentRoute);
+  window.addEventListener('hashchange', loadLabForCurrentRoute);
+
   function showUpdate(registration) {
     if (!registration || !registration.waiting || document.getElementById('mmg-update')) return;
     var bar = document.createElement('div');

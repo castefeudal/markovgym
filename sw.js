@@ -1,4 +1,4 @@
-const VERSION = '2026.09-r36-parallel-module-loading';
+const VERSION = '2026.09-r37-lazy-lab';
 const PREFIX = 'mmg-gym-';
 const SHELL = `${PREFIX}shell-${VERSION}`;
 const MEDIA = `${PREFIX}media-${VERSION}`;

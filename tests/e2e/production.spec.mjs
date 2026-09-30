@@ -62,6 +62,7 @@ test('home boots with the full exercise dataset and no page errors', async ({ pa
   await expect(page.locator('html')).toHaveAttribute('data-storage-ready', 'true');
   await expect(page.locator('html')).toHaveAttribute('data-core-ready', 'true');
   await expect(page.locator('html')).toHaveAttribute('data-route-ready', 'home');
+  expect(await page.evaluate(() => typeof window.mmgLabOpen)).toBe('undefined');
   await expect(page.locator('#stat-total')).toHaveText('1324');
   expect(errors).toEqual([]);
   expect(failed).toEqual([]);
