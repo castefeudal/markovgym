@@ -346,7 +346,8 @@ test('legacy workout history migrates to IndexedDB without a 20-session cap', as
   const download = await downloadPromise;
   const backup = JSON.parse(await readFile(await download.path(), 'utf8'));
   expect(backup.app).toBe('markov-made-gym');
-  expect(backup.schemaVersion).toBe(9);
+  expect(backup.schemaVersion).toBe(10);
+  expect(JSON.parse(backup.data.calculatorHistory)).toEqual([]);
   expect(JSON.parse(backup.data.history)).toHaveLength(28);
   expect(JSON.parse(backup.data.customExercises)).toHaveLength(1);
   expect(JSON.parse(backup.data.equipmentProfiles)).toHaveLength(4);
@@ -425,7 +426,7 @@ test('partial IndexedDB collections merge missing legacy rows without replacing 
   expect(restored.nutritionDays.map(row => row.date).sort()).toEqual(['2026-09-19', '2026-09-20']);
 });
 
-test('custom exercise joins the Library, saved workout, Run Mode, history and schema v9 backup', async ({ page }) => {
+test('custom exercise joins the Library, saved workout, Run Mode, history and schema v10 backup', async ({ page }) => {
   test.setTimeout(90_000);
   await page.goto('/index.html#library');
   await expect(page.locator('#mmg-boot')).toHaveCount(0);
@@ -476,7 +477,7 @@ test('custom exercise joins the Library, saved workout, Run Mode, history and sc
   const download = await downloadPromise;
   const backup = JSON.parse(await readFile(await download.path(), 'utf8'));
   const customExercises = JSON.parse(backup.data.customExercises);
-  expect(backup.schemaVersion).toBe(9);
+  expect(backup.schemaVersion).toBe(10);
   expect(customExercises).toHaveLength(1);
   expect(customExercises[0]).toMatchObject({
     nameRu: 'Мой жим гантели', nameEn: 'My dumbbell press',
@@ -519,7 +520,7 @@ test('equipment profiles constrain Library choices, survive reload and preserve 
   await page.locator('#v7-data-actions [data-v7-data="export"]').click();
   const download = await downloadPromise;
   const backup = JSON.parse(await readFile(await download.path(), 'utf8'));
-  expect(backup.schemaVersion).toBe(9);
+  expect(backup.schemaVersion).toBe(10);
   expect(JSON.parse(backup.data.equipmentProfiles)).toHaveLength(5);
   const importedProfileId = backup.data.equipmentProfileActive;
   expect(importedProfileId).toMatch(/^equipment-/);
@@ -590,7 +591,7 @@ test('exercise preferences persist, affect library ranking and round-trip throug
   await page.locator('#data-export').click();
   const download = await downloadPromise;
   const backup = JSON.parse(await readFile(await download.path(), 'utf8'));
-  expect(backup.schemaVersion).toBe(9);
+  expect(backup.schemaVersion).toBe(10);
   expect(JSON.parse(backup.data.exercisePreferences)[exerciseId]).toBe('discomfort');
   expect(JSON.parse(backup.data.profile)).toMatchObject({ goal: 'muscle', place: 'gym', done: true });
 
@@ -690,6 +691,7 @@ test('distance and duration tracking stay structured from Run Mode into workout 
 
 test('hash routes and MARKOV MADE LAB calculators are usable', async ({ page }) => {
   await page.goto('/index.html#tools');
+  await expect(page.locator('html')).toHaveAttribute('data-app-ready', 'true');
   await expect(page.locator('#tools')).toBeVisible();
   await expect(page.locator('#gym-tools-title')).toContainText(/Расчёты|Calculations/);
   await expect(page.locator('#lab-e1rm-out')).toContainText(/114[,.]58/);
@@ -697,10 +699,20 @@ test('hash routes and MARKOV MADE LAB calculators are usable', async ({ page }) 
   await evidence.locator('summary').click();
   await expect(evidence).toContainText('Brzycki, 1993');
   await expect(evidence.locator('a[href="https://doi.org/10.1080/07303084.1993.10606684"]')).toHaveAttribute('rel', 'noopener noreferrer');
-  await page.locator('[data-lab-form="e1rm"] #e1rm-weight').fill('100');
+  await page.locator('[data-lab-form="e1rm"] #e1rm-weight').fill('100.1');
   await page.locator('[data-lab-form="e1rm"] #e1rm-reps').fill('5');
   await page.locator('[data-lab-form="e1rm"]').getByRole('button', { name: /Рассчитать|Calculate/ }).click();
-  await expect(page.locator('#lab-e1rm-out')).toContainText(/114[,.]5[89]/);
+  await expect(page.locator('#lab-e1rm-out')).toContainText(/114[,.]7/);
+  await expect.poll(async () => (await readIndexedUserState(page, 'mmg.calculatorResults.v1', [])).length).toBe(1);
+  const results = await readIndexedUserState(page, 'mmg.calculatorResults.v1', []);
+  expect(results).toHaveLength(1);
+  expect(results[0]).toMatchObject({ calculatorId: 'lab-e1rm', title: 'Оценка одноповторного максимума', evidenceId: 'estimated-1rm' });
+  await page.goto('/index.html#settings');
+  const backupPromise = page.waitForEvent('download');
+  await page.locator('#data-export').click();
+  const calculatorBackup = JSON.parse(await readFile(await (await backupPromise).path(), 'utf8'));
+  expect(calculatorBackup.schemaVersion).toBe(10);
+  expect(JSON.parse(calculatorBackup.data.calculatorHistory)).toHaveLength(1);
   await page.goto('/index.html#library');
   await expect(page.locator('#library')).toBeVisible();
   await expect(page.locator('#search')).toBeVisible();
@@ -1041,8 +1053,7 @@ test('all three themes resolve coherent tokens, persist and keep library informa
 
 
 test('flagship restores saved programme on home and exposes the weekly pulse', async ({ page }) => {
-  await page.goto('/index.html#home');
-  await page.evaluate(() => {
+  await page.addInitScript(() => {
     localStorage.setItem('mmg.plan.v1', JSON.stringify({
       v: 2,
       createdAt: Date.now(),
@@ -1055,7 +1066,7 @@ test('flagship restores saved programme on home and exposes the weekly pulse', a
       ],
     }));
   });
-  await page.reload();
+  await page.goto('/index.html#home');
   await expect(page.locator('#mmg-boot')).toHaveCount(0, { timeout: 15_000 });
   await expect(page.locator('#v10-home-pulse')).toBeVisible();
   await expect(page.locator('#v10-home-pulse')).toContainText(/0\s*\/\s*2/);

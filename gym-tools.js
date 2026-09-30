@@ -39,6 +39,8 @@ let lastWarmupSets = [];
 let category = 'strength';
 let search = '';
 let lastLanguage = document.documentElement.lang;
+let activeCalculationId = '';
+let pendingCalculatorResults = [];
 
 const categories = [
   ['strength', 'Сила', 'Strength'],
@@ -81,6 +83,34 @@ function result(out, main, { range = '', confidence = '', meaning = '', action =
     ${meaning ? `<p class="small">${meaning}</p>` : ''}
     ${action ? `<p class="tiny"><b>${t('Что делать:', 'Next:')}</b> ${action}</p>` : ''}
     ${details ? `<details class="lab-details"><summary>${t('Метод, допущения и ограничения', 'Method, assumptions and limits')}</summary><div class="tiny">${details}</div></details>` : ''}`;
+  if (activeCalculationId && !/проверь ввод|check inputs|недостаточно данных|insufficient data|калорий недостаточно|calories are too low/i.test(String(main))) {
+    const form = q(`[data-lab-form="${activeCalculationId}"]`);
+    const inputs = Object.fromEntries([...form.elements].filter(element => element.id && element.type !== 'submit').map(element => [element.id, String(element.value)]));
+    const calculatorId = 'lab-' + activeCalculationId;
+    const evidenceId = getCalculatorEvidenceId(calculatorId) || '';
+    const evidence = evidenceId ? getLocalizedLabEvidence(evidenceId, 'en') : null;
+    const title = form?.closest('[data-lab-card]')?.querySelector('h2')?.textContent || activeCalculationId;
+    const summary = [main, ...out.querySelectorAll('.lab-pill')].map(item => typeof item === 'string' ? item : item.textContent).filter(Boolean).join(' · ');
+    persistCalculatorResult({ calculatorId, title, summary, inputs, evidenceId, formulaVersion: evidence?.version || '' });
+    renderCalculatorHistory();
+  }
+}
+
+function persistCalculatorResult(record) {
+  const save = window.mmgLocalData?.saveCalculatorResult;
+  if (typeof save === 'function') save(record);
+  else pendingCalculatorResults.push(record);
+}
+
+function renderCalculatorHistory() {
+  const host = q('#lab-calculation-history-list');
+  if (!host) return;
+  const records = window.mmgLocalData?.readSnapshot?.().calculatorResults || [];
+  host.innerHTML = records.length ? records.slice(0, 8).map(record => {
+    const title = record.title || record.calculatorId;
+    const date = new Date(record.createdAt).toLocaleDateString(en() ? 'en-US' : 'ru-RU');
+    return `<li><div><b>${esc(title)}</b><small>${esc(date)} · ${esc(Object.entries(record.inputs || {}).map(([key, value]) => `${key}: ${value}`).join(' · '))}</small></div><strong>${esc(record.summary)}</strong></li>`;
+  }).join('') : `<li class="tiny">${t('Здесь появятся выполненные расчёты.', 'Completed calculations will appear here.')}</li>`;
 }
 
 function renderShell() {
@@ -226,6 +256,11 @@ function renderCards() {
       description: t('Что приложение уже может использовать без повторного ввода.', 'What the app can already reuse without asking you to enter it again.'),
       body: '<div class="lab-kpis" id="lab-personal-kpis"></div>',
     }),
+    card({
+      id: 'lab-calculation-history', cat: 'personal', kicker: 'LOCAL HISTORY', title: t('История расчётов', 'Calculation history'),
+      description: t('Недавние результаты и введённые значения сохраняются только на этом устройстве.', 'Recent results and inputs stay on this device.'),
+      body: '<ol class="lab-calculation-history" id="lab-calculation-history-list"></ol>',
+    }),
   ].join('');
 
   const planning = card({
@@ -302,7 +337,7 @@ function bind() {
     filterCards();
   });
   qa('[data-lab-form]').forEach((form) => {
-    form.addEventListener('submit', (event) => { event.preventDefault(); calculate(form.dataset.labForm); });
+    form.addEventListener('submit', (event) => { event.preventDefault(); activeCalculationId = form.dataset.labForm; calculate(activeCalculationId); activeCalculationId = ''; });
     form.addEventListener('input', () => {
       if (form.dataset.labForm === 'convert') calculate('convert');
     });
@@ -510,6 +545,7 @@ function renderHistoryInsights() {
 function calculateAll() {
   ['e1rm','percent','plates','warmup','bmr','goal','protein','macros','fiber','bmi','ffmi','target-bf','hr','pace','riegel','convert'].forEach(calculate);
   renderHistoryInsights();
+  renderCalculatorHistory();
 }
 
 function addNavigation() {
@@ -556,8 +592,9 @@ function init() {
   renderShell();
   syncRoute();
   window.addEventListener('mmg:ready', () => {
+    pendingCalculatorResults.splice(0).forEach(record => window.mmgLocalData?.saveCalculatorResult?.(record));
     const route = (location.hash || '#home').slice(1).split('?')[0];
-    if (route === 'tools') renderHistoryInsights();
+    if (route === 'tools') { renderHistoryInsights(); renderCalculatorHistory(); }
   });
   window.addEventListener('hashchange', syncRoute);
   const observer = new MutationObserver(() => {

@@ -80,11 +80,13 @@
   }
   var databaseHistory = null;
   var databaseNutritionDays = [];
+  var databaseCalculatorResults = [];
   var databaseCustomExercises = [];
   var databaseEquipmentProfiles = [];
   var databaseExercisePreferences = {};
   var databaseAppState = {};
   var cleanIdbExercisePreferences = function (value) { return value && typeof value === 'object' && !Array.isArray(value) ? value : {}; };
+  var cleanCalculatorResultsFn = function () { return []; };
   var cleanNutritionDays = function (rows) { return Array.isArray(rows) ? rows.filter(function (row) { return row && typeof row === 'object'; }) : []; };
   var cleanEquipmentProfiles = function (rows) { return Array.isArray(rows) ? rows.filter(function (row) { return row && typeof row === 'object'; }) : []; };
   var activeEquipmentProfileId = '';
@@ -2616,6 +2618,7 @@
   K.profile = 'mmg.profile.v1';
   K.meta = 'mmg.workoutMeta.v1';
   K.history = 'mmg.history.v1';
+  K.calculatorHistory = 'mmg.calculatorResults.v1';
   K.customExercises = 'mmg.customExercises.v1';
   K.equipmentProfiles = 'mmg.equipmentProfiles.v1';
   K.equipmentProfileActive = 'mmg.equipmentProfileActive.v1';
@@ -2632,7 +2635,7 @@
   K.settings = 'mmg.settings.v1';
   K.workoutSchema = 'mmg.workoutSchema.v4';
   K.historySchema = 'mmg.historySchema.v2';
-  [K.fav,K.workout,K.profile,K.meta,K.equipmentProfileActive,K.diary,K.kbju,K.tips,K.coach,K.rest,K.recentSearch,K.recentExercises,K.runSession,K.plan,K.settings].forEach(function(key){indexedAppStateKeys[key]=true;});
+  [K.fav,K.workout,K.profile,K.meta,K.equipmentProfileActive,K.diary,K.kbju,K.tips,K.coach,K.rest,K.recentSearch,K.recentExercises,K.runSession,K.plan,K.settings,K.calculatorHistory].forEach(function(key){indexedAppStateKeys[key]=true;});
   [K.history,K.customExercises,K.equipmentProfiles,K.exercisePreferences,K.nutritionLog].forEach(function(key){indexedRepositoryKeys[key]=true;});
 
   var DEFAULT_PROFILE = { goal:'', level:'', place:'', days:'', typicalSessionMinutes:'', equipmentAvailability:[], focus:'balanced', limitations:[], recoveryBaseline:'mid', done:false, skipped:false };
@@ -7079,8 +7082,8 @@
      Correctness -> data integrity -> usability -> accessibility -> performance.
      This layer deliberately preserves the proven V4 business logic and contracts.
      ======================================================================== */
-  var APP_VERSION = '2026.09-r34-indexeddb-primary';
-  var BACKUP_SCHEMA = 9;
+  var APP_VERSION = '2026.09-r35-calculator-history';
+  var BACKUP_SCHEMA = 10;
   K.restTimer = 'mmg.restTimer.v2';
   K.lastBackup = 'mmg.lastBackup.v1';
   K.rollbackBackup = 'mmg.backup.rollback.v1';
@@ -7221,9 +7224,9 @@
   migrateEco = function(){ _migrateEcoV5(); restoreRestTimer(); };
 
   /* Production backup format: versioned, staged, validated, previewed, rollback-capable. */
-  DATA_KEYS=['customExercises','equipmentProfiles','equipmentProfileActive','exercisePreferences','fav','workout','lang','theme','density','profile','meta','history','diary','nutritionLog','kbju','tips','coach','rest','recentSearch','recentExercises','runSession','plan','settings','schema','workoutSchema','historySchema'];
+  DATA_KEYS=['customExercises','equipmentProfiles','equipmentProfileActive','exercisePreferences','calculatorHistory','fav','workout','lang','theme','density','profile','meta','history','diary','nutritionLog','kbju','tips','coach','rest','recentSearch','recentExercises','runSession','plan','settings','schema','workoutSchema','historySchema'];
   var BACKUP_LABELS = {
-    exercisePreferences:{ru:'предпочтения упражнений',en:'exercise preferences'},nutritionLog:{ru:'дневник питания',en:'nutrition log'},
+    exercisePreferences:{ru:'предпочтения упражнений',en:'exercise preferences'},calculatorHistory:{ru:'история расчётов',en:'calculator history'},nutritionLog:{ru:'дневник питания',en:'nutrition log'},
     customExercises:{ru:'свои упражнения',en:'custom exercises'},equipmentProfiles:{ru:'профили оборудования',en:'equipment profiles'},equipmentProfileActive:{ru:'активный профиль оборудования',en:'active equipment profile'},fav:{ru:'избранное',en:'favorites'},workout:{ru:'тренировка',en:'workout'},lang:{ru:'язык',en:'language'},theme:{ru:'тема',en:'theme'},density:{ru:'плотность сетки',en:'grid density'},profile:{ru:'профиль',en:'profile'},meta:{ru:'данные тренировки',en:'workout meta'},history:{ru:'история',en:'history'},diary:{ru:'дневник прогресса',en:'progress diary'},kbju:{ru:'питание',en:'nutrition'},tips:{ru:'сохранённые материалы',en:'saved knowledge'},coach:{ru:'режим тренера',en:'coach mode'},rest:{ru:'настройка отдыха',en:'rest timer preset'},recentSearch:{ru:'недавние поиски',en:'recent searches'},recentExercises:{ru:'недавние упражнения',en:'recent exercises'},runSession:{ru:'активная сессия',en:'active session'},plan:{ru:'активная программа',en:'active programme'},settings:{ru:'настройки логирования',en:'logging settings'},schema:{ru:'схема данных',en:'schema'},workoutSchema:{ru:'схема тренировки',en:'workout schema'},historySchema:{ru:'схема истории',en:'history schema'}
   };
   function backupLabel(name){var pair=BACKUP_LABELS[name];return pair?(S.lang==='en'?pair.en:pair.ru):name;}
@@ -7256,6 +7259,7 @@
       var cleanNutrition = cleanNutritionDays(value);
       return cleanNutrition.length===value.length ? JSON.stringify(cleanNutrition) : null;
     }
+    if(name==='calculatorHistory')return Array.isArray(value)&&cleanCalculatorResultsFn?JSON.stringify(cleanCalculatorResultsFn(value)):null;
     if (name==='tips') return JSON.stringify(Array.isArray(value)?value.map(String).slice(0,200):[]);
     if (name==='recentSearch') return JSON.stringify(Array.isArray(value)?value.map(String).filter(Boolean).slice(0,8):[]);
     if (name==='recentExercises') return JSON.stringify(Array.isArray(value)?value.map(String).filter(function(id){return !!BY_ID[id];}).slice(0,8):[]);
@@ -7324,7 +7328,7 @@
   }
   function backupPreviewText(report){
     var list=report.changed.slice(0,10).map(function(n){return '• '+backupLabel(n);}).join('\n');
-    var collections=['customExercises','equipmentProfiles','workout','history','diary','nutritionLog'];
+    var collections=['customExercises','equipmentProfiles','workout','history','diary','nutritionLog','calculatorHistory'];
     var summary=collections.map(function(name){var value=jsonValue(report.staged[name]);return Array.isArray(value)?backupLabel(name)+': '+value.length:null;}).filter(Boolean).join(' · ');
     var more=Math.max(0,report.changed.length-10);
     if(S.lang==='en')return 'Backup validated. Changes: '+report.changed.length+'\n'+(summary?'Records: '+summary+'\n':'')+'\n'+(list||'No values differ.')+(more?'\n• +'+more+' more':'')+'\n\nA rollback snapshot will be kept on this device. Import now?';
@@ -7843,6 +7847,12 @@
       window.dispatchEvent(new CustomEvent('mmg:error', { detail: { key: 'pr-engine' } }));
     }
     try {
+      var calculatorHistoryModule = await import('./src/features/lab/calculator-history.mjs');
+      cleanCalculatorResultsFn = calculatorHistoryModule.cleanCalculatorResults;
+    } catch (error) {
+      window.dispatchEvent(new CustomEvent('mmg:error', { detail: { key: 'calculator-history' } }));
+    }
+    try {
       var persistence = await import('./src/persistence/history-repository.mjs');
       cleanCustomExercises = persistence.cleanCustomExercises;
       cleanEquipmentProfiles = persistence.cleanEquipmentProfiles;
@@ -7859,6 +7869,8 @@
       var legacyAppState = {};
       Object.keys(indexedAppStateKeys).forEach(function(key){var value=store.get(key);if(value!==null)legacyAppState[key]=value;});
       databaseAppState = await historyRepository.migrateLegacyUserState(legacyAppState);
+      try { databaseCalculatorResults = cleanCalculatorResultsFn(JSON.parse(databaseAppState[K.calculatorHistory] || '[]')); }
+      catch (_calculatorStateError) { databaseCalculatorResults = []; }
       Object.keys(indexedAppStateKeys).forEach(function(key){
         if(!Object.prototype.hasOwnProperty.call(databaseAppState,key))return;
         memoryStore[key]=databaseAppState[key];
@@ -7876,6 +7888,7 @@
       databaseCustomExercises = cleanCustomExercises(store.json(K.customExercises, []));
       databaseEquipmentProfiles = cleanEquipmentProfiles(store.json(K.equipmentProfiles, []));
       databaseExercisePreferences = cleanIdbExercisePreferences(store.json(K.exercisePreferences, {}));
+      databaseCalculatorResults = cleanCalculatorResultsFn(store.json(K.calculatorHistory, []));
       indexedAppStateReady = false;
       storageWarnings.push({ key: K.history, type: 'indexeddb-unavailable', at: Date.now() });
     }
@@ -7897,6 +7910,7 @@
     await ensureDefaultEquipmentProfiles();
     S.exercisePreferences = cleanExercisePreferences(databaseExercisePreferences);
     store.set(K.exercisePreferences, JSON.stringify(S.exercisePreferences));
+    store.set(K.calculatorHistory, JSON.stringify(databaseCalculatorResults));
     if(activeEquipmentProfileId){
       var activeProfile=databaseEquipmentProfiles.filter(function(profile){return profile.id===activeEquipmentProfileId;})[0];
       if(activeProfile)S.equipment=activeProfile.equipment.slice();
@@ -7948,13 +7962,22 @@
     document.documentElement.dataset.coreReady = 'true';
     document.documentElement.dataset.routeReady = v7RouteFromHash();
     document.documentElement.dataset.appReady = 'true';
-    window.mmgLocalData = Object.freeze({
+      window.mmgLocalData = Object.freeze({
       readSnapshot: function () {
         return {
           history: S.history.slice(),
           measurements: S.diary.slice(),
-          nutritionDays: databaseNutritionDays.slice()
+          nutritionDays: databaseNutritionDays.slice(),
+          calculatorResults: databaseCalculatorResults.slice()
         };
+      },
+      saveCalculatorResult: function (record) {
+        var id = 'calc-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
+        var clean = cleanCalculatorResultsFn([Object.assign({ id: id, createdAt: new Date().toISOString() }, record)]);
+        if (!clean.length) return false;
+        databaseCalculatorResults = cleanCalculatorResultsFn(clean.concat(databaseCalculatorResults));
+        store.set(K.calculatorHistory, JSON.stringify(databaseCalculatorResults));
+        return true;
       }
     });
     window.dispatchEvent(new CustomEvent('mmg:ready', { detail: { exercises: DATA_READY ? EX.length : DATA_EXPECTED, content: !!contentLoaded, dataReady: DATA_READY } }));
