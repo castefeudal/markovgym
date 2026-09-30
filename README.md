@@ -97,6 +97,7 @@ data/exercises-compact.json   lightweight exercise data
 data/exercises.json           full exercise dataset
 sw.js                         PWA service worker
 tests/                        unit, smoke, E2E, accessibility and visual tests
+docs/legacy-inventory.md     retained fallbacks, migrations and removed artifacts
 ```
 
 The migration rule is **production-safe evolution, not a big-bang rewrite**. Existing local user data and working flows must remain compatible while modules are extracted.

@@ -154,6 +154,16 @@ test('service worker precaches the same shell resources as the index', async () 
   assert.doesNotMatch(sw, /legacy-base\.html|r2\.payload/);
 });
 
+test('legacy production artifacts are classified and Pages ships only the active fallback', async () => {
+  const pages = await read('.github/workflows/pages.yml');
+  const inventory = await read('docs/legacy-inventory.md');
+  assert.match(pages, /legacy-base\.html/);
+  assert.doesNotMatch(pages, /setup\.html|r2\.payload\.b64/);
+  assert.match(inventory, /Keep and retain the link/);
+  assert.match(inventory, /Removed as an unconsumed and unreadable artifact/);
+  assert.match(inventory, /mmg_current_workout_v1/);
+});
+
 test('stylesheet layers are separated and linked in their original cascade order', async () => {
   const index = await read('index.html');
   const build = await read('scripts/build-index.mjs');
