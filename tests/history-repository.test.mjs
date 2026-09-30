@@ -1,9 +1,18 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { cleanCustomExercises, cleanEquipmentProfiles, cleanExercisePreferences, cleanHistory, cleanNutritionDays, HISTORY_SCHEMA_VERSION, newestFirst } from '../src/persistence/history-repository.mjs';
+import { cleanCustomExercises, cleanEquipmentProfiles, cleanExercisePreferences, cleanHistory, cleanNutritionDays, HISTORY_SCHEMA_VERSION, mergeMissingRecords, newestFirst } from '../src/persistence/history-repository.mjs';
 
 test('history schema is explicitly versioned', () => {
   assert.equal(HISTORY_SCHEMA_VERSION, 6);
+});
+
+test('legacy collection migration fills missing identities without replacing IndexedDB values', () => {
+  const indexed = [{ id: 'same', value: 'current' }, { id: 'idb-only', value: 'keep' }];
+  const legacy = [{ id: 'same', value: 'stale' }, { id: 'legacy-only', value: 'restore' }];
+  const once = mergeMissingRecords(indexed, legacy, 'id');
+  const twice = mergeMissingRecords(once, legacy, 'id');
+  assert.deepEqual(once, [indexed[0], indexed[1], legacy[1]]);
+  assert.deepEqual(twice, once);
 });
 
 test('nutrition days are date-keyed, bounded and deterministic', () => {

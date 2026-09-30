@@ -377,6 +377,54 @@ test('legacy workout history migrates to IndexedDB without a 20-session cap', as
   await expect(page.locator('.hist-detail')).toContainText('bench note');
 });
 
+test('partial IndexedDB collections merge missing legacy rows without replacing current records', async ({ page }) => {
+  await page.goto('/index.html#home');
+  await expect(page.locator('html')).toHaveAttribute('data-app-ready', 'true');
+  await page.evaluate(async () => {
+    const db = await new Promise((resolve, reject) => {
+      const request = indexedDB.open('markov-made-gym');
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction(['history', 'nutritionDays'], 'readwrite');
+      tx.objectStore('history').put({ id: 'idb-current', date: '2026-09-20', name: 'Current', items: [] });
+      tx.objectStore('nutritionDays').put({ date: '2026-09-20', calories: 2200, protein: 140, fat: null, carbs: null, weightKg: null, accuracy: 'unknown', note: '', updatedAt: '' });
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error);
+    });
+    db.close();
+    localStorage.setItem('mmg.history.v1', JSON.stringify([
+      { id: 'idb-current', date: '2026-09-20', name: 'Stale mirror', items: [] },
+      { id: 'legacy-extra', date: '2026-09-19', name: 'Legacy', items: [] },
+    ]));
+    localStorage.setItem('mmg.nutritionLog.v1', JSON.stringify([
+      { date: '2026-09-20', calories: 1800, protein: 90 },
+      { date: '2026-09-19', calories: 2100, protein: 130 },
+    ]));
+  });
+  await page.reload();
+  await expect.poll(() => page.evaluate(() => window.mmgDiagnostics?.historyCount)).toBe(2);
+  await expect.poll(() => page.evaluate(() => window.mmgDiagnostics?.nutritionCount)).toBe(2);
+  const restored = await page.evaluate(async () => {
+    const db = await new Promise((resolve, reject) => {
+      const request = indexedDB.open('markov-made-gym');
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    const [history, nutritionDays] = await Promise.all([
+      new Promise((resolve, reject) => { const request = db.transaction('history', 'readonly').objectStore('history').getAll(); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); }),
+      new Promise((resolve, reject) => { const request = db.transaction('nutritionDays', 'readonly').objectStore('nutritionDays').getAll(); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); }),
+    ]);
+    db.close();
+    return { history, nutritionDays };
+  });
+  expect(restored.history.find(row => row.id === 'idb-current')?.name).toBe('Current');
+  expect(restored.history.map(row => row.id).sort()).toEqual(['idb-current', 'legacy-extra']);
+  expect(restored.nutritionDays.find(row => row.date === '2026-09-20')?.calories).toBe(2200);
+  expect(restored.nutritionDays.map(row => row.date).sort()).toEqual(['2026-09-19', '2026-09-20']);
+});
+
 test('custom exercise joins the Library, saved workout, Run Mode, history and schema v9 backup', async ({ page }) => {
   test.setTimeout(90_000);
   await page.goto('/index.html#library');

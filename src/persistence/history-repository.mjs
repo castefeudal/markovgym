@@ -43,6 +43,18 @@ function newestFirst(entries) {
   });
 }
 
+export function mergeMissingRecords(existing, legacy, key) {
+  const seen = new Set((Array.isArray(existing) ? existing : []).map((entry) => entry?.[key]).filter(Boolean));
+  const merged = Array.isArray(existing) ? existing.slice() : [];
+  for (const entry of Array.isArray(legacy) ? legacy : []) {
+    const identity = entry?.[key];
+    if (!identity || seen.has(identity)) continue;
+    seen.add(identity);
+    merged.push(entry);
+  }
+  return merged;
+}
+
 function openDatabase() {
   if (!globalThis.indexedDB) return Promise.reject(new Error('IndexedDB is unavailable'));
   return new Promise((resolve, reject) => {
@@ -189,7 +201,8 @@ export async function createHistoryRepository() {
 
   async function migrateLegacy(entries) {
     const existing = await readAll();
-    if (!existing.length && Array.isArray(entries) && entries.length) await replaceAll(entries);
+    const merged = mergeMissingRecords(existing, cleanHistory(entries), 'id');
+    if (merged.length !== existing.length) await replaceAll(merged);
     return readAll();
   }
 
@@ -214,7 +227,8 @@ export async function createHistoryRepository() {
 
   async function migrateLegacyCustomExercises(entries) {
     const existing = await readCustomExercises();
-    if (!existing.length && Array.isArray(entries) && entries.length) await replaceCustomExercises(entries);
+    const merged = mergeMissingRecords(existing, cleanCustomExercises(entries), 'id');
+    if (merged.length !== existing.length) await replaceCustomExercises(merged);
     return readCustomExercises();
   }
 
@@ -239,7 +253,8 @@ export async function createHistoryRepository() {
 
   async function migrateLegacyEquipmentProfiles(entries) {
     const existing = await readEquipmentProfiles();
-    if (!existing.length && Array.isArray(entries) && entries.length) await replaceEquipmentProfiles(entries);
+    const merged = mergeMissingRecords(existing, cleanEquipmentProfiles(entries), 'id');
+    if (merged.length !== existing.length) await replaceEquipmentProfiles(merged);
     return readEquipmentProfiles();
   }
 
@@ -265,7 +280,9 @@ export async function createHistoryRepository() {
 
   async function migrateLegacyExercisePreferences(value) {
     const existing = await readExercisePreferences();
-    if (!Object.keys(existing).length && Object.keys(cleanExercisePreferences(value)).length) await replaceExercisePreferences(value);
+    const legacy = cleanExercisePreferences(value);
+    const merged = Object.assign({}, legacy, existing);
+    if (Object.keys(merged).length !== Object.keys(existing).length) await replaceExercisePreferences(merged);
     return readExercisePreferences();
   }
 
@@ -303,7 +320,8 @@ export async function createHistoryRepository() {
 
   async function migrateLegacyNutritionDays(entries) {
     const existing = await readNutritionDays();
-    if (!existing.length && Array.isArray(entries) && entries.length) await replaceNutritionDays(entries);
+    const merged = mergeMissingRecords(existing, cleanNutritionDays(entries), 'date');
+    if (merged.length !== existing.length) await replaceNutritionDays(merged);
     return readNutritionDays();
   }
 
