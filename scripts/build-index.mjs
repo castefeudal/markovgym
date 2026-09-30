@@ -1,7 +1,7 @@
 import { readFile, writeFile } from 'node:fs/promises';
 
 const body = await readFile(new URL('../app-body.html', import.meta.url), 'utf8');
-const BUILD_VERSION = '2026.09-r31-translation-module';
+const BUILD_VERSION = '2026.09-r32-css-layers';
 const structuredData = {
   '@context': 'https://schema.org',
   '@type': 'SoftwareApplication',
@@ -104,6 +104,12 @@ const index = `<!doctype html>
     } catch (_) {}
   })();
   </script>
+  <link rel="stylesheet" href="./styles/tokens.css?v=${BUILD_VERSION}">
+  <link rel="stylesheet" href="./styles/reset.css?v=${BUILD_VERSION}">
+  <link rel="stylesheet" href="./styles/base.css?v=${BUILD_VERSION}">
+  <link rel="stylesheet" href="./styles/components.css?v=${BUILD_VERSION}">
+  <link rel="stylesheet" href="./styles/layout.css?v=${BUILD_VERSION}">
+  <link rel="stylesheet" href="./styles/features/legacy-product.css?v=${BUILD_VERSION}">
   <link rel="stylesheet" href="./app.css?v=${BUILD_VERSION}">
   <link rel="stylesheet" href="./styles/features/exercise.css?v=${BUILD_VERSION}">
   <link rel="stylesheet" href="./styles/features/program.css?v=${BUILD_VERSION}">

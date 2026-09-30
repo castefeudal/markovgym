@@ -1,10 +1,16 @@
-const VERSION = '2026.09-r31-translation-module';
+const VERSION = '2026.09-r32-css-layers';
 const PREFIX = 'mmg-gym-';
 const SHELL = `${PREFIX}shell-${VERSION}`;
 const MEDIA = `${PREFIX}media-${VERSION}`;
 const PRECACHE = [
   './',
   './index.html',
+  './styles/tokens.css',
+  './styles/reset.css',
+  './styles/base.css',
+  './styles/components.css',
+  './styles/layout.css',
+  './styles/features/legacy-product.css',
   './app.css',
   './styles/features/exercise.css',
   './styles/features/program.css',

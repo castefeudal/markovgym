@@ -37,7 +37,9 @@ Use the system UI stack already declared in `app.css`. Keep body text at a reada
 
 ## Stylesheet ownership
 
-`app.css` remains the compatibility foundation while existing component rules are migrated. New or extracted feature rules live under `styles/features/` (`exercise.css`, `program.css`, `workout.css`, `nutrition.css`) and load in that order after the foundation. Keep a rule with the feature that owns its markup; shared color, type, focus, and control rules belong in the foundation until the shared component sheet is split out. Every new stylesheet must be linked in the generated shell, precached by the service worker, copied by Pages, and covered by the artifact drift check.
+The generated shell loads the style layers in this order: `styles/tokens.css`, `styles/reset.css`, `styles/base.css`, `styles/components.css`, `styles/layout.css`, `styles/features/legacy-product.css`, `app.css`, the feature sheets, then `lab.css`. This preserves the previous cascade while giving tokens, reset, typography, shared components, layout and feature rules clear homes.
+
+`styles/features/legacy-product.css` is a documented migration boundary for older product components. `app.css` currently holds the later presentation and theme overrides; move rules from it into the owning layer only when the resulting cascade is verified. Feature rules live beside their feature markup (`exercise.css`, `program.css`, `workout.css`, `nutrition.css`). Every stylesheet must be linked by the index builder, precached by the service worker, copied by Pages, and covered by artifact-drift checks. The aggregate modular-layer budget prevents this split from becoming unbounded.
 
 ## Themes, accessibility, and motion
 

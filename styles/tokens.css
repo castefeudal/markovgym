@@ -1,0 +1,110 @@
+/* ============================================================================
+   MARKOV MADE GYM — единая визуальная система
+   1. Токены   2. База   3. Типографика   4. Примитивы   5. Компоненты
+   6. Секции   7. Оверлеи   8. Адаптив   9. Motion / print
+   ========================================================================= */
+
+/* ---------- 1. ТОКЕНЫ ---------------------------------------------------- */
+:root{
+  --font-display:"Unbounded","Manrope",system-ui,sans-serif;
+  --font-ui:"Manrope",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+
+  --step--2:clamp(.688rem,.66rem + .12vw,.75rem);
+  --step--1:clamp(.813rem,.78rem + .15vw,.875rem);
+  --step-0:clamp(.938rem,.91rem + .14vw,1rem);
+  --step-1:clamp(1.063rem,1.01rem + .26vw,1.188rem);
+  --step-2:clamp(1.25rem,1.15rem + .5vw,1.5rem);
+  --step-3:clamp(1.5rem,1.3rem + .95vw,2.063rem);
+  --step-4:clamp(1.813rem,1.5rem + 1.55vw,2.75rem);
+  --step-5:clamp(2.125rem,1.6rem + 2.6vw,3.75rem);
+
+  --space-1:4px;  --space-2:8px;  --space-3:12px; --space-4:16px;
+  --space-5:20px; --space-6:24px; --space-7:32px; --space-8:40px;
+  --space-9:56px; --space-10:72px;
+  --section-y:clamp(48px,7vw,96px);
+
+  --radius-xs:6px; --radius-sm:10px; --radius-md:14px; --radius-lg:20px; --radius-pill:999px;
+
+  --container:1280px;
+  --header-h:64px;
+  --safe-b:env(safe-area-inset-bottom,0px);
+
+  --ease:cubic-bezier(.22,.61,.36,1);
+  --dur-1:120ms; --dur-2:200ms; --dur-3:320ms;
+}
+
+html[data-theme="obsidian"]{
+  color-scheme:dark;
+  --color-bg-primary:#0B0C0E;
+  --color-bg-secondary:#101215;
+  --color-surface-primary:#15181C;
+  --color-surface-elevated:#1C2026;
+  --color-surface-sunken:#0E1013;
+  --color-text-primary:#F3F1ED;
+  --color-text-secondary:#A0A7B1;
+  --color-text-muted:#868D97;
+  --color-border-subtle:rgba(243,241,237,.10);
+  --color-border-strong:rgba(243,241,237,.22);
+  --color-accent:#E0A82E;
+  --color-accent-hover:#F2BE52;
+  --color-accent-ink:#120E04;
+  --color-accent-soft:rgba(224,168,46,.13);
+  --color-success:#5FBE86;
+  --color-warning:#E5A93C;
+  --color-danger:#F0666B;
+  --shadow-1:0 1px 2px rgba(0,0,0,.5);
+  --shadow-2:0 10px 28px -14px rgba(0,0,0,.85);
+  --shadow-3:0 28px 64px -24px rgba(0,0,0,.9);
+  --media-bg:#0A0B0D;
+}
+
+html[data-theme="soft"]{
+  color-scheme:light;
+  --color-bg-primary:#E8E1D5;
+  --color-bg-secondary:#DED4C4;
+  --color-surface-primary:#F1EADF;
+  --color-surface-elevated:#F7F1E8;
+  --color-surface-sunken:#D8CEBD;
+  --color-text-primary:#292722;
+  --color-text-secondary:#5C574E;
+  --color-text-muted:#6C655A;
+  --color-border-subtle:rgba(41,39,34,.13);
+  --color-border-strong:rgba(41,39,34,.28);
+  --color-accent:#825B08;
+  --color-accent-hover:#664705;
+  --color-accent-ink:#FFF9ED;
+  --color-accent-soft:rgba(130,91,8,.11);
+  --color-success:#376D51;
+  --color-warning:#825B08;
+  --color-danger:#A43B3F;
+  --shadow-1:0 1px 2px rgba(54,45,30,.07);
+  --shadow-2:0 10px 26px -17px rgba(54,45,30,.27);
+  --shadow-3:0 28px 60px -30px rgba(54,45,30,.30);
+  --media-bg:#DDD3C3;
+}
+
+html[data-theme="ivory"]{
+  color-scheme:light;
+  --color-bg-primary:#F6F4F0;
+  --color-bg-secondary:#EEEBE4;
+  --color-surface-primary:#FFFFFF;
+  --color-surface-elevated:#FFFFFF;
+  --color-surface-sunken:#EAE7DF;
+  --color-text-primary:#15171A;
+  --color-text-secondary:#545A63;
+  --color-text-muted:#61676F;
+  --color-border-subtle:rgba(21,23,26,.11);
+  --color-border-strong:rgba(21,23,26,.26);
+  --color-accent:#8A5D00;
+  --color-accent-hover:#6E4A00;
+  --color-accent-ink:#FFFFFF;
+  --color-accent-soft:rgba(138,93,0,.10);
+  --color-success:#1B6B43;
+  --color-warning:#8A5D00;
+  --color-danger:#B0242A;
+  --shadow-1:0 1px 2px rgba(21,23,26,.06);
+  --shadow-2:0 10px 26px -16px rgba(21,23,26,.32);
+  --shadow-3:0 28px 60px -28px rgba(21,23,26,.34);
+  --media-bg:#EFECE5;
+}
+

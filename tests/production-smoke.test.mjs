@@ -149,18 +149,24 @@ test('PWA manifest is relative-origin and points to a valid shell', async () => 
 test('service worker precaches the same shell resources as the index', async () => {
   const sw = await read('sw.js');
   const pages = await read('.github/workflows/pages.yml');
-  for (const resource of ['index.html', 'app.css', 'styles/features/exercise.css', 'styles/features/program.css', 'styles/features/workout.css', 'styles/features/nutrition.css', 'app.js', 'tools/workout-groups.mjs', 'src/app/router.mjs', 'src/app/i18n.mjs', 'src/persistence/history-repository.mjs', 'src/features/today/decision-engine.mjs', 'src/features/exercise/substitution-engine.mjs', 'src/features/workout/pr-engine.mjs', 'src/features/nutrition/nutrition-analytics.mjs', 'src/features/progress/weight-trend.mjs', 'data/content.json', 'data/exercises-compact.json']) assert.match(sw, new RegExp(resource.replaceAll('.', '\\.')));
+  for (const resource of ['index.html', 'app.css', 'styles/tokens.css', 'styles/reset.css', 'styles/base.css', 'styles/components.css', 'styles/layout.css', 'styles/features/legacy-product.css', 'styles/features/exercise.css', 'styles/features/program.css', 'styles/features/workout.css', 'styles/features/nutrition.css', 'app.js', 'tools/workout-groups.mjs', 'src/app/router.mjs', 'src/app/i18n.mjs', 'src/persistence/history-repository.mjs', 'src/features/today/decision-engine.mjs', 'src/features/exercise/substitution-engine.mjs', 'src/features/workout/pr-engine.mjs', 'src/features/nutrition/nutrition-analytics.mjs', 'src/features/progress/weight-trend.mjs', 'data/content.json', 'data/exercises-compact.json']) assert.match(sw, new RegExp(resource.replaceAll('.', '\\.')));
   assert.match(pages, /cp -R data images src styles tools videos site\//);
   assert.doesNotMatch(sw, /legacy-base\.html|r2\.payload/);
 });
 
-test('new feature styles are separated and linked after the core stylesheet', async () => {
+test('stylesheet layers are separated and linked in their original cascade order', async () => {
   const index = await read('index.html');
   const build = await read('scripts/build-index.mjs');
   const base = await read('app.css');
-  assert.ok(index.indexOf('./app.css?v=') < index.indexOf('./styles/features/exercise.css?v='));
+  const layers = ['./styles/tokens.css?v=', './styles/reset.css?v=', './styles/base.css?v=', './styles/components.css?v=', './styles/layout.css?v=', './styles/features/legacy-product.css?v=', './app.css?v=', './styles/features/exercise.css?v='];
+  const positions = layers.map((layer) => index.indexOf(layer));
+  assert.ok(positions.every((position) => position >= 0));
+  assert.deepEqual(positions, [...positions].sort((left, right) => left - right));
   assert.ok(index.indexOf('./styles/features/nutrition.css?v=') < index.indexOf('./lab.css?v='));
   assert.match(build, /styles\/features\/exercise\.css/);
+  for (const layer of ['tokens', 'reset', 'base', 'components', 'layout']) assert.match(await read(`styles/${layer}.css`), /\S/);
+  assert.match(await read('styles/features/legacy-product.css'), /\.cnote\s*\{/);
+  assert.match(build, /2026\.09-r32-css-layers/);
   assert.doesNotMatch(base, /\.custom-exercise-dialog\{|\.run-pr-notice\{|\.nutrition-log-panel\{/);
 });
 

@@ -78,7 +78,13 @@ app-body.html                 source body for the generated shell
 scripts/build-index.mjs       deterministic index builder
 index.html                    generated production entry
 app.js                        current core application runtime
-app.css                       current core styles
+styles/tokens.css             semantic colors, type, spacing and motion tokens
+styles/reset.css              normalization and document defaults
+styles/base.css               shared typography and base elements
+styles/components.css         shared controls and reusable components
+styles/layout.css             responsive shell and layout rules
+styles/features/              feature-owned styles and legacy migration boundary
+app.css                       current presentation and theme overrides
 src/features/today/           pure Today next-action decision rules
 src/features/workout/         pure personal-record detection against completed history
 src/persistence/              versioned IndexedDB repositories for history, nutrition and user-created data
