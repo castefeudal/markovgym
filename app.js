@@ -14,6 +14,7 @@ import { subscribeToHashChanges } from './src/app/router.mjs';
 import { searchCommandPalette } from './src/features/command-palette/search.mjs';
 import { createCustomExerciseRuntimeRecord, decodeCompactExercises } from './src/data/exercise-repository.mjs';
 import { cleanSetRecord, ensureSetLog, normalizeWorkoutRecord } from './src/features/workout/workout-records.mjs';
+import { cleanExercisePreferences as normalizeExercisePreferences, exercisePreference as getExercisePreference, exercisePreferenceScore as rankByPreference, EXERCISE_PREFERENCE_VALUES } from './src/features/exercise/preferences.mjs';
 
 (function () {
   'use strict';
@@ -935,11 +936,9 @@ import { cleanSetRecord, ensureSetLog, normalizeWorkoutRecord } from './src/feat
     return S.workout.some(function (item) { return item.id === id; });
   }
   function saveFavorites() { store.set(K.fav, JSON.stringify(S.favorites)); }
-  var EXERCISE_PREFERENCE_VALUES = ['prefer', 'neutral', 'lessOften', 'avoid', 'unavailable', 'discomfort'];
-  function exercisePreference(id) { return EXERCISE_PREFERENCE_VALUES.indexOf(S.exercisePreferences[id]) !== -1 ? S.exercisePreferences[id] : 'neutral'; }
+  function exercisePreference(id) { return getExercisePreference(S.exercisePreferences, id); }
   function exercisePreferenceScore(ex) {
-    var value = exercisePreference(ex.id);
-    return value === 'prefer' ? 115 : value === 'lessOften' ? -85 : (value === 'avoid' || value === 'unavailable' || value === 'discomfort') ? -10000 : 0;
+    return rankByPreference(exercisePreference(ex.id));
   }
   function exercisePreferenceLabel(value) {
     var labels = S.lang === 'en' ? {neutral:'No preference',prefer:'Prefer',lessOften:'Less often',avoid:'Avoid',unavailable:'Unavailable',discomfort:'Does not suit me / discomfort'} : {neutral:'Без предпочтения',prefer:'Предпочитаю',lessOften:'Реже',avoid:'Избегать',unavailable:'Недоступно',discomfort:'Не подходит / дискомфорт'};
@@ -956,12 +955,7 @@ import { cleanSetRecord, ensureSetLog, normalizeWorkoutRecord } from './src/feat
     });
   }
   function cleanExercisePreferences(value) {
-    var clean = {};
-    if (!value || typeof value !== 'object' || Array.isArray(value)) return clean;
-    Object.keys(value).slice(0, EX.length).forEach(function(id) {
-      if (BY_ID[id] && EXERCISE_PREFERENCE_VALUES.indexOf(value[id]) !== -1 && value[id] !== 'neutral') clean[id] = value[id];
-    });
-    return clean;
+    return normalizeExercisePreferences(value, function(id) { return !!BY_ID[id]; }, EX.length);
   }
   function saveWorkout() { store.set(K.workout, JSON.stringify(S.workout)); }
 
@@ -6981,7 +6975,7 @@ import { cleanSetRecord, ensureSetLog, normalizeWorkoutRecord } from './src/feat
      Correctness -> data integrity -> usability -> accessibility -> performance.
      This layer deliberately preserves the proven V4 business logic and contracts.
      ======================================================================== */
-  var APP_VERSION = '2026.09-r45-workout-records';
+  var APP_VERSION = '2026.09-r46-exercise-preferences';
   var BACKUP_SCHEMA = 10;
   K.restTimer = 'mmg.restTimer.v2';
   K.lastBackup = 'mmg.lastBackup.v1';

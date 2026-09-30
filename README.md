@@ -90,6 +90,7 @@ styles/features/              feature-owned styles and legacy migration boundary
 app.css                       current presentation and theme overrides
 src/features/today/           pure Today next-action decision rules
 src/features/command-palette/ pure command-palette candidate search and ranking
+src/features/exercise/        preference ranking and substitution rules
 src/data/                      compact exercise decoding and runtime records
 src/features/workout/         set and workout normalization, personal-record detection
 src/persistence/              local-first key/value adapter and versioned IndexedDB repositories
@@ -110,6 +111,8 @@ The migration rule is **production-safe evolution, not a big-bang rewrite**. Exi
 ## Development
 
 Requirements: current Node.js and npm.
+
+Playwright starts its own static server. If another app occupies port 4173, set `MMG_E2E_PORT` to an unused local port before running `npm run e2e`.
 
 ```bash
 npm ci

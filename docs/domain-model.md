@@ -46,6 +46,8 @@ The compact exercise dataset is decoded by `src/data/exercise-repository.mjs` in
 
 Workout and set normalization live in `src/features/workout/workout-records.mjs`; Run Mode consumes normalized set roles, completed state and grouping metadata from this pure module.
 
+User-declared exercise preference values and their recommendation ranking weights live in `src/features/exercise/preferences.mjs`; the UI injects the current exercise catalog for validation and supplies translated reason labels.
+
 Developer diagnostics expose schema and migration state, local record counts, current route, service-worker control and the latest local error/storage warning. The panel reads application state in the browser and does not transmit it.
 
 ## Planned model boundaries
