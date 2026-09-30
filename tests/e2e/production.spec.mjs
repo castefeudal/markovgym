@@ -1,6 +1,41 @@
 import { test, expect } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 
+async function readIndexedUserState(page, key, fallback = null) {
+  return page.evaluate(async ({ key, fallback }) => {
+    const db = await new Promise((resolve, reject) => {
+      const request = indexedDB.open('markov-made-gym');
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    const record = await new Promise((resolve, reject) => {
+      const request = db.transaction('userState', 'readonly').objectStore('userState').get(key);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    db.close();
+    if (record?.value == null) return fallback;
+    try { return JSON.parse(record.value); } catch { return fallback; }
+  }, { key, fallback });
+}
+
+async function readIndexedExercisePreference(page, exerciseId) {
+  return page.evaluate(async id => {
+    const db = await new Promise((resolve, reject) => {
+      const request = indexedDB.open('markov-made-gym');
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    const record = await new Promise((resolve, reject) => {
+      const request = db.transaction('exercisePreferences', 'readonly').objectStore('exercisePreferences').get(id);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    db.close();
+    return record?.preference || null;
+  }, exerciseId);
+}
+
 async function chooseLanguage(page, locale) {
   const desktopControl = page.locator(`#lang-switch [data-lang="${locale}"]`);
   if (await desktopControl.isVisible()) {
@@ -66,7 +101,12 @@ test('daily nutrition log persists by date and links optional weight to the prog
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
     });
-    const diary = JSON.parse(localStorage.getItem('mmg.diary.v1') || '[]');
+    const diaryRecord = await new Promise((resolve, reject) => {
+      const request = db.transaction('userState', 'readonly').objectStore('userState').get('mmg.diary.v1');
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    const diary = JSON.parse(diaryRecord?.value || '[]');
     db.close();
     return { nutrition, diary: diary.find(entry => entry.date === date) };
   }, logDate);
@@ -97,13 +137,13 @@ test('corrupt backup import leaves the current local profile and workout untouch
   }, { profileSeed: profile, workoutSeed: workout });
   await page.goto('/index.html#settings');
   await expect(page.locator('#mmg-boot')).toHaveCount(0);
-  const before = await page.evaluate(() => ({ profile: localStorage.getItem('mmg.profile.v1'), workout: localStorage.getItem('mmg.workout.v2') }));
+  const before = { profile: await readIndexedUserState(page, 'mmg.profile.v1'), workout: await readIndexedUserState(page, 'mmg.workout.v2') };
   const importChooser = page.waitForEvent('filechooser');
   await page.locator('#data-import').click();
   const chooser = await importChooser;
   await chooser.setFiles({ name: 'corrupt-backup.json', mimeType: 'application/json', buffer: Buffer.from('{ definitely not valid json') });
   await expect(page.locator('.toast')).toContainText(/Не получилось прочитать JSON|Could not read the JSON/);
-  const after = await page.evaluate(() => ({ profile: localStorage.getItem('mmg.profile.v1'), workout: localStorage.getItem('mmg.workout.v2') }));
+  const after = { profile: await readIndexedUserState(page, 'mmg.profile.v1'), workout: await readIndexedUserState(page, 'mmg.workout.v2') };
   expect(after).toEqual(before);
 });
 
@@ -447,7 +487,7 @@ test('exercise preferences persist, affect library ranking and round-trip throug
   await expect(preference.locator('option')).toHaveCount(6);
   await preference.selectOption('prefer');
   await expect(page.locator('#grid .card').first()).toHaveAttribute('data-id', exerciseId);
-  await expect.poll(() => page.evaluate(id => JSON.parse(localStorage.getItem('mmg.exercisePreferences.v1'))[id], exerciseId)).toBe('prefer');
+  await expect.poll(() => readIndexedExercisePreference(page, exerciseId)).toBe('prefer');
   await expect.poll(() => page.evaluate(async id => {
     const db = await new Promise((resolve, reject) => { const request = indexedDB.open('markov-made-gym'); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); });
     const record = await new Promise((resolve, reject) => { const request = db.transaction('exercisePreferences', 'readonly').objectStore('exercisePreferences').get(id); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); });
@@ -460,7 +500,7 @@ test('exercise preferences persist, affect library ranking and round-trip throug
   await expect(page.locator(`[data-pref-toggle="${exerciseId}"]`)).toBeVisible();
   await page.locator(`[data-pref-toggle="${exerciseId}"]`).click();
   await page.locator(`[data-exercise-preference="${exerciseId}"]`).selectOption('discomfort');
-  await expect.poll(() => page.evaluate(id => JSON.parse(localStorage.getItem('mmg.exercisePreferences.v1'))[id], exerciseId)).toBe('discomfort');
+  await expect.poll(() => readIndexedExercisePreference(page, exerciseId)).toBe('discomfort');
 
   await page.goto('/index.html#settings');
   const downloadPromise = page.waitForEvent('download');
@@ -489,7 +529,7 @@ test('exercise preferences persist, affect library ranking and round-trip throug
   await expect.poll(() => importPreview).toMatch(/Резервная копия проверена|Backup validated/);
   await importNavigation;
   await expect(page.locator('#mmg-boot')).toHaveCount(0);
-  await expect.poll(() => page.evaluate(id => JSON.parse(localStorage.getItem('mmg.exercisePreferences.v1'))[id], exerciseId)).toBe('discomfort');
+  await expect.poll(() => readIndexedExercisePreference(page, exerciseId)).toBe('discomfort');
   await expect.poll(() => page.evaluate(async id => {
     const db = await new Promise((resolve, reject) => { const request = indexedDB.open('markov-made-gym'); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); });
     const record = await new Promise((resolve, reject) => { const request = db.transaction('exercisePreferences', 'readonly').objectStore('exercisePreferences').get(id); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); });
@@ -554,7 +594,7 @@ test('distance and duration tracking stay structured from Run Mode into workout 
   await page.locator('[data-run-field="distance"]').fill('2');
   await page.locator('[data-run-field="duration"]').fill('12:30');
   await page.locator('#run-next').click();
-  const savedLog = await page.evaluate(() => JSON.parse(localStorage.getItem('mmg.workout.v2'))[0].setLog[0]);
+  const savedLog = (await readIndexedUserState(page, 'mmg.workout.v2'))[0].setLog[0];
   expect(savedLog).toMatchObject({ distance: '2', duration: '12:30' });
   await expect(page.locator('#run-stage')).toContainText(/Все упражнения|All exercises/);
   await page.locator('#run-next').click();
@@ -719,7 +759,7 @@ test('Run Mode announces a history-backed estimated one-rep-max record', async (
   await page.reload();
   await expect(page.locator('#mmg-boot')).toHaveCount(0);
   await page.locator('#grid [data-add="' + exerciseId + '"]').click();
-  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('mmg.workout.v2') || '[]').length), { timeout: 10_000 }).toBe(1);
+  await expect.poll(async () => (await readIndexedUserState(page, 'mmg.workout.v2', [])).length, { timeout: 10_000 }).toBe(1);
   await page.goto('/index.html#workout');
   const workoutSets = page.locator('.workout-item [data-field="sets"]');
   await workoutSets.fill('1');
@@ -735,7 +775,7 @@ test('Run Mode announces a history-backed estimated one-rep-max record', async (
   await expect(page.locator('[data-run-set]')).toHaveCount(1);
   await page.locator('[data-run-field="reps"]').fill('5');
   await page.locator('[data-run-field="note"]').fill('Keep the next rep controlled');
-  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('mmg.workout.v2'))[0].setLog[0].note)).toBe('Keep the next rep controlled');
+  await expect.poll(async () => (await readIndexedUserState(page, 'mmg.workout.v2'))[0].setLog[0].note).toBe('Keep the next rep controlled');
   await page.locator('#run-next').click();
   await expect(page.locator('.run-pr-notice')).toContainText('Новый PR');
   await expect(page.locator('.run-pr-notice')).toContainText('e1RM');
@@ -763,7 +803,7 @@ test('Lab warm-up can be added before an unstarted weighted exercise', async ({ 
   await page.locator('[data-add-warmup]').click();
   await expect(page.locator('#toast')).toHaveAttribute('data-open', 'true');
   await page.goto('/index.html#workout');
-  const setLog = await page.evaluate(() => JSON.parse(localStorage.getItem('mmg.workout.v2') || '[]')[0]?.setLog || []);
+  const setLog = (await readIndexedUserState(page, 'mmg.workout.v2', []))[0]?.setLog || [];
   expect(setLog.length).toBeGreaterThan(1);
   expect(setLog[0]).toMatchObject({ type: 'warmup', weight: '40', reps: '8', completed: false });
   expect(setLog[setLog.length - 1].type).toBe('working');
@@ -792,14 +832,14 @@ test('Workout superset runs in alternating rounds and survives workout storage',
   const firstItem = page.locator('.workout-item').first();
   await firstItem.locator('.workout-group-menu summary').click();
   await firstItem.locator('[data-group-create="superset"]').click();
-  const savedWorkout = await page.evaluate(() => JSON.parse(localStorage.getItem('mmg.workout.v2') || '[]'));
+  const savedWorkout = await readIndexedUserState(page, 'mmg.workout.v2', []);
   expect(savedWorkout[0].groupType).toBe('superset');
   expect(savedWorkout[1].groupId).toBe(savedWorkout[0].groupId);
   await page.locator('[data-v8-start-run]:visible, #w-run:visible').first().click();
   await expect(page.locator('.run-name')).toHaveText(exerciseNames[0]);
   await page.locator('#run-next').click();
   await expect(page.locator('.run-name')).toHaveText(exerciseNames[1]);
-  const afterFirstSet = await page.evaluate(() => JSON.parse(localStorage.getItem('mmg.workout.v2') || '[]'));
+  const afterFirstSet = await readIndexedUserState(page, 'mmg.workout.v2', []);
   expect(afterFirstSet[0].setLog[0].completed).toBe(true);
   expect(afterFirstSet[1].setLog[0].completed).toBe(false);
   await page.locator('#run-next').click();
@@ -808,7 +848,7 @@ test('Workout superset runs in alternating rounds and survives workout storage',
   await page.locator('[data-hist-detail]').first().click();
   await expect(page.locator('.hist-detail [data-group-id]')).toHaveCount(2);
   await page.locator('[data-hist-repeat]').first().click();
-  const repeatedWorkout = await page.evaluate(() => JSON.parse(localStorage.getItem('mmg.workout.v2') || '[]'));
+  const repeatedWorkout = await readIndexedUserState(page, 'mmg.workout.v2', []);
   expect(repeatedWorkout[0].groupType).toBe('superset');
   expect(repeatedWorkout[1].groupId).toBe(repeatedWorkout[0].groupId);
 });

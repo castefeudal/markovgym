@@ -66,6 +66,12 @@
       return null;
     }).catch(function (error) {
       storageWarnings.push({ key: key, type: 'indexeddb-write', at: Date.now() });
+      try {
+        if (storageOk) {
+          if (remove) window.localStorage.removeItem(key);
+          else window.localStorage.setItem(key, String(value));
+        }
+      } catch (_fallbackError) {}
       return error;
     }));
   }
@@ -118,11 +124,15 @@
     set: function (key, value) {
       memoryStore[key] = value;
       try {
-        if (storageOk) window.localStorage.setItem(key, value);
+        var indexedDbOwned = indexedAppStateReady && Object.prototype.hasOwnProperty.call(indexedAppStateKeys, key);
+        if (storageOk && !indexedDbOwned) window.localStorage.setItem(key, value);
         queueAppStateWrite(key, value, false);
         return true;
       } catch (e) {
         storageWarnings.push({ key: key, type: 'write', at: Date.now() });
+        if (storageOk && indexedAppStateReady && Object.prototype.hasOwnProperty.call(indexedAppStateKeys, key)) {
+          try { window.localStorage.setItem(key, value); } catch (_fallbackError) {}
+        }
         queueAppStateWrite(key, value, false);
         return !storageOk;
       }
@@ -7062,7 +7072,7 @@
      Correctness -> data integrity -> usability -> accessibility -> performance.
      This layer deliberately preserves the proven V4 business logic and contracts.
      ======================================================================== */
-  var APP_VERSION = '2026.09-r32-css-layers';
+  var APP_VERSION = '2026.09-r33-indexeddb-state';
   var BACKUP_SCHEMA = 9;
   K.restTimer = 'mmg.restTimer.v2';
   K.lastBackup = 'mmg.lastBackup.v1';
@@ -7845,7 +7855,7 @@
       Object.keys(indexedAppStateKeys).forEach(function(key){
         if(!Object.prototype.hasOwnProperty.call(databaseAppState,key))return;
         memoryStore[key]=databaseAppState[key];
-        try{if(storageOk)window.localStorage.setItem(key,databaseAppState[key]);}catch(e){storageWarnings.push({key:key,type:'mirror-write',at:Date.now()});}
+        try{if(storageOk)window.localStorage.removeItem(key);}catch(e){storageWarnings.push({key:key,type:'mirror-remove',at:Date.now()});}
       });
       indexedAppStateReady = true;
       activeEquipmentProfileId = store.get(K.equipmentProfileActive) || '';

@@ -176,7 +176,7 @@ test('stylesheet layers are separated and linked in their original cascade order
   assert.match(build, /styles\/features\/exercise\.css/);
   for (const layer of ['tokens', 'reset', 'base', 'components', 'layout']) assert.match(await read(`styles/${layer}.css`), /\S/);
   assert.match(await read('styles/features/legacy-product.css'), /\.cnote\s*\{/);
-  assert.match(build, /2026\.09-r32-css-layers/);
+  assert.match(build, /2026\.09-r33-indexeddb-state/);
   assert.doesNotMatch(base, /\.custom-exercise-dialog\{|\.run-pr-notice\{|\.nutrition-log-panel\{/);
 });
 
