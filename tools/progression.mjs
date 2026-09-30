@@ -30,9 +30,17 @@ export function recommendProgression({
   targetRepRange,
   increment = 2.5,
   minimumCompletedSets = 2,
+  trackingType = 'weight-reps',
+  unit = 'kg',
 } = {}) {
   const range = parseRepRange(targetRepRange);
-  if (!range) return { status: 'insufficient', reason: 'missing-rep-range' };
+  if (!range) return insufficient('missing-rep-range');
+  if (!['weight-reps', 'bodyweight-added-weight'].includes(trackingType)) {
+    return insufficient('unsupported-tracking-type', range, { trackingType });
+  }
+
+  const minSets = Number.isInteger(minimumCompletedSets) && minimumCompletedSets > 0 ? minimumCompletedSets : 2;
+  const loadUnit = String(unit || 'kg').trim().toLowerCase();
 
   const completed = previousSets
     .filter((set) => set && set.completed !== false && (set.type == null || set.type === 'working'))
@@ -41,15 +49,19 @@ export function recommendProgression({
       reps: finite(set.reps),
       rir: finite(set.rir),
       rpe: finite(set.rpe),
+      unit: String(set.unit || set.weightUnit || set.loadUnit || loadUnit).trim().toLowerCase(),
     }))
     .filter((set) => set.weight != null && set.weight > 0 && set.reps != null && set.reps > 0);
 
-  if (completed.length < minimumCompletedSets) return { status: 'insufficient', reason: 'not-enough-completed-sets' };
+  if (completed.length < minSets) return insufficient('not-enough-completed-sets', range, { completedSets: completed.length, requiredSets: minSets });
+  if (completed.some((set) => set.unit !== loadUnit)) {
+    return insufficient('mixed-load-units', range, { completedSets: completed.length, expectedUnit: loadUnit });
+  }
 
   const weights = completed.map((set) => set.weight);
   const baseWeight = weights[0];
   const sameWeight = weights.every((weight) => Math.abs(weight - baseWeight) < 1e-6);
-  if (!sameWeight) return { status: 'insufficient', reason: 'mixed-working-weights' };
+  if (!sameWeight) return insufficient('mixed-working-weights', range, { completedSets: completed.length });
 
   const [low, high] = range;
   const reps = completed.map((set) => set.reps);
@@ -61,49 +73,69 @@ export function recommendProgression({
   );
 
   if (allAtTop && !hardTopSet) {
-    const nextLoad = roundToIncrement(baseWeight + Number(increment || 0), increment);
-    return {
-      status: 'recommendation',
+    const step = finite(increment);
+    if (step == null || step <= 0) return insufficient('invalid-load-increment', range, { completedSets: completed.length, previousLoad: baseWeight });
+    const nextLoad = roundToIncrement(baseWeight + step, step);
+    return recommendation({
       action: 'increase-load',
       previousLoad: baseWeight,
       nextLoad,
-      targetReps: [low, high],
+      targetRange: range,
+      unit: loadUnit,
       evidence: { completedSets: completed.length, reps, allAtTop: true },
       reason: 'all-sets-at-top-of-range',
-    };
+    });
   }
 
   if (allAtTop && hardTopSet) {
-    return {
-      status: 'recommendation',
+    return recommendation({
       action: 'hold-load',
       previousLoad: baseWeight,
       nextLoad: baseWeight,
-      targetReps: [low, high],
+      targetRange: range,
+      unit: loadUnit,
       evidence: { completedSets: completed.length, reps, hardTopSet: true },
       reason: 'top-range-but-maximal-effort',
-    };
+    });
   }
 
   if (allInRange) {
-    return {
-      status: 'recommendation',
+    return recommendation({
       action: 'hold-load',
       previousLoad: baseWeight,
       nextLoad: baseWeight,
-      targetReps: [low, high],
+      targetRange: range,
+      unit: loadUnit,
       evidence: { completedSets: completed.length, reps },
       reason: 'build-reps-within-range',
-    };
+    });
   }
 
-  return {
-    status: 'recommendation',
+  return recommendation({
     action: 'hold-load',
     previousLoad: baseWeight,
     nextLoad: baseWeight,
-    targetReps: [low, high],
+    targetRange: range,
+    unit: loadUnit,
     evidence: { completedSets: completed.length, reps },
     reason: 'rep-floor-not-yet-secured',
+  });
+}
+
+function insufficient(reason, targetRange = null, evidence = {}) {
+  return {
+    status: 'insufficient', action: 'collect-more-data', nextLoad: null,
+    targetRange, targetReps: targetRange, confidence: 'low', reason, evidence,
+  };
+}
+
+function recommendation({ action, previousLoad, nextLoad, targetRange, unit, evidence, reason }) {
+  const completedSets = Number(evidence && evidence.completedSets) || 0;
+  const confidence = completedSets >= 3 ? 'high' : (completedSets >= 2 ? 'medium' : 'low');
+  return {
+    status: 'recommendation', action, previousLoad, nextLoad,
+    targetRange, targetReps: targetRange, unit, confidence,
+    evidence: { ...evidence, confidenceBasis: `${completedSets}-completed-working-sets` },
+    reason,
   };
 }

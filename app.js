@@ -3570,35 +3570,39 @@ import { cleanExercisePreferences as normalizeExercisePreferences, exercisePrefe
     if (!progressionEngine || !item) return null;
     var previous = previousPerformance(item.id);
     if (!previous || !Array.isArray(previous.setLog)) return null;
+    var exercise=BY_ID[item.id],trackingType=exercise&&exercise.custom?exercise.trackingType:(exercise&&exercise.zone==='cardio'?'duration':'weight-reps');
     return progressionEngine.recommendProgression({
       previousSets: previous.setLog,
       targetRepRange: item.reps,
-      increment: progressionIncrementForExercise(BY_ID[item.id])
+      increment: progressionIncrementForExercise(exercise),
+      trackingType: trackingType,
+      unit: 'kg'
     });
   }
 
   function progressionCopy(rec) {
     if (!rec || rec.status !== 'recommendation') return null;
     var range = rec.targetReps && rec.targetReps.length ? rec.targetReps[0] + '–' + rec.targetReps[1] : '';
+    var loadLabel=rec.nextLoad+' '+(rec.unit||'kg');
     var ru = S.lang !== 'en';
     if (rec.reason === 'all-sets-at-top-of-range') return {
       title: ru ? 'Следующая нагрузка' : 'Next load',
-      value: rec.nextLoad + ' kg',
+      value: loadLabel,
       why: ru ? 'Все завершённые рабочие подходы достигли верхней границы ' + range + '. Вес повышен на минимальный шаг правила.' : 'Every completed working set reached the top of ' + range + '. Load increases by the rule increment.'
     };
     if (rec.reason === 'top-range-but-maximal-effort') return {
       title: ru ? 'Сохранить вес' : 'Hold load',
-      value: rec.nextLoad + ' kg',
+      value: loadLabel,
       why: ru ? 'Повторы достигнуты, но в записи есть предельный RPE/RIR. Сначала закрепи результат без максимального усилия.' : 'The rep target was reached, but logged RPE/RIR indicates maximal effort. Consolidate before increasing.'
     };
     if (rec.reason === 'build-reps-within-range') return {
       title: ru ? 'Сохранить вес' : 'Hold load',
-      value: rec.nextLoad + ' kg',
+      value: loadLabel,
       why: ru ? 'Все подходы уже внутри диапазона ' + range + ', но верхняя граница ещё не достигнута во всех сетах.' : 'All sets are inside ' + range + ', but not every set has reached the top yet.'
     };
     return {
       title: ru ? 'Сохранить вес' : 'Hold load',
-      value: rec.nextLoad + ' kg',
+      value: loadLabel,
       why: ru ? 'Нижняя граница ' + range + ' ещё не закреплена во всех завершённых сетах.' : 'The lower edge of ' + range + ' is not yet secured across all completed sets.'
     };
   }
@@ -6948,7 +6952,7 @@ import { cleanExercisePreferences as normalizeExercisePreferences, exercisePrefe
      Correctness -> data integrity -> usability -> accessibility -> performance.
      This layer deliberately preserves the proven V4 business logic and contracts.
      ======================================================================== */
-  var APP_VERSION = '2026.09-r49-shared-today-action';
+  var APP_VERSION = '2026.09-r50-progression-contract';
   var BACKUP_SCHEMA = 10;
   K.restTimer = 'mmg.restTimer.v2';
   K.lastBackup = 'mmg.lastBackup.v1';

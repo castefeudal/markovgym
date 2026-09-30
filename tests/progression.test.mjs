@@ -50,6 +50,9 @@ test('increases load only when every completed set reaches the top', () => {
   assert.equal(result.action, 'increase-load');
   assert.equal(result.nextLoad, 102.5);
   assert.equal(result.reason, 'all-sets-at-top-of-range');
+  assert.deepEqual(result.targetRange, [8, 10]);
+  assert.equal(result.confidence, 'high');
+  assert.equal(result.evidence.confidenceBasis, '3-completed-working-sets');
 });
 
 test('does not increase after maximal-effort top-range sets', () => {
@@ -109,4 +112,45 @@ test('standard double progression only uses working sets', () => {
   assert.equal(result.action, 'hold-load');
   assert.equal(result.previousLoad, 100);
   assert.equal(result.evidence.completedSets, 2);
+});
+
+test('does not treat assisted resistance as load to increase and supports added bodyweight load', () => {
+  const sets = [
+    { weight: 10, reps: 10, completed: true },
+    { weight: 10, reps: 10, completed: true },
+    { weight: 10, reps: 10, completed: true },
+  ];
+  const assisted = recommendProgression({ previousSets: sets, targetRepRange: '8-10', trackingType: 'assisted-weight' });
+  assert.equal(assisted.status, 'insufficient');
+  assert.equal(assisted.action, 'collect-more-data');
+  assert.equal(assisted.reason, 'unsupported-tracking-type');
+
+  const weighted = recommendProgression({ previousSets: sets, targetRepRange: '8-10', trackingType: 'bodyweight-added-weight', increment: 1.25 });
+  assert.equal(weighted.action, 'increase-load');
+  assert.equal(weighted.nextLoad, 11.25);
+});
+
+test('rejects mixed units and invalid load increments instead of inventing a change', () => {
+  const sets = [
+    { weight: 100, reps: 10, completed: true, unit: 'kg' },
+    { weight: 100, reps: 10, completed: true, unit: 'lb' },
+    { weight: 100, reps: 10, completed: true, unit: 'kg' },
+  ];
+  assert.equal(recommendProgression({ previousSets: sets, targetRepRange: '8-10' }).reason, 'mixed-load-units');
+  assert.equal(recommendProgression({
+    previousSets: sets.filter((set) => set.unit === 'kg'),
+    targetRepRange: '8-10',
+    increment: 0,
+  }).reason, 'invalid-load-increment');
+});
+
+test('progression confidence reflects the number of completed working sets', () => {
+  const result = recommendProgression({
+    previousSets: [
+      { weight: 100, reps: 9, completed: true },
+      { weight: 100, reps: 8, completed: true },
+    ],
+    targetRepRange: '8-10',
+  });
+  assert.equal(result.confidence, 'medium');
 });

@@ -1,4 +1,4 @@
-const VERSION = '2026.09-r49-shared-today-action';
+const VERSION = '2026.09-r50-progression-contract';
 const PREFIX = 'mmg-gym-';
 const SHELL = `${PREFIX}shell-${VERSION}`;
 const MEDIA = `${PREFIX}media-${VERSION}`;
