@@ -1072,6 +1072,7 @@ test('flagship restores saved programme on home and exposes the weekly pulse', a
   await expect(page.locator('#mmg-boot')).toHaveCount(0, { timeout: 15_000 });
   await expect(page.locator('#v10-home-pulse')).toBeVisible();
   await expect(page.locator('#v10-home-pulse')).toContainText(/0\s*\/\s*2/);
+  await expect(page.locator('#v7-home-next')).toContainText('Начать следующий день программы');
   await page.goto('/index.html#program');
   await expect(page.locator('html')).toHaveAttribute('data-route-ready', 'program');
   await expect(page.locator('#plan-out')).toHaveAttribute('data-filled', 'true');

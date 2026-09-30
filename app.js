@@ -7506,17 +7506,40 @@ import { cleanExercisePreferences as normalizeExercisePreferences, exercisePrefe
   function v7NextAction(){
     var total=S.workout.reduce(function(a,w){return a+(Number(w.sets)||0);},0),done=S.workout.reduce(function(a,w){return a+completedSetCount(w);},0);
     var active=S.runSession&&Date.now()-Number(S.runSession.startedAt||0)<8*3600000&&done<total;
-    if(active)return{type:'resume',title:v7c('continueRun'),why:v7c('continueRunWhy'),evidence:[done+' / '+total+' '+v7c('sets')]};
-    if(S.workout.length&&done<total)return{type:'run',title:v7c('startReady'),why:v7c('startReadyWhy'),evidence:[S.workout.length+' '+(S.lang==='en'?'exercises':'упражнений'),total+' '+v7c('sets')]};
-    var block=v7MesocycleStatus();if(block&&block.status==='complete')return{type:'program',title:t('nextBlockReview'),why:t('nextBlockReviewWhy'),evidence:[block.durationWeeks+' '+(S.lang==='en'?'weeks':'недель')]};
-    var pday=v7NextPlanDay();if(S.plan&&pday>=0)return{type:'planDay',day:pday,title:v7c('startPlan'),why:v7c('startPlanWhy'),evidence:[v7c('programmeDay')+' '+(pday+1)+' / '+S.plan.days.length]};
-    if(!profileComplete())return{type:'profile',title:v7c('finishProfile'),why:v7c('finishProfileWhy'),evidence:[]};
-    var last=S.diary[0],age=last&&last.date?Math.floor((Date.now()-Date.parse(last.date+'T12:00:00'))/86400000):999;
-    if(S.history.length&&age>7)return{type:'checkin',title:v7c('checkin'),why:v7c('checkinWhy'),evidence:[age+' '+v7c('days')]};
-    if(!databaseNutritionDays.some(function(entry){return entry.date===todayISO();}))return{type:'nutrition',title:S.lang==='en'?'Log today’s nutrition':'Записать питание за сегодня',why:S.lang==='en'?'Add calories and protein; a same-day weigh-in can also strengthen the trend.':'Добавь калории и белок; вес за эту дату поможет точнее увидеть динамику.',evidence:[]};
-    if(S.plan&&S.plan.days&&S.plan.completedDays&&S.plan.completedDays.length>=S.plan.days.length)return{type:'progress',title:v7c('weekComplete'),why:v7c('weekCompleteWhy'),evidence:[S.plan.completedDays.length+' / '+S.plan.days.length]};
-    if(!S.plan)return{type:'program',title:v7c('buildPlan'),why:v7c('buildPlanWhy'),evidence:[]};
-    return{type:'library',title:v7c('discover'),why:v7c('discoverWhy'),evidence:[]};
+    var block=v7MesocycleStatus();
+    var day=v7NextPlanDay();
+    var last=S.diary[0],age=last&&last.date?Math.max(0,Math.floor((Date.now()-Date.parse(last.date+'T12:00:00'))/86400000)):null;
+    var planDone=!!(S.plan&&S.plan.days&&S.plan.days.length&&S.plan.completedDays&&S.plan.completedDays.length>=S.plan.days.length);
+    var decision=todayDecisionEngine?todayDecisionEngine({
+      activeRun:!!active,
+      completedWorkout:!!(S.workout.length&&total>0&&done>=total),
+      pendingWorkout:!!(S.workout.length&&done<total),
+      profileIncomplete:!profileComplete(),
+      programmeBlockComplete:!!(block&&block.status==='complete'),
+      scheduledProgramDay:S.plan&&day>=0?day:null,
+      programmeWeekComplete:planDone,
+      hasTrainingHistory:S.history.length>0,
+      checkinAgeDays:age,
+      hasNutritionLogToday:databaseNutritionDays.some(function(entry){return entry.date===todayISO();}),
+      hasProgram:!!(S.plan&&S.plan.days&&S.plan.days.length)
+    }):null;
+    if(!decision)return{type:'library',title:v7c('discover'),why:v7c('discoverWhy'),evidence:[]};
+    var views={
+      resume_run:{type:'resume',title:v7c('continueRun'),why:v7c('continueRunWhy'),evidence:[done+' / '+total+' '+v7c('sets')]},
+      save_workout:{type:'workout',title:t('nextSave'),why:t('nextSaveWhy'),evidence:[done+' / '+total+' '+v7c('sets')]},
+      start_workout:{type:'run',title:v7c('startReady'),why:v7c('startReadyWhy'),evidence:[S.workout.length+' '+(S.lang==='en'?'exercises':'упражнений'),total+' '+v7c('sets')]},
+      finish_profile:{type:'profile',title:v7c('finishProfile'),why:v7c('finishProfileWhy'),evidence:[]},
+      review_program_block:{type:'program',title:t('nextBlockReview'),why:t('nextBlockReviewWhy'),evidence:[(block?block.durationWeeks:0)+' '+(S.lang==='en'?'weeks':'недель')]},
+      start_program_day:{type:'planDay',day:decision.day,title:v7c('startPlan'),why:v7c('startPlanWhy'),evidence:[v7c('programmeDay')+' '+(decision.day+1)+' / '+(S.plan&&S.plan.days?S.plan.days.length:0)]},
+      review_week:{type:'program',title:v7c('weekComplete'),why:v7c('weekCompleteWhy'),evidence:[(S.plan&&S.plan.completedDays?S.plan.completedDays.length:0)+' / '+(S.plan&&S.plan.days?S.plan.days.length:0)]},
+      record_measurements:{type:'checkin',title:v7c('checkin'),why:v7c('checkinWhy'),evidence:age==null?[]:[age+' '+v7c('days')]},
+      log_nutrition:{type:'nutrition',title:S.lang==='en'?'Log today’s nutrition':'Записать питание за сегодня',why:S.lang==='en'?'Add calories and protein; a same-day weigh-in can also strengthen the trend.':'Добавь калории и белок; вес за эту дату поможет точнее увидеть динамику.',evidence:[]},
+      build_program:{type:'program',title:v7c('buildPlan'),why:v7c('buildPlanWhy'),evidence:[]},
+      find_exercise:{type:'library',title:v7c('discover'),why:v7c('discoverWhy'),evidence:[]},
+      review_progress:{type:'progress',title:t('nextKeep'),why:t('nextKeepWhy'),evidence:[]}
+    };
+    var view=views[decision.recommendation];
+    return view?Object.assign({decision:decision},view):{type:'library',title:v7c('discover'),why:v7c('discoverWhy'),evidence:[]};
   }
   function v7DateLabel(){try{return new Intl.DateTimeFormat(S.lang==='en'?'en-GB':'ru-RU',{weekday:'long',day:'numeric',month:'long'}).format(new Date());}catch(e){return todayISO();}}
   function v7PlanSummary(){if(!S.plan||!S.plan.days)return{v:'—',s:v7c('noPlan')};var done=(S.plan.completedDays||[]).length;return{v:done+' / '+S.plan.days.length,s:(S.lang==='en'?'sessions ':'тренировок ')+v7c('completed')};}

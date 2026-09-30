@@ -30,7 +30,7 @@ The browser entry is an ES module. `src/app/router.mjs` is the shared route regi
 
 ## Today decision contract
 
-`src/features/today/decision-engine.mjs` receives recorded-state facts and returns one recommendation with machine-readable reasons, a confidence label, missing-data keys, and the next action. Active runs and unsaved completed workouts keep priority; an elapsed programme block then asks the user to review records and recovery before setting up another block. The module contains no DOM access or localized copy; the UI translates the action while domain tests cover priority and missing-data rules.
+`src/features/today/decision-engine.mjs` receives recorded-state facts and returns one recommendation with machine-readable reasons, a confidence label, missing-data keys, and the next action. Both Today cards use this same decision function. It prioritizes an active run, saving a completed workout, starting a prepared workout, reviewing an elapsed programme block, starting the next programme day, overdue body check-in, today's nutrition record, a completed-week review, profile setup, programme creation, and the first workout when there is no training history. The module contains no DOM access or localized copy; the UI maps actions to translated copy and routes while domain tests cover priority and missing-data rules.
 
 ## Workout history and migration
 
