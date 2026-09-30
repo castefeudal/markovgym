@@ -13,6 +13,7 @@ import { createInitialState } from './src/app/state.mjs';
 import { subscribeToHashChanges } from './src/app/router.mjs';
 import { searchCommandPalette } from './src/features/command-palette/search.mjs';
 import { createCustomExerciseRuntimeRecord, decodeCompactExercises } from './src/data/exercise-repository.mjs';
+import { cleanSetRecord, ensureSetLog, normalizeWorkoutRecord } from './src/features/workout/workout-records.mjs';
 
 (function () {
   'use strict';
@@ -1785,24 +1786,6 @@ import { createCustomExerciseRuntimeRecord, decodeCompactExercises } from './src
     return { sets: 3, reps: '10–12' };
   }
 
-  function cleanSetRecord(raw) {
-    raw = raw && typeof raw === 'object' ? raw : {};
-    var setTypes=['warmup','working','drop','failure','backoff','amrap'];
-    var type=setTypes.indexOf(String(raw.type||'working'))!==-1?String(raw.type||'working'):'working';
-    return { reps:String(raw.reps==null?'':raw.reps).slice(0,24), weight:String(raw.weight==null?'':raw.weight).slice(0,40), distance:String(raw.distance==null?'':raw.distance).slice(0,32), duration:String(raw.duration==null?'':raw.duration).slice(0,32), rir:String(raw.rir==null?'':raw.rir).slice(0,8), rpe:String(raw.rpe==null?'':raw.rpe).slice(0,8), restSec:Math.max(0,Number(raw.restSec)||0), note:String(raw.note==null?'':raw.note).slice(0,500), type:type, completed:!!raw.completed, completedAt:Number(raw.completedAt)>0?Number(raw.completedAt):0 };
-  }
-  function ensureSetLog(item) {
-    if (!item) return [];
-    var total=clamp(Number(item.sets)||1,1,20), source=Array.isArray(item.setLog)?item.setLog:[], log=[];
-    for(var i=0;i<total;i++){ var row=cleanSetRecord(source[i]); if(!source.length&&item.done){row.reps=String(item.reps||'').slice(0,24);row.weight=String(item.weight||'').slice(0,40);row.completed=true;} log.push(row); }
-    item.setLog=log; item.done=log.length>0&&log.every(function(x){return x.completed;}); return log;
-  }
-  function normalizeWorkoutRecord(item) {
-    item=item&&typeof item==='object'?item:{};
-    var groupTypes=['superset','tri-set','circuit'],groupType=groupTypes.indexOf(String(item.groupType||''))>=0?String(item.groupType):'',groupId=groupType?String(item.groupId||'').slice(0,48):'';
-    var record={id:String(item.id||''),sets:clamp(Number(item.sets)||3,1,20),reps:String(item.reps==null?'10–12':item.reps).slice(0,24),weight:String(item.weight==null?'':item.weight).slice(0,40),done:!!item.done,groupId:groupId,groupType:groupId?groupType:'',setLog:Array.isArray(item.setLog)?item.setLog.map(cleanSetRecord).slice(0,20):[]};
-    ensureSetLog(record); return record;
-  }
   function completedSetCount(item){return ensureSetLog(item).filter(function(x){return x.completed;}).length;}
   function totalCompletedHistorySets(entry){return(entry&&Array.isArray(entry.items)?entry.items:[]).reduce(function(sum,item){if(Array.isArray(item.setLog))return sum+item.setLog.filter(function(x){return x&&x.completed;}).length;return sum+(item.done?(Number(item.sets)||0):0);},0);}
   function totalHistorySets(entry){return(entry&&Array.isArray(entry.items)?entry.items:[]).reduce(function(sum,item){return sum+(Number(item.sets)||0);},0);}
@@ -6998,7 +6981,7 @@ import { createCustomExerciseRuntimeRecord, decodeCompactExercises } from './src
      Correctness -> data integrity -> usability -> accessibility -> performance.
      This layer deliberately preserves the proven V4 business logic and contracts.
      ======================================================================== */
-  var APP_VERSION = '2026.09-r44-exercise-repository';
+  var APP_VERSION = '2026.09-r45-workout-records';
   var BACKUP_SCHEMA = 10;
   K.restTimer = 'mmg.restTimer.v2';
   K.lastBackup = 'mmg.lastBackup.v1';

@@ -44,6 +44,8 @@ Command-palette candidate search and ranking live in `src/features/command-palet
 
 The compact exercise dataset is decoded by `src/data/exercise-repository.mjs` into the shared runtime shape. Custom exercise records use the same runtime adapter, keeping dataset decoding and custom-record mapping outside the UI layer.
 
+Workout and set normalization live in `src/features/workout/workout-records.mjs`; Run Mode consumes normalized set roles, completed state and grouping metadata from this pure module.
+
 Developer diagnostics expose schema and migration state, local record counts, current route, service-worker control and the latest local error/storage warning. The panel reads application state in the browser and does not transmit it.
 
 ## Planned model boundaries

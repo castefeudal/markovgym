@@ -1,4 +1,4 @@
-const VERSION = '2026.09-r44-exercise-repository';
+const VERSION = '2026.09-r45-workout-records';
 const PREFIX = 'mmg-gym-';
 const SHELL = `${PREFIX}shell-${VERSION}`;
 const MEDIA = `${PREFIX}media-${VERSION}`;
@@ -20,6 +20,7 @@ const PRECACHE = [
   './src/app/router.mjs',
   './src/features/command-palette/search.mjs',
   './src/data/exercise-repository.mjs',
+  './src/features/workout/workout-records.mjs',
   './src/app/state.mjs',
   './src/app/i18n.mjs',
   './src/app/load-modules.mjs',
