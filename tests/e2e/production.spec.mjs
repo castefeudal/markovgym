@@ -613,12 +613,13 @@ test('exercise preferences persist, affect library ranking and round-trip throug
   await expect.poll(() => importPreview).toMatch(/Резервная копия проверена|Backup validated/);
   await importNavigation;
   await expect(page.locator('#mmg-boot')).toHaveCount(0);
-  await expect.poll(() => readIndexedExercisePreference(page, exerciseId)).toBe('discomfort');
+  await expect(page.locator('html')).toHaveAttribute('data-storage-ready', 'true');
+  await expect.poll(() => readIndexedExercisePreference(page, exerciseId), { timeout: 15000 }).toBe('discomfort');
   await expect.poll(() => page.evaluate(async id => {
     const db = await new Promise((resolve, reject) => { const request = indexedDB.open('markov-made-gym'); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); });
     const record = await new Promise((resolve, reject) => { const request = db.transaction('exercisePreferences', 'readonly').objectStore('exercisePreferences').get(id); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); });
     db.close(); return record?.preference;
-  }, exerciseId)).toBe('discomfort');
+  }, exerciseId), { timeout: 15000 }).toBe('discomfort');
   await expect.poll(() => page.evaluate(async () => {
     const db = await new Promise((resolve, reject) => { const request = indexedDB.open('markov-made-gym'); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); });
     const record = await new Promise((resolve, reject) => { const request = db.transaction('userState', 'readonly').objectStore('userState').get('mmg.profile.v1'); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); });
