@@ -353,7 +353,7 @@ test('equipment profiles constrain Library choices, survive reload and preserve 
   await page.goto('/index.html#settings');
   await expect(page.locator('html')).toHaveAttribute('data-app-ready', 'true');
   const downloadPromise = page.waitForEvent('download');
-  await page.locator('#data-export').click();
+  await page.locator('#v7-data-actions [data-v7-data="export"]').click();
   const download = await downloadPromise;
   const backup = JSON.parse(await readFile(await download.path(), 'utf8'));
   expect(backup.schemaVersion).toBe(9);
