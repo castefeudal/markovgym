@@ -7082,7 +7082,7 @@
      Correctness -> data integrity -> usability -> accessibility -> performance.
      This layer deliberately preserves the proven V4 business logic and contracts.
      ======================================================================== */
-  var APP_VERSION = '2026.09-r35-calculator-history';
+  var APP_VERSION = '2026.09-r36-parallel-module-loading';
   var BACKUP_SCHEMA = 10;
   K.restTimer = 'mmg.restTimer.v2';
   K.lastBackup = 'mmg.lastBackup.v1';
@@ -7780,80 +7780,42 @@
 
   async function init() {
     window.addEventListener('mmg:error',function(event){lastLocalError=String(event&&event.detail&&event.detail.key||'unknown');renderV7Diagnostics();});
+    var modules = {};
     try {
-      var router = await import('./src/app/router.mjs');
+      var moduleLoader = await import('./src/app/load-modules.mjs');
+      modules = await moduleLoader.loadAppModules(function(key) {
+        window.dispatchEvent(new CustomEvent('mmg:error', { detail: { key: key } }));
+      });
+    } catch (error) {
+      window.dispatchEvent(new CustomEvent('mmg:error', { detail: { key: 'module-loader' } }));
+    }
+    var router = modules.router;
+    if (router) {
       var routeViews = router.ROUTE_VIEWS;
       routeIsKnown = router.isKnownRoute;
       normalizeRouteHash = router.normalizeRouteHash;
       V7_ROUTES = routeViews;
       V7_ROUTE_IDS = Object.keys(routeViews).reduce(function(a,k){a[k]=1;return a;},{});
-    } catch (error) {
-      window.dispatchEvent(new CustomEvent('mmg:error', { detail: { key: 'router' } }));
     }
-    try {
-      var i18n = await import('./src/app/i18n.mjs');
-      runtimeTranslator = i18n.createTranslator(T, function(){return S.lang;});
-    } catch (error) {
-      window.dispatchEvent(new CustomEvent('mmg:error', { detail: { key: 'i18n' } }));
+    if (modules.i18n) runtimeTranslator = modules.i18n.createTranslator(T, function(){return S.lang;});
+    if (modules.workoutGroups) workoutExecutionOrderFn = modules.workoutGroups.workoutExecutionOrder;
+    if (modules.today) todayDecisionEngine = modules.today.nextWorkoutAction;
+    if (modules.mesocycle) mesocycleStatusFn = modules.mesocycle.mesocycleStatus;
+    if (modules.weeklyReview) {
+      weeklyReviewDecisionFn = modules.weeklyReview.weeklyReviewDecision;
+      cleanWeeklyReviewsFn = modules.weeklyReview.cleanWeeklyReviews;
     }
-    try {
-      var workoutGroupModule = await import('./tools/workout-groups.mjs');
-      workoutExecutionOrderFn = workoutGroupModule.workoutExecutionOrder;
-    } catch (error) {
-      window.dispatchEvent(new CustomEvent('mmg:error', { detail: { key: 'workout-groups' } }));
+    if (modules.weightTrend) weightTrendFn = modules.weightTrend.weightTrend;
+    if (modules.nutritionAnalytics) weeklyNutritionBudgetFn = modules.nutritionAnalytics.weeklyNutritionBudget;
+    if (modules.substitutions) substitutionRanker = modules.substitutions.rankSubstitutions;
+    if (modules.personalRecords) {
+      detectSetPersonalRecords = modules.personalRecords.detectSetPersonalRecords;
+      detectVolumePersonalRecords = modules.personalRecords.detectVolumePersonalRecords;
     }
+    if (modules.calculatorHistory) cleanCalculatorResultsFn = modules.calculatorHistory.cleanCalculatorResults;
     try {
-      var todayModule = await import('./src/features/today/decision-engine.mjs');
-      todayDecisionEngine = todayModule.nextWorkoutAction;
-    } catch (error) {
-      window.dispatchEvent(new CustomEvent('mmg:error', { detail: { key: 'today-decision' } }));
-    }
-    try {
-      var mesocycleModule = await import('./src/features/program/mesocycle.mjs');
-      mesocycleStatusFn = mesocycleModule.mesocycleStatus;
-    } catch (error) {
-      window.dispatchEvent(new CustomEvent('mmg:error', { detail: { key: 'program-mesocycle' } }));
-    }
-    try {
-      var weeklyReviewModule = await import('./src/features/program/weekly-review.mjs');
-      weeklyReviewDecisionFn = weeklyReviewModule.weeklyReviewDecision;
-      cleanWeeklyReviewsFn = weeklyReviewModule.cleanWeeklyReviews;
-    } catch (error) {
-      window.dispatchEvent(new CustomEvent('mmg:error', { detail: { key: 'program-weekly-review' } }));
-    }
-    try {
-      var weightTrendModule = await import('./src/features/progress/weight-trend.mjs');
-      weightTrendFn = weightTrendModule.weightTrend;
-    } catch (error) {
-      window.dispatchEvent(new CustomEvent('mmg:error', { detail: { key: 'weight-trend' } }));
-    }
-    try {
-      var nutritionAnalyticsModule = await import('./src/features/nutrition/nutrition-analytics.mjs');
-      weeklyNutritionBudgetFn = nutritionAnalyticsModule.weeklyNutritionBudget;
-    } catch (error) {
-      window.dispatchEvent(new CustomEvent('mmg:error', { detail: { key: 'nutrition-analytics' } }));
-    }
-    try {
-      var substitutionModule = await import('./src/features/exercise/substitution-engine.mjs');
-      substitutionRanker = substitutionModule.rankSubstitutions;
-    } catch (error) {
-      window.dispatchEvent(new CustomEvent('mmg:error', { detail: { key: 'substitution-engine' } }));
-    }
-    try {
-      var prModule = await import('./src/features/workout/pr-engine.mjs');
-      detectSetPersonalRecords = prModule.detectSetPersonalRecords;
-      detectVolumePersonalRecords = prModule.detectVolumePersonalRecords;
-    } catch (error) {
-      window.dispatchEvent(new CustomEvent('mmg:error', { detail: { key: 'pr-engine' } }));
-    }
-    try {
-      var calculatorHistoryModule = await import('./src/features/lab/calculator-history.mjs');
-      cleanCalculatorResultsFn = calculatorHistoryModule.cleanCalculatorResults;
-    } catch (error) {
-      window.dispatchEvent(new CustomEvent('mmg:error', { detail: { key: 'calculator-history' } }));
-    }
-    try {
-      var persistence = await import('./src/persistence/history-repository.mjs');
+      var persistence = modules.persistence;
+      if (!persistence) throw new Error('IndexedDB persistence module did not load');
       cleanCustomExercises = persistence.cleanCustomExercises;
       cleanEquipmentProfiles = persistence.cleanEquipmentProfiles;
       cleanIdbExercisePreferences = persistence.cleanExercisePreferences;

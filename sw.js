@@ -1,4 +1,4 @@
-const VERSION = '2026.09-r35-calculator-history';
+const VERSION = '2026.09-r36-parallel-module-loading';
 const PREFIX = 'mmg-gym-';
 const SHELL = `${PREFIX}shell-${VERSION}`;
 const MEDIA = `${PREFIX}media-${VERSION}`;
@@ -19,6 +19,7 @@ const PRECACHE = [
   './app.js',
   './src/app/router.mjs',
   './src/app/i18n.mjs',
+  './src/app/load-modules.mjs',
   './lab.css',
   './bootstrap.js',
   './gym-tools.js',
