@@ -17,6 +17,7 @@ import { cleanSetRecord, ensureSetLog, normalizeWorkoutRecord } from './src/feat
 import { progressionTrackingType } from './src/features/workout/progression-adapter.mjs';
 import { cleanExercisePreferences as normalizeExercisePreferences, exercisePreference as getExercisePreference, exercisePreferenceScore as rankByPreference, EXERCISE_PREFERENCE_VALUES } from './src/features/exercise/preferences.mjs';
 import { buildWeeklyPlan } from './src/features/program/plan-builder.mjs';
+import { diaryAverage, diaryDelta as calculateDiaryDelta } from './src/features/progress/diary-analytics.mjs';
 
 (function () {
   'use strict';
@@ -4302,26 +4303,11 @@ import { buildWeeklyPlan } from './src/features/program/plan-builder.mjs';
   }
 
   function diaryDelta(field, days) {
-    var withVal = S.diary.filter(function (d) { return typeof d[field] === 'number'; });
-    if (withVal.length < 2) return null;
-    var newest = new Date(withVal[0].date).getTime();
-    var target = newest - days * 86400000;
-    var past = null;
-    for (var i = 0; i < withVal.length; i++) {
-      if (new Date(withVal[i].date).getTime() <= target) { past = withVal[i]; break; }
-    }
-    if (!past) past = withVal[withVal.length - 1];
-    if (past === withVal[0]) return null;
-    return withVal[0][field] - past[field];
+    return calculateDiaryDelta(S.diary, field, days);
   }
 
   function diaryAvg(field, days) {
-    var cutoff = Date.now() - days * 86400000;
-    var vals = S.diary.filter(function (d) {
-      return typeof d[field] === 'number' && new Date(d.date).getTime() >= cutoff;
-    }).map(function (d) { return d[field]; });
-    if (!vals.length) return null;
-    return vals.reduce(function (a, b) { return a + b; }, 0) / vals.length;
+    return diaryAverage(S.diary, field, days);
   }
 
   var progressMetric = 'weight';
@@ -6871,7 +6857,7 @@ import { buildWeeklyPlan } from './src/features/program/plan-builder.mjs';
      Correctness -> data integrity -> usability -> accessibility -> performance.
      This layer deliberately preserves the proven V4 business logic and contracts.
      ======================================================================== */
-  var APP_VERSION = '2026.10-r53-program-domain';
+  var APP_VERSION = '2026.10-r54-progress-analytics';
   var BACKUP_SCHEMA = 10;
   K.restTimer = 'mmg.restTimer.v2';
   K.lastBackup = 'mmg.lastBackup.v1';

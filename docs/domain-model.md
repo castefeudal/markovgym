@@ -27,6 +27,7 @@ The browser entry is an ES module. `src/app/router.mjs` is the shared route regi
 | UserState | Versioned IndexedDB record keyed by the existing domain storage key. It holds profile, current workout, program, measurements, nutrition calculation, notes, and settings as validated JSON strings while older app code transitions to repository reads. |
 | Nutrition calculation | Current macro target calculation and last result. Daily NutritionDay records join by date with body measurements for adaptive expenditure; the Lab requires at least seven paired days and reports coverage, uncertainty, confidence, and its edge-mean smoothing window. |
 | Weight trend | `src/features/progress/weight-trend.mjs` reports the latest scale value, an arithmetic mean of readings in the latest 7 calendar days, a 7-day change against the previous window, a per-week 21-day rate, and measurement coverage. It leaves comparisons blank until each compared window contains at least three measurements; it does not interpolate missing days. |
+| Diary analytics | `src/features/progress/diary-analytics.mjs` calculates dated deltas and averages from finite diary values, sorting records by their dates and allowing the averaging clock to be injected for deterministic checks. |
 | Calculator result | A local result with calculator id, timestamp, submitted inputs, concise output, formula version, and evidence reference when available. The most recent 500 records live in IndexedDB `userState` and are included in version 10 backups. |
 
 ## Today decision contract

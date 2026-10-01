@@ -1,4 +1,4 @@
-const VERSION = '2026.10-r53-program-domain';
+const VERSION = '2026.10-r54-progress-analytics';
 const PREFIX = 'mmg-gym-';
 const SHELL = `${PREFIX}shell-${VERSION}`;
 const MEDIA = `${PREFIX}media-${VERSION}`;
@@ -44,6 +44,7 @@ const PRECACHE = [
   './src/features/workout/pr-engine.mjs',
   './src/features/nutrition/nutrition-analytics.mjs',
   './src/features/progress/weight-trend.mjs',
+  './src/features/progress/diary-analytics.mjs',
   './data/content.json',
   './data/exercises-compact.json',
   './manifest.webmanifest',
