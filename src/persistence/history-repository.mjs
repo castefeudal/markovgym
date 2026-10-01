@@ -1,11 +1,13 @@
 export const HISTORY_DATABASE = 'markov-made-gym';
-export const HISTORY_SCHEMA_VERSION = 6;
+export const HISTORY_SCHEMA_VERSION = 7;
 
 const HISTORY_STORE = 'history';
 const CUSTOM_EXERCISE_STORE = 'customExercises';
 const EQUIPMENT_PROFILE_STORE = 'equipmentProfiles';
 const EXERCISE_PREFERENCE_STORE = 'exercisePreferences';
 const USER_STATE_STORE = 'userState';
+const PROGRAM_STORE = 'programs';
+const ACTIVE_PROGRAM_ID = 'active';
 const NUTRITION_DAY_STORE = 'nutritionDays';
 const EXERCISE_PREFERENCE_VALUES = new Set(['prefer', 'neutral', 'lessOften', 'avoid', 'unavailable', 'discomfort']);
 const TRACKING_TYPES = new Set([
@@ -66,6 +68,7 @@ function openDatabase() {
       if (!db.objectStoreNames.contains(EQUIPMENT_PROFILE_STORE)) db.createObjectStore(EQUIPMENT_PROFILE_STORE, { keyPath: 'id' });
       if (!db.objectStoreNames.contains(EXERCISE_PREFERENCE_STORE)) db.createObjectStore(EXERCISE_PREFERENCE_STORE, { keyPath: 'id' });
       if (!db.objectStoreNames.contains(USER_STATE_STORE)) db.createObjectStore(USER_STATE_STORE, { keyPath: 'key' });
+      if (!db.objectStoreNames.contains(PROGRAM_STORE)) db.createObjectStore(PROGRAM_STORE, { keyPath: 'id' });
       if (!db.objectStoreNames.contains(NUTRITION_DAY_STORE)) db.createObjectStore(NUTRITION_DAY_STORE, { keyPath: 'date' });
     };
     request.onsuccess = () => {
@@ -378,6 +381,48 @@ export async function createHistoryRepository() {
     });
   }
 
+  async function readProgram() {
+    const tx = db.transaction(PROGRAM_STORE, 'readonly');
+    const record = await requestResult(tx.objectStore(PROGRAM_STORE).get(ACTIVE_PROGRAM_ID));
+    return record?.schemaVersion === 1 && record.plan && typeof record.plan === 'object' && !Array.isArray(record.plan)
+      ? JSON.stringify(record.plan)
+      : null;
+  }
+
+  async function writeProgram(value) {
+    if (typeof value !== 'string' || value.length > 50_000_000) throw new TypeError('Invalid programme record');
+    let plan;
+    try { plan = JSON.parse(value); } catch { throw new TypeError('Programme must be valid JSON'); }
+    if (!plan || typeof plan !== 'object' || Array.isArray(plan)) throw new TypeError('Programme must be an object');
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction(PROGRAM_STORE, 'readwrite');
+      tx.objectStore(PROGRAM_STORE).put({ id: ACTIVE_PROGRAM_ID, schemaVersion: 1, plan });
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error || new Error('Could not save programme'));
+      tx.onabort = () => reject(tx.error || new Error('Programme save was aborted'));
+    });
+  }
+
+  async function clearProgram() {
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction(PROGRAM_STORE, 'readwrite');
+      tx.objectStore(PROGRAM_STORE).delete(ACTIVE_PROGRAM_ID);
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error || new Error('Could not clear programme'));
+      tx.onabort = () => reject(tx.error || new Error('Programme clear was aborted'));
+    });
+  }
+
+  async function migrateLegacyProgram(localValue, legacyUserStateKey) {
+    const existing = await readProgram();
+    const userState = legacyUserStateKey ? await readUserState() : {};
+    const databaseLegacyValue = legacyUserStateKey ? userState[legacyUserStateKey] : null;
+    const candidate = existing || databaseLegacyValue || localValue;
+    if (!existing && candidate) await writeProgram(candidate);
+    if (legacyUserStateKey && databaseLegacyValue != null) await deleteUserState(legacyUserStateKey);
+    return readProgram();
+  }
+
   return Object.freeze({
     schemaVersion: HISTORY_SCHEMA_VERSION,
     readAll,
@@ -401,6 +446,10 @@ export async function createHistoryRepository() {
     writeUserState,
     deleteUserState,
     clearUserState,
+    readProgram,
+    writeProgram,
+    clearProgram,
+    migrateLegacyProgram,
     close: () => db.close(),
   });
 }

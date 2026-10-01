@@ -646,14 +646,14 @@ test('exercise preferences persist, affect library ranking and round-trip throug
   })).toBe(4);
   const clearedState = await page.evaluate(async () => {
     const db = await new Promise((resolve, reject) => { const request = indexedDB.open('markov-made-gym'); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); });
-    const counts = await Promise.all(['history', 'customExercises', 'equipmentProfiles', 'exercisePreferences', 'userState'].map(name => new Promise((resolve, reject) => {
+    const counts = await Promise.all(['history', 'customExercises', 'equipmentProfiles', 'exercisePreferences', 'programs', 'userState'].map(name => new Promise((resolve, reject) => {
       const request = db.transaction(name, 'readonly').objectStore(name).count(); request.onsuccess = () => resolve([name, request.result]); request.onerror = () => reject(request.error);
     })));
     const userState = await new Promise((resolve, reject) => { const request = db.transaction('userState', 'readonly').objectStore('userState').getAll(); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); });
     const localProfile = localStorage.getItem('mmg.profile.v1');
     db.close(); return { counts: Object.fromEntries(counts), userState: Object.fromEntries(userState.map(record => [record.key, record.value])), localProfile };
   });
-  expect(clearedState.counts).toMatchObject({ history: 0, customExercises: 0, equipmentProfiles: 4, exercisePreferences: 0 });
+  expect(clearedState.counts).toMatchObject({ history: 0, customExercises: 0, equipmentProfiles: 4, exercisePreferences: 0, programs: 0 });
   expect(JSON.parse(clearedState.userState['mmg.diary.v1'] || '[]')).toEqual([]);
   expect(JSON.parse(clearedState.userState['mmg.plan.v1'] || 'null')).toBeNull();
   expect(JSON.parse(clearedState.userState['mmg.workout.v2'] || '[]')).toEqual([]);
@@ -1121,6 +1121,68 @@ test('flagship restores saved programme on home and exposes the weekly pulse', a
   await expect(page.locator('#plan-out')).toHaveAttribute('data-filled', 'true');
   await expect(page.locator('#plan-out .v10-plan-day')).toHaveCount(2);
   await expect(page.locator('#plan-out [data-mesocycle-status="active"]')).toContainText('Неделя блока 1 из 4');
+  const programMigration = await page.evaluate(async () => {
+    const db = await new Promise((resolve, reject) => {
+      const request = indexedDB.open('markov-made-gym');
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    const saved = await new Promise((resolve, reject) => {
+      const request = db.transaction('programs', 'readonly').objectStore('programs').get('active');
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    const legacy = await new Promise((resolve, reject) => {
+      const request = db.transaction('userState', 'readonly').objectStore('userState').get('mmg.plan.v1');
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    db.close();
+    return { schemaVersion: saved?.schemaVersion, savedWeeks: saved?.plan?.ctx?.blockWeeks, hasLegacy: !!legacy };
+  });
+  expect(programMigration).toMatchObject({ schemaVersion: 1, savedWeeks: 4, hasLegacy: false });
+
+  // Recreate a v6 UserState-only programme to verify the versioned migration path.
+  await page.evaluate(async () => {
+    const db = await new Promise((resolve, reject) => {
+      const request = indexedDB.open('markov-made-gym');
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction(['programs', 'userState'], 'readwrite');
+      const programs = tx.objectStore('programs');
+      const userState = tx.objectStore('userState');
+      const read = programs.get('active');
+      read.onsuccess = () => {
+        userState.put({ key: 'mmg.plan.v1', value: JSON.stringify(read.result.plan) });
+        programs.delete('active');
+      };
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error);
+      tx.onabort = () => reject(tx.error);
+    });
+    db.close();
+  });
+  await page.reload();
+  await expect(page.locator('#plan-out')).toHaveAttribute('data-filled', 'true');
+  const movedLegacyProgramme = await page.evaluate(async () => {
+    const db = await new Promise((resolve, reject) => {
+      const request = indexedDB.open('markov-made-gym');
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    const result = await Promise.all(['programs', 'userState'].map(name => new Promise((resolve, reject) => {
+      const store = db.transaction(name, 'readonly').objectStore(name);
+      const request = name === 'programs' ? store.get('active') : store.get('mmg.plan.v1');
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    })));
+    db.close();
+    return { weeks: result[0]?.plan?.ctx?.blockWeeks, legacyRemoved: !result[1] };
+  });
+  expect(movedLegacyProgramme).toEqual({ weeks: 4, legacyRemoved: true });
+
   await page.locator('#plan-wizard [data-wizard-step="5"]').click();
   await page.locator('#p-block-weeks').selectOption('6');
   await page.locator('#plan-build').click();
@@ -1142,8 +1204,8 @@ test('flagship restores saved programme on home and exposes the weekly pulse', a
       request.onerror = () => reject(request.error);
     });
     const count = await new Promise((resolve, reject) => {
-      const request = db.transaction('userState').objectStore('userState').get('mmg.plan.v1');
-      request.onsuccess = () => resolve(JSON.parse(request.result.value).ctx.weeklyReviews.length);
+      const request = db.transaction('programs').objectStore('programs').get('active');
+      request.onsuccess = () => resolve(request.result.plan.ctx.weeklyReviews.length);
       request.onerror = () => reject(request.error);
     });
     db.close();
@@ -1163,14 +1225,15 @@ test('flagship restores saved programme on home and exposes the weekly pulse', a
       request.onerror = () => reject(request.error);
     });
     await new Promise((resolve, reject) => {
-      const tx = db.transaction('userState', 'readwrite');
-      const state = tx.objectStore('userState');
-      const get = state.get('mmg.plan.v1');
+      const tx = db.transaction('programs', 'readwrite');
+      const state = tx.objectStore('programs');
+      const get = state.get('active');
       get.onsuccess = () => {
-        const plan = JSON.parse(get.result.value);
+        const record = get.result;
+        const plan = record.plan;
         plan.ctx.blockWeeks = 4;
         plan.ctx.blockStartWeek = startWeek;
-        state.put({ key: 'mmg.plan.v1', value: JSON.stringify(plan) });
+        state.put({ ...record, plan });
       };
       tx.oncomplete = resolve;
       tx.onerror = () => reject(tx.error);

@@ -1,4 +1,4 @@
-const VERSION = '2026.10-r58-idb-exercise-preferences';
+const VERSION = '2026.10-r59-program-repository';
 const PREFIX = 'mmg-gym-';
 const SHELL = `${PREFIX}shell-${VERSION}`;
 const MEDIA = `${PREFIX}media-${VERSION}`;

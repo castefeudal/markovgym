@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { cleanCustomExercises, cleanEquipmentProfiles, cleanExercisePreferences, cleanHistory, cleanNutritionDays, HISTORY_SCHEMA_VERSION, mergeMissingRecords, newestFirst } from '../src/persistence/history-repository.mjs';
 
 test('history schema is explicitly versioned', () => {
-  assert.equal(HISTORY_SCHEMA_VERSION, 6);
+  assert.equal(HISTORY_SCHEMA_VERSION, 7);
 });
 
 test('legacy collection migration fills missing identities without replacing IndexedDB values', () => {

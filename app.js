@@ -74,10 +74,14 @@ import { cleanLoadIncrementOverrides, equipmentLoadIncrement } from './src/featu
   var indexedAppStateReady = false;
   var pendingAppStateWrites = [];
   function queueAppStateWrite(key, value, remove) {
-    if (!indexedAppStateReady || !historyRepository || !indexedAppStateKeys[key]) return;
-    var write = remove ? historyRepository.deleteUserState(key) : historyRepository.writeUserState(key, String(value));
+    var isProgram = key === K.plan;
+    if (!indexedAppStateReady || !historyRepository || (!isProgram && !indexedAppStateKeys[key])) return;
+    var write = isProgram
+      ? (remove ? historyRepository.clearProgram() : historyRepository.writeProgram(String(value)))
+      : (remove ? historyRepository.deleteUserState(key) : historyRepository.writeUserState(key, String(value)));
     pendingAppStateWrites.push(write.then(function () {
-      if (remove) delete databaseAppState[key]; else databaseAppState[key] = String(value);
+      if (isProgram) databaseProgram = remove ? null : String(value);
+      else if (remove) delete databaseAppState[key]; else databaseAppState[key] = String(value);
       return null;
     }).catch(function (error) {
       storageWarnings.push({ key: key, type: 'indexeddb-write', at: Date.now() });
@@ -99,6 +103,7 @@ import { cleanLoadIncrementOverrides, equipmentLoadIncrement } from './src/featu
   var databaseEquipmentProfiles = [];
   var databaseExercisePreferences = {};
   var databaseAppState = {};
+  var databaseProgram = null;
   var cleanIdbExercisePreferences = function (value) { return value && typeof value === 'object' && !Array.isArray(value) ? value : {}; };
   var cleanCalculatorResultsFn = function () { return []; };
   var cleanNutritionDays = function (rows) { return Array.isArray(rows) ? rows.filter(function (row) { return row && typeof row === 'object'; }) : []; };
@@ -2476,8 +2481,8 @@ import { cleanLoadIncrementOverrides, equipmentLoadIncrement } from './src/featu
   K.settings = 'mmg.settings.v1';
   K.workoutSchema = 'mmg.workoutSchema.v4';
   K.historySchema = 'mmg.historySchema.v2';
-  [K.fav,K.workout,K.profile,K.meta,K.equipmentProfileActive,K.diary,K.kbju,K.tips,K.coach,K.rest,K.recentSearch,K.recentExercises,K.runSession,K.plan,K.settings,K.calculatorHistory].forEach(function(key){indexedAppStateKeys[key]=true;});
-  [K.history,K.customExercises,K.equipmentProfiles,K.exercisePreferences,K.nutritionLog].forEach(function(key){indexedRepositoryKeys[key]=true;});
+  [K.fav,K.workout,K.profile,K.meta,K.equipmentProfileActive,K.diary,K.kbju,K.tips,K.coach,K.rest,K.recentSearch,K.recentExercises,K.settings,K.calculatorHistory].forEach(function(key){indexedAppStateKeys[key]=true;});
+  [K.history,K.customExercises,K.equipmentProfiles,K.exercisePreferences,K.nutritionLog,K.plan].forEach(function(key){indexedRepositoryKeys[key]=true;});
 
   var DEFAULT_PROFILE = { goal:'', level:'', place:'', days:'', typicalSessionMinutes:'', equipmentAvailability:[], focus:'balanced', limitations:[], recoveryBaseline:'mid', done:false, skipped:false };
 
@@ -6861,7 +6866,7 @@ import { cleanLoadIncrementOverrides, equipmentLoadIncrement } from './src/featu
      Correctness -> data integrity -> usability -> accessibility -> performance.
      This layer deliberately preserves the proven V4 business logic and contracts.
      ======================================================================== */
-  var APP_VERSION = '2026.10-r58-idb-exercise-preferences';
+  var APP_VERSION = '2026.10-r59-program-repository';
   var BACKUP_SCHEMA = 10;
   K.restTimer = 'mmg.restTimer.v2';
   K.lastBackup = 'mmg.lastBackup.v1';
@@ -7170,7 +7175,7 @@ import { cleanLoadIncrementOverrides, equipmentLoadIncrement } from './src/featu
     Object.keys(memoryStore).filter(function(key){return key.indexOf('mmg.recovery.')===0;}).forEach(function(key){store.remove(key);});
     if(storageOk){try{for(var i=window.localStorage.length-1;i>=0;i--){var key=window.localStorage.key(i);if(key&&key.indexOf('mmg.recovery.')===0)window.localStorage.removeItem(key);}}catch(e){}}
     var cleared = historyRepository ? flushAppStateWrites().then(function(){
-      return Promise.all([historyRepository.replaceAll([]), historyRepository.replaceNutritionDays([]), historyRepository.replaceCustomExercises([]), historyRepository.replaceEquipmentProfiles([]), historyRepository.replaceExercisePreferences({})]);
+      return Promise.all([historyRepository.replaceAll([]), historyRepository.replaceNutritionDays([]), historyRepository.replaceCustomExercises([]), historyRepository.replaceEquipmentProfiles([]), historyRepository.replaceExercisePreferences({}), historyRepository.clearProgram()]);
     }).then(function(){return historyRepository.clearUserState();}) : Promise.resolve();
     cleared.then(function(){
       DATA_KEYS.forEach(function(name){var key=K[name];if(!key)return;delete memoryStore[key];if(storageOk){try{window.localStorage.removeItem(key);}catch(e){}}});
@@ -7695,6 +7700,9 @@ import { cleanLoadIncrementOverrides, equipmentLoadIncrement } from './src/featu
       var legacyAppState = {};
       Object.keys(indexedAppStateKeys).forEach(function(key){var value=store.get(key);if(value!==null)legacyAppState[key]=value;});
       databaseAppState = await historyRepository.migrateLegacyUserState(legacyAppState);
+      databaseProgram = await historyRepository.migrateLegacyProgram(store.get(K.plan), K.plan);
+      delete databaseAppState[K.plan];
+      if (databaseProgram == null) delete memoryStore[K.plan]; else memoryStore[K.plan] = databaseProgram;
       try { databaseCalculatorResults = cleanCalculatorResultsFn(JSON.parse(databaseAppState[K.calculatorHistory] || '[]')); }
       catch (_calculatorStateError) { databaseCalculatorResults = []; }
       Object.keys(indexedAppStateKeys).forEach(function(key){
@@ -7714,6 +7722,7 @@ import { cleanLoadIncrementOverrides, equipmentLoadIncrement } from './src/featu
       databaseCustomExercises = cleanCustomExercises(store.json(K.customExercises, []));
       databaseEquipmentProfiles = cleanEquipmentProfiles(store.json(K.equipmentProfiles, []));
       databaseExercisePreferences = cleanIdbExercisePreferences(store.json(K.exercisePreferences, {}));
+      databaseProgram = store.get(K.plan);
       databaseCalculatorResults = cleanCalculatorResultsFn(store.json(K.calculatorHistory, []));
       indexedAppStateReady = false;
       storageWarnings.push({ key: K.history, type: 'indexeddb-unavailable', at: Date.now() });
