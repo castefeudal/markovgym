@@ -1,4 +1,4 @@
-const VERSION = '2026.10-r59-program-repository';
+const VERSION = '2026.10-r60-i18n-catalog';
 const PREFIX = 'mmg-gym-';
 const SHELL = `${PREFIX}shell-${VERSION}`;
 const MEDIA = `${PREFIX}media-${VERSION}`;
@@ -27,6 +27,7 @@ const PRECACHE = [
   './src/features/exercise/preferences.mjs',
   './src/app/state.mjs',
   './src/app/i18n.mjs',
+  './src/app/catalog.mjs',
   './src/app/load-modules.mjs',
   './lab.css',
   './bootstrap.js',
