@@ -1,4 +1,4 @@
-const VERSION = '2026.10-r60-i18n-catalog';
+const VERSION = '2026.10-r61-i18n-consolidation';
 const PREFIX = 'mmg-gym-';
 const SHELL = `${PREFIX}shell-${VERSION}`;
 const MEDIA = `${PREFIX}media-${VERSION}`;

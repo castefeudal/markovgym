@@ -20,3 +20,23 @@ export function createTranslator(catalog, localeProvider) {
     ));
   };
 }
+
+/**
+ * Adds the HTML-derived Russian counterparts for legacy English keys to the
+ * same runtime catalog. Core bilingual entries always keep precedence.
+ * @param {Record<string, TranslationEntry>} catalog
+ * @param {Record<string, string>} englishCatalog
+ * @param {Record<string, string>} russianDom
+ */
+export function mergeEnglishCompatibility(catalog, englishCatalog, russianDom) {
+  const target = catalog || {};
+  for (const key of Object.keys(englishCatalog || {})) {
+    if (Object.prototype.hasOwnProperty.call(target, key)) continue;
+    const russian = russianDom?.[key]
+      ?? russianDom?.[`ph:${key}`]
+      ?? russianDom?.[`aria:${key}`]
+      ?? russianDom?.[`alt:${key}`];
+    target[key] = { ru: russian == null ? key : russian, en: englishCatalog[key] };
+  }
+  return target;
+}
