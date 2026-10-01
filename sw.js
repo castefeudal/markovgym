@@ -1,4 +1,4 @@
-const VERSION = '2026.10-r57-webkit-contrast';
+const VERSION = '2026.10-r58-idb-exercise-preferences';
 const PREFIX = 'mmg-gym-';
 const SHELL = `${PREFIX}shell-${VERSION}`;
 const MEDIA = `${PREFIX}media-${VERSION}`;

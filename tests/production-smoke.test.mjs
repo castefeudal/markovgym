@@ -240,7 +240,7 @@ test('flagship 10 surface includes weekly pulse, contextual actions, workout bal
 
 test('programme survives reloads and edits are written back to saved state', async () => {
   const app = await read('app.js');
-  assert.match(app, /hasPersistedExerciseState = !!\(store\.get\(K\.fav\) \|\| store\.get\(K\.workout\) \|\| store\.get\(K\.plan\) \|\| store\.get\(K\.exercisePreferences\) \|\| databaseCustomExercises\.length\)/);
+  assert.match(app, /hasPersistedExerciseState = !!\(store\.get\(K\.fav\) \|\| store\.get\(K\.workout\) \|\| store\.get\(K\.plan\) \|\| store\.get\(K\.exercisePreferences\) \|\| Object\.keys\(databaseExercisePreferences\)\.length \|\| databaseCustomExercises\.length\)/);
   assert.match(app, /function renderStoredPlanV10\(\)/);
   assert.match(app, /item\.ex=alt;\s*savePlanV7\(\);\s*renderStoredPlanV10\(\)/);
   assert.match(app, /day\.items\.splice\(itemIndex,1\);\s*savePlanV7\(\);/);

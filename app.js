@@ -6861,7 +6861,7 @@ import { cleanLoadIncrementOverrides, equipmentLoadIncrement } from './src/featu
      Correctness -> data integrity -> usability -> accessibility -> performance.
      This layer deliberately preserves the proven V4 business logic and contracts.
      ======================================================================== */
-  var APP_VERSION = '2026.10-r57-webkit-contrast';
+  var APP_VERSION = '2026.10-r58-idb-exercise-preferences';
   var BACKUP_SCHEMA = 10;
   K.restTimer = 'mmg.restTimer.v2';
   K.lastBackup = 'mmg.lastBackup.v1';
@@ -7721,7 +7721,7 @@ import { cleanLoadIncrementOverrides, equipmentLoadIncrement } from './src/featu
     document.documentElement.dataset.storageReady = 'true';
     document.documentElement.dataset.storageMode = historyRepository ? 'indexeddb' : 'degraded';
     var initialRoute = (location.hash || '#home').slice(1).split('?')[0];
-    var hasPersistedExerciseState = !!(store.get(K.fav) || store.get(K.workout) || store.get(K.plan) || store.get(K.exercisePreferences) || databaseCustomExercises.length);
+    var hasPersistedExerciseState = !!(store.get(K.fav) || store.get(K.workout) || store.get(K.plan) || store.get(K.exercisePreferences) || Object.keys(databaseExercisePreferences).length || databaseCustomExercises.length);
     var needsData = dataRouteNeedsLibrary(initialRoute) || hasPersistedExerciseState;
     if (needsData) window.dispatchEvent(new CustomEvent('mmg:stage', { detail: { key: 'data' } }));
     var contentLoaded = await loadContent();
