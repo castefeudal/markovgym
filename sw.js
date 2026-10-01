@@ -1,4 +1,4 @@
-const VERSION = '2026.10-r52-portable-backup-export';
+const VERSION = '2026.10-r53-program-domain';
 const PREFIX = 'mmg-gym-';
 const SHELL = `${PREFIX}shell-${VERSION}`;
 const MEDIA = `${PREFIX}media-${VERSION}`;
@@ -38,6 +38,7 @@ const PRECACHE = [
   './src/features/today/decision-engine.mjs',
   './src/features/program/mesocycle.mjs',
   './src/features/program/weekly-review.mjs',
+  './src/features/program/plan-builder.mjs',
   './src/features/lab/evidence-registry.mjs',
   './src/features/exercise/substitution-engine.mjs',
   './src/features/workout/pr-engine.mjs',

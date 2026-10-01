@@ -16,6 +16,7 @@ import { createCustomExerciseRuntimeRecord, decodeCompactExercises } from './src
 import { cleanSetRecord, ensureSetLog, normalizeWorkoutRecord } from './src/features/workout/workout-records.mjs';
 import { progressionTrackingType } from './src/features/workout/progression-adapter.mjs';
 import { cleanExercisePreferences as normalizeExercisePreferences, exercisePreference as getExercisePreference, exercisePreferenceScore as rankByPreference, EXERCISE_PREFERENCE_VALUES } from './src/features/exercise/preferences.mjs';
+import { buildWeeklyPlan } from './src/features/program/plan-builder.mjs';
 
 (function () {
   'use strict';
@@ -2036,14 +2037,6 @@ import { cleanExercisePreferences as normalizeExercisePreferences, exercisePrefe
   }
 
   /* ---------- 11. КОНСТРУКТОР ПЛАНА --------------------------------------- */
-  var DAY_TEMPLATES = {
-    full: { key: 'full', zones: ['chest', 'back', 'upper legs', 'shoulders', 'upper arms', 'waist'] },
-    upper: { key: 'upper', zones: ['chest', 'back', 'shoulders', 'upper arms'] },
-    lower: { key: 'lower', zones: ['upper legs', 'lower legs', 'waist'] },
-    push: { key: 'push', zones: ['chest', 'shoulders', 'upper arms'] },
-    pull: { key: 'pull', zones: ['back', 'upper arms', 'lower arms'] },
-    legs: { key: 'legs', zones: ['upper legs', 'lower legs', 'waist'] }
-  };
   var DAY_NAMES = {
     full: { ru: 'Всё тело', en: 'Full body' },
     upper: { ru: 'Верх тела', en: 'Upper body' },
@@ -2051,24 +2044,6 @@ import { cleanExercisePreferences as normalizeExercisePreferences, exercisePrefe
     push: { ru: 'Жимовой день', en: 'Push day' },
     pull: { ru: 'Тяговый день', en: 'Pull day' },
     legs: { ru: 'Ноги и кор', en: 'Legs and core' }
-  };
-
-  function splitFor(days, level, goal) {
-    if (days <= 2) return ['full', 'full'];
-    if (days === 3) {
-      if (level === 'beginner' || goal === 'health') return ['full', 'full', 'full'];
-      return ['push', 'pull', 'legs'];
-    }
-    if (days === 4) return ['upper', 'lower', 'upper', 'lower'];
-    if (days === 5) return ['push', 'pull', 'legs', 'upper', 'lower'];
-    return ['push', 'pull', 'legs', 'push', 'pull', 'legs'];
-  }
-
-  var GOAL_DOSE = {
-    strength: { sets: [4, 5], reps: '3–6', rest: [150, 210] },
-    muscle: { sets: [3, 4], reps: '6–12', rest: [90, 120] },
-    fatloss: { sets: [3, 4], reps: '10–15', rest: [45, 75] },
-    health: { sets: [2, 3], reps: '10–15', rest: [60, 90] }
   };
 
   var CARDIO_TEXT = {
@@ -2147,73 +2122,16 @@ import { cleanExercisePreferences as normalizeExercisePreferences, exercisePrefe
     var place = $('p-place').value;
     var focus = $('p-focus').value;
 
-    var allowed = equipmentFor(place);
-    var dose = GOAL_DOSE[goal] || GOAL_DOSE.muscle;
-    var setsLo = dose.sets[0], setsHi = dose.sets[1];
-    if (level === 'beginner') { setsLo = Math.max(2, setsLo - 1); setsHi = Math.max(3, setsHi - 1); }
-    if (level === 'advanced') { setsLo += 1; setsHi += 1; }
-
-    var perSession = clamp(Math.round(time / 12), 3, 8);
-    if (level === 'beginner') perSession = clamp(perSession - 1, 3, 6);
-    if (days >= 5) perSession = clamp(perSession - 1, 3, 7);
     var recovery = $('p-recovery') ? $('p-recovery').value : 'mid';
-    if (recovery === 'low') {
-      setsLo = Math.max(2, setsLo - 1);
-      setsHi = Math.max(2, setsHi - 1);
-      perSession = Math.max(3, perSession - 1);
-    }
-
-    var split = splitFor(days, level, goal).slice(0, days);
-    var used = Object.create(null);
-
-    function pool(zone) {
-      return EX.filter(function (ex) {
-        return ex.zone === zone && allowed.indexOf(ex.equip) !== -1 && planExtraFilter(ex);
-      }).sort(function (a, b) {
-        return (planExerciseScore(b, goal, level) - planExerciseScore(a, goal, level)) || (a.idx - b.idx);
-      });
-    }
-
-    var poolCache = Object.create(null);
-    function pickFor(zone) {
-      if (!poolCache[zone]) poolCache[zone] = pool(zone);
-      var list = poolCache[zone];
-      for (var i = 0; i < list.length; i++) {
-        if (!used[list[i].id]) { used[list[i].id] = true; return list[i]; }
-      }
-      return list.length ? list[0] : null;
-    }
-
-    var week = split.map(function (key, dayIndex) {
-      var tpl = DAY_TEMPLATES[key];
-      var zones = tpl.zones.slice();
-      if (focus !== 'balanced') {
-        var focusZones = focus === 'chest' ? ['chest'] : focus === 'back' ? ['back'] :
-          focus === 'shoulders' ? ['shoulders'] : focus === 'upper arms' ? ['upper arms'] :
-          focus === 'waist' ? ['waist'] : ['upper legs'];
-        var hit = focusZones.filter(function (z) { return zones.indexOf(z) !== -1; });
-        if (hit.length) {
-          zones = hit.concat(hit, zones.filter(function (z) { return hit.indexOf(z) === -1; }));
-        }
-      }
-      var items = [];
-      var guard = 0;
-      while (items.length < perSession && guard < perSession * 4) {
-        var zone = zones[items.length % zones.length];
-        var pick = pickFor(zone);
-        guard++;
-        if (!pick) continue;
-        if (items.some(function (it) { return it.ex.id === pick.id; })) continue;
-        var isMain = items.length < 2;
-        items.push({
-          ex: pick,
-          sets: isMain ? setsHi : setsLo,
-          reps: pick.zone === 'waist' && goal !== 'strength' ? '12–20' : dose.reps,
-          rest: isMain ? dose.rest[1] : dose.rest[0]
-        });
-      }
-      return { key: key, index: dayIndex, items: items };
+    var generated = buildWeeklyPlan({
+      goal: goal, level: level, days: days, time: time, focus: focus, recovery: recovery,
+      allowedEquipment: equipmentFor(place), exercises: EX,
+      scoreExercise: function (ex) { return planExerciseScore(ex, goal, level); },
+      isExerciseAllowed: planExtraFilter
     });
+    var week = generated.week;
+    var split = generated.split;
+    var perSession = generated.perSession;
 
     lastPlan = { week: week, goal: goal, level: level, days: days, time: time, place: place, focus: focus, ctx: {goal:goal,level:level,days:days,time:time,place:place,focus:focus,style:$('p-style')?$('p-style').value:'balanced',recovery:recovery,cardio:$('p-cardio')?$('p-cardio').value:'light',steps:$('p-steps')?$('p-steps').value:'mid',blockWeeks:blockWeeks} };
 
@@ -6953,7 +6871,7 @@ import { cleanExercisePreferences as normalizeExercisePreferences, exercisePrefe
      Correctness -> data integrity -> usability -> accessibility -> performance.
      This layer deliberately preserves the proven V4 business logic and contracts.
      ======================================================================== */
-  var APP_VERSION = '2026.10-r52-portable-backup-export';
+  var APP_VERSION = '2026.10-r53-program-domain';
   var BACKUP_SCHEMA = 10;
   K.restTimer = 'mmg.restTimer.v2';
   K.lastBackup = 'mmg.lastBackup.v1';
