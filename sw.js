@@ -1,4 +1,4 @@
-const VERSION = '2026.10-r56-equipment-load-steps';
+const VERSION = '2026.10-r57-webkit-contrast';
 const PREFIX = 'mmg-gym-';
 const SHELL = `${PREFIX}shell-${VERSION}`;
 const MEDIA = `${PREFIX}media-${VERSION}`;

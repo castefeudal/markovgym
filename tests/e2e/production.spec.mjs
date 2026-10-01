@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 async function exportBackup(page, selector = '#data-export') {
+  await expect(page.locator('html')).toHaveAttribute('data-app-ready', 'true');
   await page.locator(selector).click();
   const output = page.locator('#data-io');
   await expect(output).toBeVisible();
