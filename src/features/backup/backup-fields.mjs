@@ -76,7 +76,11 @@ export function validateBackupField(name, raw, adapters = {}) {
   }
   if (name === 'settings') {
     return value && typeof value === 'object' && !Array.isArray(value)
-      ? stringify({ rir: !!value.rir, rpe: !!value.rpe, reading: ['balanced', 'comfortable', 'large'].includes(value.reading) ? value.reading : 'balanced' })
+      ? stringify({
+        rir: !!value.rir, rpe: !!value.rpe,
+        reading: ['balanced', 'comfortable', 'large'].includes(value.reading) ? value.reading : 'balanced',
+        loadIncrements: typeof adapters.cleanLoadIncrementOverrides === 'function' ? adapters.cleanLoadIncrementOverrides(value.loadIncrements) : {},
+      })
       : null;
   }
   return null;

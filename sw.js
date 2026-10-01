@@ -1,4 +1,4 @@
-const VERSION = '2026.10-r55-backup-domain';
+const VERSION = '2026.10-r56-equipment-load-steps';
 const PREFIX = 'mmg-gym-';
 const SHELL = `${PREFIX}shell-${VERSION}`;
 const MEDIA = `${PREFIX}media-${VERSION}`;
@@ -22,6 +22,7 @@ const PRECACHE = [
   './src/features/backup/backup-fields.mjs',
   './src/data/exercise-repository.mjs',
   './src/features/workout/workout-records.mjs',
+  './src/features/workout/equipment-increments.mjs',
   './src/features/workout/progression-adapter.mjs',
   './src/features/exercise/preferences.mjs',
   './src/app/state.mjs',

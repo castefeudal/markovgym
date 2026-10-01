@@ -1,5 +1,5 @@
 /** Central shape and defaults for mutable application state. */
-export const APP_STATE_SCHEMA_VERSION = 1;
+export const APP_STATE_SCHEMA_VERSION = 2;
 
 export function createInitialState() {
   return {
@@ -39,6 +39,6 @@ export function createInitialState() {
     recentSearches: [],
     recentExercises: [],
     runSession: null,
-    settings: { rir: false, rpe: false, reading: 'balanced' },
+    settings: { rir: false, rpe: false, reading: 'balanced', loadIncrements: {} },
   };
 }

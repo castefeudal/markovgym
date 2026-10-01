@@ -19,6 +19,7 @@ import { cleanExercisePreferences as normalizeExercisePreferences, exercisePrefe
 import { buildWeeklyPlan } from './src/features/program/plan-builder.mjs';
 import { diaryAverage, diaryDelta as calculateDiaryDelta } from './src/features/progress/diary-analytics.mjs';
 import { backupEnvelopeError, parseBackupJson, validateBackupField } from './src/features/backup/backup-fields.mjs';
+import { cleanLoadIncrementOverrides, equipmentLoadIncrement } from './src/features/workout/equipment-increments.mjs';
 
 (function () {
   'use strict';
@@ -2588,7 +2589,7 @@ import { backupEnvelopeError, parseBackupJson, validateBackupField } from './src
     S.plan = restorePlanV7(store.json(K.plan,null));
     if(S.plan) savePlanV7();
     var settings=store.json(K.settings,null);
-    S.settings=(settings&&typeof settings==='object')?{rir:!!settings.rir,rpe:!!settings.rpe,reading:['balanced','comfortable','large'].indexOf(settings.reading)!==-1?settings.reading:'balanced'}:{rir:false,rpe:false,reading:'balanced'};
+    S.settings=(settings&&typeof settings==='object')?{rir:!!settings.rir,rpe:!!settings.rpe,reading:['balanced','comfortable','large'].indexOf(settings.reading)!==-1?settings.reading:'balanced',loadIncrements:cleanLoadIncrementOverrides(settings.loadIncrements)}:{rir:false,rpe:false,reading:'balanced',loadIncrements:{}};
     applyReadability();
   }
 
@@ -3481,9 +3482,11 @@ import { backupEnvelopeError, parseBackupJson, validateBackupField } from './src
   var progressionEngine = null;
   import('./tools/progression.mjs').then(function (module) {
     progressionEngine = module;
-    renderWorkout();
-    if ($('run') && $('run').getAttribute('data-open') === 'true') renderRun();
-  }).catch(function () {
+    if (document.documentElement.dataset.appReady === 'true') {
+      renderWorkout();
+      if ($('run') && $('run').getAttribute('data-open') === 'true') renderRun();
+    }
+  }).catch(function (error) {
     progressionEngine = null;
   });
 
@@ -6858,7 +6861,7 @@ import { backupEnvelopeError, parseBackupJson, validateBackupField } from './src
      Correctness -> data integrity -> usability -> accessibility -> performance.
      This layer deliberately preserves the proven V4 business logic and contracts.
      ======================================================================== */
-  var APP_VERSION = '2026.10-r55-backup-domain';
+  var APP_VERSION = '2026.10-r56-equipment-load-steps';
   var BACKUP_SCHEMA = 10;
   K.restTimer = 'mmg.restTimer.v2';
   K.lastBackup = 'mmg.lastBackup.v1';
@@ -7011,7 +7014,7 @@ import { backupEnvelopeError, parseBackupJson, validateBackupField } from './src
     return validateBackupField(name, raw, {
       exerciseExists: function(id){ return !!BY_ID[id]; }, exerciseLimit: EX.length,
       normalizeWorkoutRecord: normalizeWorkoutRecord, cleanNutritionDays: cleanNutritionDays,
-      cleanCalculatorResults: cleanCalculatorResultsFn, cleanCustomExercises: cleanCustomExercises,
+      cleanCalculatorResults: cleanCalculatorResultsFn, cleanLoadIncrementOverrides: cleanLoadIncrementOverrides, cleanCustomExercises: cleanCustomExercises,
       cleanEquipmentProfiles: cleanEquipmentProfiles, cleanExercisePreferences: cleanExercisePreferences,
       restorePlan: restorePlanV7, serializePlan: serialisePlanV7, now: Date.now()
     });
@@ -7520,7 +7523,7 @@ import { backupEnvelopeError, parseBackupJson, validateBackupField } from './src
   function navigateV7(route,focus){route=routeIsKnown&&routeIsKnown(route)?route:'home';if(location.hash!=='#'+route)location.hash=route;else{applyV7Route(focus!==false);}}
   function syncV7Floating(){var route=v7RouteFromHash(),bar=$('mfb');if(bar){var show=MOBILE_MQ.matches&&route==='library';bar.setAttribute('data-open',String(show));}var sticky=$('mobile-rest-timer');if(sticky)sticky.classList.toggle('is-raised',!!(bar&&bar.getAttribute('data-open')==='true'));}
   function startPlanDayV7(dayIndex,startRun){if(!S.plan||!S.plan.days)return;v7EnsurePlanWeek();var day=S.plan.days[dayIndex];if(!day)return;S.workout=day.items.map(function(it){return normalizeWorkoutRecord({id:it.ex.id,sets:it.sets,reps:it.reps,weight:'',done:false,setLog:[]});});S.meta.name=(S.lang==='en'?'Day ':'День ')+(dayIndex+1)+' · '+(DAY_NAMES[day.key]?(DAY_NAMES[day.key][S.lang]||DAY_NAMES[day.key].ru):day.key);S.meta.date=todayISO();S.meta.note='';S.meta.planDay=dayIndex;saveWorkout();saveMeta();renderWorkout();renderResults();track('program_day_start',{day:dayIndex+1});navigateV7('workout',true);showToast(t('planDayAdded',{n:dayIndex+1}));if(startRun)setTimeout(openRun,80);}
-  function progressionIncrementForExercise(ex){if(ex&&ex.custom&&Number(ex.loadIncrement)>0)return Number(ex.loadIncrement);var lower=ex&&['upper legs','lower legs'].indexOf(ex.zone)!==-1,compound=ex&&exKind(ex)==='compound';return lower?2.5:(compound?2:1);}
+  function progressionIncrementForExercise(ex){var source=ex&&ex.compound==null?Object.assign({},ex,{compound:exKind(ex)==='compound'}):ex;return equipmentLoadIncrement(source,S.settings&&S.settings.loadIncrements);}
   function progressionAdviceV7(id,item){
     if(!progressionEngine||!item)return null;
     var previous=previousPerformance(id);
@@ -7528,7 +7531,7 @@ import { backupEnvelopeError, parseBackupJson, validateBackupField } from './src
     var rec=progressionEngine.recommendProgression({previousSets:previous.setLog,targetRepRange:item.reps,increment:progressionIncrementForExercise(BY_ID[id])});
     return rec&&rec.status==='recommendation'?rec:null;
   }
-  function addProgressionAdviceV7(){qsa('#workout-list .workout-item').forEach(function(row){var item=S.workout.filter(function(w){return w.id===row.dataset.id;})[0],main=qs('.workout-main',row);if(!item||!main||qs('.workout-progression',main))return;var adv=progressionAdviceV7(item.id,item);if(!adv||adv.action!=='increase-load')return;var reason=S.lang==='en'?'Last completed session reached the top of the rep range in every working set.':'В прошлой завершённой сессии верхняя граница повторов достигнута во всех рабочих подходах.';var box=document.createElement('div');box.className='workout-progression';box.innerHTML='<span aria-hidden="true">↗</span><span><b>'+esc(v7c('tryWeight'))+' '+adv.nextLoad+' '+esc(t('kg'))+'</b><small>'+esc(reason)+'</small></span>';var prev=qs('.workout-previous',main);if(prev)prev.insertAdjacentElement('afterend',box);else main.appendChild(box);});}
+  function addProgressionAdviceV7(){qsa('#workout-list .workout-item').forEach(function(row){var item=S.workout.filter(function(w){return w.id===row.dataset.id;})[0],main=qs('.workout-main',row);if(!item||!main||qs('.workout-progression',main))return;var exercise=BY_ID[item.id];if(!exercise)return;var adv=progressionAdviceV7(item.id,item);if(!adv||adv.action!=='increase-load')return;var reason=S.lang==='en'?'Last completed session reached the top of the rep range in every working set.':'В прошлой завершённой сессии верхняя граница повторов достигнута во всех рабочих подходах.';var increment=progressionIncrementForExercise(exercise),override=S.settings&&S.settings.loadIncrements&&S.settings.loadIncrements[item.id],options=['0.5','1','1.25','2','2.5','5','10'];var label=S.lang==='en'?'Load step':'Шаг нагрузки';var automatic=S.lang==='en'?'Auto':'Авто';var box=document.createElement('div');box.className='workout-progression';box.innerHTML='<span aria-hidden="true">↗</span><span><b>'+esc(v7c('tryWeight'))+' '+adv.nextLoad+' '+esc(t('kg'))+'</b><small>'+esc(reason)+'</small><label class="workout-progression-increment">'+esc(label)+' <select data-load-increment="'+esc(item.id)+'" aria-label="'+esc(label)+' · '+esc(exName(exercise))+'"><option value="default"'+(!override?' selected':'')+'>'+esc(automatic)+' · '+increment+' '+esc(t('kg'))+'</option>'+options.map(function(step){return'<option value="'+step+'"'+(Number(override)===Number(step)?' selected':'')+'>'+step+' '+esc(t('kg'))+'</option>';}).join('')+'</select></label></span>';var prev=qs('.workout-previous',main);if(prev)prev.insertAdjacentElement('afterend',box);else main.appendChild(box);});}
   function initV7WorkoutUtilities(){var side=qs('.workout-side');if(!side||$('v7-session-tools'))return;var details=document.createElement('details');details.id='v7-session-tools';details.className='v7-session-tools';details.innerHTML='<summary>'+esc(v7c('utilities'))+'</summary><div class="v7-session-tools-body"></div>';var body=qs('.v7-session-tools-body',details);['w-copy','w-share','w-print','w-clear'].forEach(function(id){var el=$(id);if(el)body.appendChild(el);});['w-name','w-date','w-note'].forEach(function(fid){var field=$(fid);if(field&&field.closest('.field'))body.appendChild(field.closest('.field'));});var io=$('w-io');if(io){var d=io.closest('details');if(d)body.appendChild(d);}side.appendChild(details);}
   function initV7ProgressQuick(){var grid=qs('.progress-form-grid');if(!grid||$('g-recovery-v7'))return;var waist=$('g-waist'),field=document.createElement('div');field.className='field';field.innerHTML='<label for="g-recovery-v7">'+esc(v7c('recovery'))+'</label><select class="select" id="g-recovery-v7"><option value="1">'+esc(v7c('recoveryLow'))+'</option><option value="2" selected>'+esc(v7c('recoveryMid'))+'</option><option value="3">'+esc(v7c('recoveryHigh'))+'</option></select>';if(waist&&waist.closest('.field'))waist.closest('.field').insertAdjacentElement('afterend',field);var labels=qsa('.form-section-label',grid);if(labels.length<2)return;var adv=document.createElement('details');adv.className='v7-advanced-checkin';adv.innerHTML='<summary>'+esc(v7c('advanced'))+'</summary><div class="v7-advanced-checkin-grid"></div>';var advGrid=qs('.v7-advanced-checkin-grid',adv);var move=['g-sleep','g-mood','g-hunger','g-fatigue','g-lift','g-note'];labels.slice(1).forEach(function(l){if(l.parentNode)advGrid.appendChild(l);});move.forEach(function(id){var el=$(id);if(el&&el.closest('.field'))advGrid.appendChild(el.closest('.field'));});grid.appendChild(adv);var save=$('prog-save');if(save)save.textContent=S.lang==='en'?'Save check-in':'Сохранить check-in';}
   function renderV7RunAdvanced(){var stage=$('run-stage');if(!stage||!S.settings)return;var inputs=qs('.run-current-inputs',stage);if(!inputs)return;var item=S.workout[runState.ex],set=item?ensureSetLog(item)[Math.max(0,runState.set-1)]:null;if(!set)return;if(S.settings.rir&&!qs('[data-run-field="rir"]',inputs)){var l=document.createElement('label');l.textContent='RIR';l.innerHTML+=' <input type="number" inputmode="numeric" min="0" max="10" step="1" data-run-field="rir" value="'+esc(set.rir||'')+'">';inputs.appendChild(l);}if(S.settings.rpe&&!qs('[data-run-field="rpe"]',inputs)){var l2=document.createElement('label');l2.textContent='RPE';l2.innerHTML+=' <input type="number" inputmode="decimal" min="1" max="10" step="0.5" data-run-field="rpe" value="'+esc(set.rpe||'')+'">';inputs.appendChild(l2);}}
@@ -7587,6 +7590,7 @@ import { backupEnvelopeError, parseBackupJson, validateBackupField } from './src
   function initProductOSV7(){
     document.documentElement.dataset.release='ultimate-2026-08-v8';document.body.dataset.v7Ready='true';document.body.dataset.v8Ready='true';
     ensureMobileAppNav();renderV7All();initV8Keyboard();
+    document.addEventListener('change',function(event){var select=event.target.closest('[data-load-increment]');if(!select)return;var id=select.dataset.loadIncrement,values=Object.assign({},S.settings.loadIncrements||{});if(select.value==='default')delete values[id];else values[id]=select.value;S.settings.loadIncrements=cleanLoadIncrementOverrides(values);saveSettings();renderWorkout();var replacement=qsa('[data-load-increment]').filter(function(input){return input.dataset.loadIncrement===id;})[0];if(replacement)replacement.focus();});
     subscribeToHashChanges(window, v7RouteFromHash, function(route){
       applyV7Route(true);
       track('home_action',{route:route});

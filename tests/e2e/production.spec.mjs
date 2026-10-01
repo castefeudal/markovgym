@@ -885,6 +885,44 @@ test('Run Mode announces a history-backed estimated one-rep-max record', async (
   await expect(page.locator('.run-pr-notice')).toHaveCount(0);
 });
 
+test('equipment-based progression increment can be overridden and survives reload', async ({ page }) => {
+  await page.goto('/index.html#workout');
+  await expect(page.locator('#mmg-boot')).toHaveCount(0);
+  await page.evaluate(async (id) => {
+    const db = await new Promise((resolve, reject) => {
+      const request = indexedDB.open('markov-made-gym');
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction('userState', 'readwrite');
+      tx.objectStore('userState').put({ key: 'mmg.workout.v2', value: JSON.stringify([{ id, sets: 3, reps: '6–8', weight: '', done: false, setLog: [] }]) });
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error);
+    });
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction('history', 'readwrite');
+      tx.objectStore('history').put({ id: 'increment-baseline', name: 'Baseline', date: '2026-09-28', items: [{ id, setLog: [
+        { completed: true, type: 'working', weight: 50, reps: 8 },
+        { completed: true, type: 'working', weight: 50, reps: 8 },
+      ] }] });
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error);
+    });
+    db.close();
+  }, '0025');
+  const exerciseId = '0025';
+  await page.reload();
+  const step = page.locator('.workout-item[data-id="' + exerciseId + '"] [data-load-increment]');
+  await expect(step).toBeVisible();
+  await expect(step.locator('option').first()).toContainText('2.5');
+  await step.selectOption('1.25');
+  await expect.poll(async () => (await readIndexedUserState(page, 'mmg.settings.v1')).loadIncrements[exerciseId]).toBe(1.25);
+  await page.reload();
+  await expect(page.locator('.workout-item[data-id="' + exerciseId + '"] [data-load-increment]')).toHaveValue('1.25');
+  await expect(page.locator('.workout-item[data-id="' + exerciseId + '"] .workout-progression b')).toContainText('51.25');
+});
+
 test('Lab warm-up can be added before an unstarted weighted exercise', async ({ page }) => {
   await page.goto('/index.html#library');
   await expect(page.locator('#mmg-boot')).toHaveCount(0);
