@@ -621,6 +621,7 @@ test('exercise preferences persist, affect library ranking and round-trip throug
   await importNavigation;
   await expect(page.locator('#mmg-boot')).toHaveCount(0);
   await expect(page.locator('html')).toHaveAttribute('data-storage-ready', 'true');
+  await expect(page.locator('html')).toHaveAttribute('data-app-ready', 'true');
   await expect.poll(() => readIndexedExercisePreference(page, exerciseId), { timeout: 15000 }).toBe('discomfort');
   await expect.poll(() => page.evaluate(async id => {
     const db = await new Promise((resolve, reject) => { const request = indexedDB.open('markov-made-gym'); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); });
