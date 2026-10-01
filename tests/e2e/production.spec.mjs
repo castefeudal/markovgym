@@ -346,7 +346,7 @@ test('legacy workout history migrates to IndexedDB without a 20-session cap', as
     db.close();
     return { version: db.version, count, customCount, profileCount, exercisePreferences, userState };
   });
-  expect(persistedCount.version).toBe(6);
+  expect(persistedCount.version).toBe(7);
   expect(persistedCount.count).toBe(28);
   expect(persistedCount.customCount).toBe(1);
   expect(persistedCount.profileCount).toBe(4);
