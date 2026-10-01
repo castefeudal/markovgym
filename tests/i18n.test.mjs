@@ -1,7 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { createTranslator, mergeEnglishCompatibility } from '../src/app/i18n.mjs';
 import { CORE_TRANSLATIONS, LEGACY_ENGLISH } from '../src/app/catalog.mjs';
+
+const repo = new URL('../', import.meta.url);
+const appSource = readFileSync(new URL('app.js', repo), 'utf8');
+const shellSource = readFileSync(new URL('index.html', repo), 'utf8');
 
 test('core catalog is immutable bilingual runtime data with complete entries', () => {
   assert.equal(Object.isFrozen(CORE_TRANSLATIONS), true);
@@ -16,6 +21,26 @@ test('core catalog is immutable bilingual runtime data with complete entries', (
     assert.ok(entry.ru.trim(), `${key} has empty Russian copy`);
     assert.ok(entry.en.trim(), `${key} has empty English copy`);
   }
+});
+
+test('literal runtime translation calls have a complete Russian and English source', () => {
+  const staticDomKeys = new Set();
+  for (const match of shellSource.matchAll(/data-i18n(?:-ph|-aria|-alt)?\s*=\s*['\"]([^'\"]+)['\"]/g)) {
+    staticDomKeys.add(match[1]);
+  }
+  const calls = new Set([...appSource.matchAll(/\bt\(\s*['\"]([^'\"]+)['\"]/g)].map(match => match[1]));
+  const missing = [...calls].filter(key => {
+    if (key.endsWith('.')) return false;
+    if (Object.hasOwn(CORE_TRANSLATIONS, key)) return false;
+    if (Object.hasOwn(LEGACY_ENGLISH, key)) {
+      return !staticDomKeys.has(key)
+        && !staticDomKeys.has(`ph:${key}`)
+        && !staticDomKeys.has(`aria:${key}`)
+        && !staticDomKeys.has(`alt:${key}`);
+    }
+    return !staticDomKeys.has(key);
+  }).sort();
+  assert.deepEqual(missing, [], `add bilingual catalog entries for runtime-only calls: ${missing.join(', ')}`);
 });
 
 test('legacy English copy merges into the same catalog using captured DOM labels', () => {
