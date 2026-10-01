@@ -18,6 +18,7 @@ import { progressionTrackingType } from './src/features/workout/progression-adap
 import { cleanExercisePreferences as normalizeExercisePreferences, exercisePreference as getExercisePreference, exercisePreferenceScore as rankByPreference, EXERCISE_PREFERENCE_VALUES } from './src/features/exercise/preferences.mjs';
 import { buildWeeklyPlan } from './src/features/program/plan-builder.mjs';
 import { diaryAverage, diaryDelta as calculateDiaryDelta } from './src/features/progress/diary-analytics.mjs';
+import { backupEnvelopeError, parseBackupJson, validateBackupField } from './src/features/backup/backup-fields.mjs';
 
 (function () {
   'use strict';
@@ -6857,7 +6858,7 @@ import { diaryAverage, diaryDelta as calculateDiaryDelta } from './src/features/
      Correctness -> data integrity -> usability -> accessibility -> performance.
      This layer deliberately preserves the proven V4 business logic and contracts.
      ======================================================================== */
-  var APP_VERSION = '2026.10-r54-progress-analytics';
+  var APP_VERSION = '2026.10-r55-backup-domain';
   var BACKUP_SCHEMA = 10;
   K.restTimer = 'mmg.restTimer.v2';
   K.lastBackup = 'mmg.lastBackup.v1';
@@ -7005,50 +7006,15 @@ import { diaryAverage, diaryDelta as calculateDiaryDelta } from './src/features/
     customExercises:{ru:'свои упражнения',en:'custom exercises'},equipmentProfiles:{ru:'профили оборудования',en:'equipment profiles'},equipmentProfileActive:{ru:'активный профиль оборудования',en:'active equipment profile'},fav:{ru:'избранное',en:'favorites'},workout:{ru:'тренировка',en:'workout'},lang:{ru:'язык',en:'language'},theme:{ru:'тема',en:'theme'},density:{ru:'плотность сетки',en:'grid density'},profile:{ru:'профиль',en:'profile'},meta:{ru:'данные тренировки',en:'workout meta'},history:{ru:'история',en:'history'},diary:{ru:'дневник прогресса',en:'progress diary'},kbju:{ru:'питание',en:'nutrition'},tips:{ru:'сохранённые материалы',en:'saved knowledge'},coach:{ru:'режим тренера',en:'coach mode'},rest:{ru:'настройка отдыха',en:'rest timer preset'},recentSearch:{ru:'недавние поиски',en:'recent searches'},recentExercises:{ru:'недавние упражнения',en:'recent exercises'},runSession:{ru:'активная сессия',en:'active session'},plan:{ru:'активная программа',en:'active programme'},settings:{ru:'настройки логирования',en:'logging settings'},schema:{ru:'схема данных',en:'schema'},workoutSchema:{ru:'схема тренировки',en:'workout schema'},historySchema:{ru:'схема истории',en:'history schema'}
   };
   function backupLabel(name){var pair=BACKUP_LABELS[name];return pair?(S.lang==='en'?pair.en:pair.ru):name;}
-  function jsonValue(raw){ try{return JSON.parse(raw);}catch(e){return null;} }
+  function jsonValue(raw){ return parseBackupJson(raw); }
   function validateBackupValue(name, raw){
-    if (typeof raw !== 'string' || raw.length > 50000000) return null;
-    if (name==='lang') return (raw==='ru'||raw==='en') ? raw : null;
-    if (name==='theme') return ['obsidian','soft','ivory'].indexOf(raw)!==-1 ? raw : null;
-    if (name==='density') return ['compact','default','roomy'].indexOf(raw)!==-1 ? raw : null;
-    if (name==='coach') return (raw==='0'||raw==='1') ? raw : null;
-    if (name==='rest') return [60,90,120,180].indexOf(Number(raw))!==-1 ? String(Number(raw)) : null;
-    if (name==='schema'||name==='workoutSchema'||name==='historySchema') return /^\d{1,3}$/.test(raw) ? raw : null;
-    if (name==='equipmentProfileActive') return raw.length<=80?raw:null;
-    var value=jsonValue(raw);
-    if (value===null) return null;
-    if (name==='fav') return JSON.stringify(Array.isArray(value)?value.map(String).filter(function(id){return !!BY_ID[id];}).slice(0,EX.length):[]);
-    if (name==='workout') return JSON.stringify(Array.isArray(value)?value.filter(function(x){return x&&BY_ID[String(x.id)];}).map(normalizeWorkoutRecord).slice(0,80):[]);
-    if (name==='profile') {
-      if (!value||typeof value!=='object'||Array.isArray(value)) return null;
-      return JSON.stringify({goal:String(value.goal||'').slice(0,40),level:String(value.level||'').slice(0,40),place:String(value.place||'').slice(0,40),days:String(value.days||'').slice(0,8),typicalSessionMinutes:String(value.typicalSessionMinutes||'').slice(0,8),equipmentAvailability:Array.isArray(value.equipmentAvailability)?value.equipmentAvailability.map(String).slice(0,32):[],focus:String(value.focus||'balanced').slice(0,40),limitations:Array.isArray(value.limitations)?value.limitations.map(String).slice(0,16):[],recoveryBaseline:String(value.recoveryBaseline||'mid').slice(0,20),done:!!value.done,skipped:!!value.skipped});
-    }
-    if (name==='meta') {
-      if (!value||typeof value!=='object'||Array.isArray(value)) return null;
-      return JSON.stringify({name:String(value.name||'').slice(0,80),date:String(value.date||'').slice(0,10),note:String(value.note||'').slice(0,600),planDay:Number.isInteger(Number(value.planDay))?Number(value.planDay):null});
-    }
-    if (name==='history') return JSON.stringify(Array.isArray(value)?value.filter(function(x){return x&&Array.isArray(x.items);}):[]);
-    if (name==='diary') return JSON.stringify(Array.isArray(value)?value.filter(function(x){return x&&typeof x.date==='string';}).slice(0,400):[]);
-    if (name==='nutritionLog') {
-      if (!Array.isArray(value)) return null;
-      var cleanNutrition = cleanNutritionDays(value);
-      return cleanNutrition.length===value.length ? JSON.stringify(cleanNutrition) : null;
-    }
-    if(name==='calculatorHistory')return Array.isArray(value)&&cleanCalculatorResultsFn?JSON.stringify(cleanCalculatorResultsFn(value)):null;
-    if (name==='tips') return JSON.stringify(Array.isArray(value)?value.map(String).slice(0,200):[]);
-    if (name==='recentSearch') return JSON.stringify(Array.isArray(value)?value.map(String).filter(Boolean).slice(0,8):[]);
-    if (name==='recentExercises') return JSON.stringify(Array.isArray(value)?value.map(String).filter(function(id){return !!BY_ID[id];}).slice(0,8):[]);
-    if (name==='runSession') {
-      if (!value||typeof value!=='object'||Date.now()-Number(value.startedAt||0)>8*3600000) return JSON.stringify(null);
-      return JSON.stringify(value);
-    }
-    if(name==='kbju')return(value&&typeof value==='object'&&!Array.isArray(value))?JSON.stringify(value):null;
-    if(name==='customExercises')return Array.isArray(value)?JSON.stringify(cleanCustomExercises(value)):null;
-    if(name==='equipmentProfiles')return Array.isArray(value)?JSON.stringify(cleanEquipmentProfiles(value)):null;
-    if(name==='exercisePreferences')return value&&typeof value==='object'&&!Array.isArray(value)?JSON.stringify(cleanExercisePreferences(value)):null;
-    if(name==='plan'){var restored=restorePlanV7(value);return restored?JSON.stringify(serialisePlanV7(restored)):JSON.stringify(null);}
-    if(name==='settings')return(value&&typeof value==='object'&&!Array.isArray(value))?JSON.stringify({rir:!!value.rir,rpe:!!value.rpe,reading:['balanced','comfortable','large'].indexOf(value.reading)!==-1?value.reading:'balanced'}):null;
-    return null;
+    return validateBackupField(name, raw, {
+      exerciseExists: function(id){ return !!BY_ID[id]; }, exerciseLimit: EX.length,
+      normalizeWorkoutRecord: normalizeWorkoutRecord, cleanNutritionDays: cleanNutritionDays,
+      cleanCalculatorResults: cleanCalculatorResultsFn, cleanCustomExercises: cleanCustomExercises,
+      cleanEquipmentProfiles: cleanEquipmentProfiles, cleanExercisePreferences: cleanExercisePreferences,
+      restorePlan: restorePlanV7, serializePlan: serialisePlanV7, now: Date.now()
+    });
   }
   exportAll = function(){
     var payload={app:'markov-made-gym',schemaVersion:BACKUP_SCHEMA,createdAt:new Date().toISOString(),v:BACKUP_SCHEMA,kind:'mmg-backup',appVersion:APP_VERSION,exportedAt:new Date().toISOString(),data:{}};
@@ -7058,8 +7024,8 @@ import { diaryAverage, diaryDelta as calculateDiaryDelta } from './src/features/
   function analyzeBackup(raw){
     var parsed;
     try{parsed=JSON.parse(raw);}catch(e){return{ok:false,code:'json'};}
-    if(!parsed||parsed.kind!=='mmg-backup'||!parsed.data||typeof parsed.data!=='object'||Array.isArray(parsed.data))return{ok:false,code:'shape'};
-    if(Number(parsed.schemaVersion||parsed.v||0)>BACKUP_SCHEMA)return{ok:false,code:'future'};
+    var envelopeError=backupEnvelopeError(parsed,BACKUP_SCHEMA);
+    if(envelopeError)return{ok:false,code:envelopeError};
     var staged={},changed=[],invalid=[],temporaryCustomIds=[];
     if(Object.prototype.hasOwnProperty.call(parsed.data,'customExercises')){
       var customRaw=validateBackupValue('customExercises',parsed.data.customExercises);

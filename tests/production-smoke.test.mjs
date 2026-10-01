@@ -199,9 +199,11 @@ test('stylesheet layers are separated and linked in their original cascade order
 
 test('daily nutrition records use a dedicated validated store and survive backup import/export flows', async () => {
   const app = await read('app.js');
+  const backupFields = await read('src/features/backup/backup-fields.mjs');
   const repository = await read('src/persistence/history-repository.mjs');
   assert.match(app, /K\.nutritionLog = 'mmg\.nutritionLog\.v1'/);
-  assert.match(app, /name==='nutritionLog'[\s\S]*?cleanNutritionDays/);
+  assert.match(backupFields, /name === 'nutritionLog'[\s\S]*?cleanNutritionDays/);
+  assert.match(app, /validateBackupField\(name, raw, \{/);
   assert.match(app, /historyRepository\.replaceNutritionDays\(importedNutritionDays\)/);
   assert.match(app, /nutritionLog'\?JSON\.stringify\(databaseNutritionDays\)/);
   assert.match(repository, /createObjectStore\(NUTRITION_DAY_STORE, \{ keyPath: 'date' \}\)/);
