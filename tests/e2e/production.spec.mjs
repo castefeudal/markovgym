@@ -400,6 +400,11 @@ test('legacy workout history migrates to IndexedDB without a 20-session cap', as
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
     });
+    const measurements = await new Promise((resolve, reject) => {
+      const request = db.transaction('measurements', 'readonly').objectStore('measurements').getAll();
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
     const exercisePreferences = await new Promise((resolve, reject) => {
       const request = db.transaction('exercisePreferences', 'readonly').objectStore('exercisePreferences').getAll();
       request.onsuccess = () => resolve(request.result);
@@ -411,16 +416,18 @@ test('legacy workout history migrates to IndexedDB without a 20-session cap', as
       request.onerror = () => reject(request.error);
     });
     db.close();
-    return { version: db.version, count, customCount, profileCount, exercisePreferences, userState };
+    return { version: db.version, count, customCount, profileCount, exercisePreferences, measurements, userState };
   });
-  expect(persistedCount.version).toBe(7);
+  expect(persistedCount.version).toBe(8);
   expect(persistedCount.count).toBe(28);
   expect(persistedCount.customCount).toBe(1);
   expect(persistedCount.profileCount).toBe(4);
   expect(persistedCount.exercisePreferences).toEqual([{ id: '0001', preference: 'prefer' }, { id: 'custom-legacy-example', preference: 'lessOften' }]);
+  expect(persistedCount.measurements).toHaveLength(1);
+  expect(persistedCount.measurements[0]).toMatchObject(diary[0]);
   const migratedState = Object.fromEntries(persistedCount.userState.map(record => [record.key, record.value]));
   expect(JSON.parse(migratedState['mmg.profile.v1'])).toMatchObject({ goal: 'muscle', place: 'gym', done: true });
-  expect(JSON.parse(migratedState['mmg.diary.v1'])).toEqual(diary);
+  expect(migratedState['mmg.diary.v1']).toBeUndefined();
   expect(JSON.parse(migratedState['mmg.workout.v2'])).toHaveLength(1);
   await page.reload();
   await expect.poll(() => page.evaluate(() => window.mmgDiagnostics?.historyCount)).toBe(28);
