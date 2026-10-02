@@ -1,4 +1,4 @@
-const VERSION = '2026.10-r65-readable-throughout';
+const VERSION = '2026.10-r66-semantic-theme-tokens';
 const PREFIX = 'mmg-gym-';
 const SHELL = `${PREFIX}shell-${VERSION}`;
 const MEDIA = `${PREFIX}media-${VERSION}`;

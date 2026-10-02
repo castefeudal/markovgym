@@ -292,7 +292,7 @@
   transition:color var(--dur-1) var(--ease),border-color var(--dur-1) var(--ease)}
 .fav-btn svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linejoin:round}
 .fav-btn:hover{color:var(--color-accent);border-color:var(--color-accent)}
-.fav-btn[aria-pressed="true"]{color:var(--v8-signal);border-color:var(--v8-signal)}
+.fav-btn[aria-pressed="true"]{color:var(--accent);border-color:var(--accent)}
 .fav-btn[aria-pressed="true"] svg{fill:currentColor}
 .card-body{display:flex;flex-direction:column;gap:var(--space-3);padding:var(--space-4);flex:1}
 .card-title{font-size:var(--step-0);font-weight:700;line-height:1.3;letter-spacing:-.01em;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:2.6em}

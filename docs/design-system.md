@@ -6,13 +6,13 @@ Use a quiet, high contrast training interface. Put the next action first, keep e
 
 ## Color tokens
 
-The active themes are defined in `app.css`. New components should use the semantic tokens below; the existing `--v8-*` variables remain compatibility aliases while older styles are consolidated.
+Theme values are owned by the theme blocks in `app.css`. Shared components now read the semantic tokens below. The old palette values remain behind aliases in those theme blocks during the staged migration; new component rules must not reference `--v8-*` color names.
 
 | Token | Use |
 | --- | --- |
-| `--bg-canvas` | Page background |
+| `--bg-canvas`, `--bg-workspace` | Page and secondary workspace backgrounds |
 | `--bg-surface` | Cards and panels |
-| `--bg-elevated` | Raised controls and overlays |
+| `--bg-elevated`, `--bg-overlay` | Raised controls and overlays |
 | `--text-primary` | Main text |
 | `--text-secondary` | Supporting labels and descriptions |
 | `--text-muted` | Quiet metadata |

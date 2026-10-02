@@ -592,6 +592,7 @@ test('equipment profiles constrain Library choices, survive reload and preserve 
   if (await page.locator('#filters-apply').isVisible()) await page.locator('#filters-apply').click();
   await expect(page.locator('.workout-item')).toHaveCount(1);
   await page.reload();
+  await expect(page.locator('html')).toHaveAttribute('data-app-ready', 'true');
   await expect.poll(() => page.evaluate(() => window.mmgDiagnostics?.activeEquipmentProfileId)).toBe('builtin-travel');
   await expect(page.locator('.workout-item')).toHaveCount(1);
 
@@ -627,6 +628,7 @@ test('equipment profiles constrain Library choices, survive reload and preserve 
     db.close();
   });
   await page.reload();
+  await expect(page.locator('html')).toHaveAttribute('data-app-ready', 'true');
   await expect.poll(() => page.evaluate(() => window.mmgDiagnostics?.activeEquipmentProfileId)).toBe('builtin-home');
   let importPreview='';
   page.once('dialog', dialog => { importPreview=dialog.message(); return dialog.accept(); });
