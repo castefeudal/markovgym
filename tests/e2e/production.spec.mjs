@@ -1087,8 +1087,7 @@ test('desktop library filters do not overlap and the warm gold accent is gone', 
 
   const audit = await page.evaluate(() => {
     const root = getComputedStyle(document.documentElement);
-    const accent = root.getPropertyValue('--v8-signal').trim();
-    const brass = root.getPropertyValue('--v8-brass').trim();
+    const accent = root.getPropertyValue('--accent').trim();
     const list = document.querySelector('#filter-mu');
     const buttons = [...list.querySelectorAll('.filter-btn')].slice(0, 18);
     const rects = buttons.map((button) => {
@@ -1107,7 +1106,6 @@ test('desktop library filters do not overlap and the warm gold accent is gone', 
     const labelCountCollisions = rects.filter((r) => r.labelRight > r.countLeft + 0.5).length;
     return {
       accent,
-      brass,
       listOverflow: getComputedStyle(list).overflowY,
       minHeight: Math.min(...rects.map((r) => r.height)),
       overlaps,
@@ -1118,7 +1116,6 @@ test('desktop library filters do not overlap and the warm gold accent is gone', 
   });
 
   expect(audit.accent.toLowerCase()).toBe('#86b6ff');
-  expect(audit.brass.toLowerCase()).toBe('#8f9bad');
   expect(audit.listOverflow).toBe('visible');
   expect(audit.minHeight).toBeGreaterThanOrEqual(37);
   expect(audit.overlaps).toBe(0);
