@@ -1,9 +1,27 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { cleanCustomExercises, cleanEquipmentProfiles, cleanExercisePreferences, cleanHistory, cleanNutritionDays, HISTORY_SCHEMA_VERSION, mergeMissingRecords, newestFirst } from '../src/persistence/history-repository.mjs';
+import { cleanCustomExercises, cleanEquipmentProfiles, cleanExercisePreferences, cleanHistory, cleanMeasurements, cleanNutritionDays, HISTORY_SCHEMA_VERSION, mergeMissingRecords, newestFirst } from '../src/persistence/history-repository.mjs';
 
 test('history schema is explicitly versioned', () => {
-  assert.equal(HISTORY_SCHEMA_VERSION, 7);
+  assert.equal(HISTORY_SCHEMA_VERSION, 8);
+});
+
+test('body measurements are date-keyed, bounded, deterministic and unlimited', () => {
+  const source = [
+    { date: '2026-09-28', weight: 80.4, waist: 91, recovery: 2, sleep: 7.5, mood: 4, hunger: 2, fatigue: 1, lift: 'Squat 5×80 kg', note: '  Good week  ', ignored: true },
+    { date: '2026-09-28', weight: 81, note: 'Updated' },
+    { date: '2026-02-30', weight: 70 },
+    { date: '2026-09-27', weight: 500 },
+    ...Array.from({ length: 420 }, (_, index) => ({ date: new Date(Date.UTC(2025, 0, index + 1)).toISOString().slice(0, 10), weight: 70 + (index % 10) / 10 })),
+  ];
+  const clean = cleanMeasurements(source);
+  assert.equal(clean.length, 422);
+  assert.deepEqual(clean.find((entry) => entry.date === '2026-09-28'), {
+    date: '2026-09-28', weight: 81, waist: null, recovery: null, sleep: null,
+    mood: null, hunger: null, fatigue: null, lift: '', note: 'Updated',
+  });
+  assert.equal(clean.some((entry) => entry.date === '2026-02-30'), false);
+  assert.equal(clean.some((entry) => entry.weight === 500), false);
 });
 
 test('legacy collection migration fills missing identities without replacing IndexedDB values', () => {

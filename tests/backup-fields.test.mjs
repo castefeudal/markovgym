@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { backupEnvelopeError, parseBackupJson, validateBackupField } from '../src/features/backup/backup-fields.mjs';
+import { cleanMeasurements } from '../src/persistence/history-repository.mjs';
 
 const parse = (value) => JSON.parse(value);
 
@@ -32,7 +33,9 @@ test('backup history and references drop malformed or unknown exercise records',
   assert.deepEqual(parse(validateBackupField('recentExercises', JSON.stringify(['missing', 'row']), adapters)), ['row']);
   assert.deepEqual(parse(validateBackupField('workout', JSON.stringify([{ id: 'row' }, { id: 'missing' }]), adapters)), [{ id: 'row', sets: 3, setLog: [] }]);
   assert.deepEqual(parse(validateBackupField('history', JSON.stringify([{ items: [] }, {}, null]))), [{ items: [] }]);
-  assert.deepEqual(parse(validateBackupField('diary', JSON.stringify([{ date: '2026-10-01' }, {}, { date: 5 }]))), [{ date: '2026-10-01' }]);
+  assert.equal(validateBackupField('diary', JSON.stringify([{ date: '2026-10-01' }, {}, { date: 5 }]), { cleanMeasurements }), null);
+  const measurements = [{ date: '2026-10-01', weight: 80.4, sleep: 7.5, note: 'Weekly check-in' }];
+  assert.deepEqual(parse(validateBackupField('diary', JSON.stringify(measurements), { cleanMeasurements })), cleanMeasurements(measurements));
 });
 
 test('profile and workout metadata are bounded and have stable defaults', () => {

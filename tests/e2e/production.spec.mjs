@@ -121,18 +121,85 @@ test('daily nutrition log persists by date and links optional weight to the prog
       request.onerror = () => reject(request.error);
     });
     const diaryRecord = await new Promise((resolve, reject) => {
-      const request = db.transaction('userState', 'readonly').objectStore('userState').get('mmg.diary.v1');
+      const request = db.transaction('measurements', 'readonly').objectStore('measurements').get(date);
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
     });
-    const diary = JSON.parse(diaryRecord?.value || '[]');
     db.close();
-    return { nutrition, diary: diary.find(entry => entry.date === date) };
+    return { nutrition, diary: diaryRecord };
   }, logDate);
   expect(saved.nutrition).toMatchObject({ calories: 2240, protein: 148, fat: 72, carbs: 252, weightKg: 80.4, accuracy: 'estimated', note: 'Long day' });
   expect(saved.diary.weight).toBe(80.4);
   await page.reload();
   await expect(page.locator('#nutrition-log-list')).toContainText('2240 ккал');
+});
+
+test('body measurements migrate from legacy stores into the all-time date-keyed collection', async ({ page }) => {
+  await page.addInitScript(() => {
+    const localRows = Array.from({ length: 410 }, (_, index) => ({
+      date: new Date(Date.UTC(2025, 0, index + 1)).toISOString().slice(0, 10),
+      weight: 70 + (index % 10) / 10,
+    }));
+    localRows.push({ date: '2026-09-01', weight: 99, note: 'stale local copy' });
+    localStorage.setItem('mmg.diary.v1', JSON.stringify(localRows));
+    const request = indexedDB.open('markov-made-gym', 7);
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains('userState')) db.createObjectStore('userState', { keyPath: 'key' });
+    };
+    request.onsuccess = () => {
+      const db = request.result;
+      const tx = db.transaction('userState', 'readwrite');
+      tx.objectStore('userState').put({
+        key: 'mmg.diary.v1',
+        value: JSON.stringify([
+          { date: '2026-09-01', weight: 75, note: 'database copy' },
+          { date: '2026-09-02', weight: 76, note: 'database only' },
+        ]),
+      });
+      tx.oncomplete = () => db.close();
+    };
+  });
+  await page.goto('/index.html#progress');
+  await expect(page.locator('#mmg-boot')).toHaveCount(0);
+  await expect(page.locator('html')).toHaveAttribute('data-storage-ready', 'true');
+  const result = await page.evaluate(async () => {
+    const db = await new Promise((resolve, reject) => {
+      const request = indexedDB.open('markov-made-gym');
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    const [measurements, legacyDiary] = await Promise.all([
+      new Promise((resolve, reject) => {
+        const request = db.transaction('measurements', 'readonly').objectStore('measurements').getAll();
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      }),
+      new Promise((resolve, reject) => {
+        const request = db.transaction('userState', 'readonly').objectStore('userState').get('mmg.diary.v1');
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      }),
+    ]);
+    db.close();
+    return {
+      measurements,
+      snapshotCount: window.mmgLocalData.readSnapshot().measurements.length,
+      legacyDiary,
+      localCopy: localStorage.getItem('mmg.diary.v1'),
+    };
+  });
+  expect(result.measurements).toHaveLength(412);
+  expect(result.snapshotCount).toBe(412);
+  expect(result.measurements.find(entry => entry.date === '2026-09-01')).toMatchObject({ weight: 75, note: 'database copy' });
+  expect(result.measurements.find(entry => entry.date === '2026-09-02')).toMatchObject({ weight: 76, note: 'database only' });
+  expect(result.legacyDiary).toBeUndefined();
+  expect(result.localCopy).toBeNull();
+  await page.goto('/index.html#settings');
+  const backup = await exportBackup(page);
+  const backupMeasurements = JSON.parse(backup.data.diary);
+  expect(backupMeasurements).toHaveLength(412);
+  expect(backupMeasurements.find(entry => entry.date === '2026-09-01')).toMatchObject({ weight: 75, note: 'database copy' });
 });
 
 test('Lab reads full workout and nutrition data from IndexedDB repositories', async ({ page }) => {
@@ -646,15 +713,15 @@ test('exercise preferences persist, affect library ranking and round-trip throug
   })).toBe(4);
   const clearedState = await page.evaluate(async () => {
     const db = await new Promise((resolve, reject) => { const request = indexedDB.open('markov-made-gym'); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); });
-    const counts = await Promise.all(['history', 'customExercises', 'equipmentProfiles', 'exercisePreferences', 'programs', 'userState'].map(name => new Promise((resolve, reject) => {
+    const counts = await Promise.all(['history', 'customExercises', 'equipmentProfiles', 'exercisePreferences', 'programs', 'measurements', 'userState'].map(name => new Promise((resolve, reject) => {
       const request = db.transaction(name, 'readonly').objectStore(name).count(); request.onsuccess = () => resolve([name, request.result]); request.onerror = () => reject(request.error);
     })));
     const userState = await new Promise((resolve, reject) => { const request = db.transaction('userState', 'readonly').objectStore('userState').getAll(); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); });
     const localProfile = localStorage.getItem('mmg.profile.v1');
     db.close(); return { counts: Object.fromEntries(counts), userState: Object.fromEntries(userState.map(record => [record.key, record.value])), localProfile };
   });
-  expect(clearedState.counts).toMatchObject({ history: 0, customExercises: 0, equipmentProfiles: 4, exercisePreferences: 0, programs: 0 });
-  expect(JSON.parse(clearedState.userState['mmg.diary.v1'] || '[]')).toEqual([]);
+  expect(clearedState.counts).toMatchObject({ history: 0, customExercises: 0, equipmentProfiles: 4, exercisePreferences: 0, programs: 0, measurements: 0 });
+  expect(clearedState.userState['mmg.diary.v1']).toBeUndefined();
   expect(JSON.parse(clearedState.userState['mmg.plan.v1'] || 'null')).toBeNull();
   expect(JSON.parse(clearedState.userState['mmg.workout.v2'] || '[]')).toEqual([]);
   expect(JSON.parse(clearedState.userState['mmg.favorites.v8'] || '[]')).toEqual([]);

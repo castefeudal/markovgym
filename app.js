@@ -77,12 +77,16 @@ import { cleanLoadIncrementOverrides, equipmentLoadIncrement } from './src/featu
   var pendingAppStateWrites = [];
   function queueAppStateWrite(key, value, remove) {
     var isProgram = key === K.plan;
-    if (!indexedAppStateReady || !historyRepository || (!isProgram && !indexedAppStateKeys[key])) return;
+    var isDiary = key === K.diary;
+    if (!indexedAppStateReady || !historyRepository || (!isProgram && !isDiary && !indexedAppStateKeys[key])) return;
     var write = isProgram
       ? (remove ? historyRepository.clearProgram() : historyRepository.writeProgram(String(value)))
-      : (remove ? historyRepository.deleteUserState(key) : historyRepository.writeUserState(key, String(value)));
+      : isDiary
+        ? historyRepository.replaceMeasurements(remove ? [] : store.json(K.diary, []))
+        : (remove ? historyRepository.deleteUserState(key) : historyRepository.writeUserState(key, String(value)));
     pendingAppStateWrites.push(write.then(function () {
       if (isProgram) databaseProgram = remove ? null : String(value);
+      else if (isDiary) databaseMeasurements = remove ? [] : cleanMeasurementsFn(store.json(K.diary, []));
       else if (remove) delete databaseAppState[key]; else databaseAppState[key] = String(value);
       return null;
     }).catch(function (error) {
@@ -100,6 +104,7 @@ import { cleanLoadIncrementOverrides, equipmentLoadIncrement } from './src/featu
   }
   var databaseHistory = null;
   var databaseNutritionDays = [];
+  var databaseMeasurements = [];
   var databaseCalculatorResults = [];
   var databaseCustomExercises = [];
   var databaseEquipmentProfiles = [];
@@ -109,6 +114,7 @@ import { cleanLoadIncrementOverrides, equipmentLoadIncrement } from './src/featu
   var cleanIdbExercisePreferences = function (value) { return value && typeof value === 'object' && !Array.isArray(value) ? value : {}; };
   var cleanCalculatorResultsFn = function () { return []; };
   var cleanNutritionDays = function (rows) { return Array.isArray(rows) ? rows.filter(function (row) { return row && typeof row === 'object'; }) : []; };
+  var cleanMeasurementsFn = function (rows) { return Array.isArray(rows) ? rows.filter(function (row) { return row && typeof row === 'object' && row.date; }) : []; };
   var cleanEquipmentProfiles = function (rows) { return Array.isArray(rows) ? rows.filter(function (row) { return row && typeof row === 'object'; }) : []; };
   var activeEquipmentProfileId = '';
   var cleanCustomExercises = function (rows) { return Array.isArray(rows) ? rows.filter(function (row) { return row && typeof row === 'object'; }) : []; };
@@ -2061,8 +2067,8 @@ import { cleanLoadIncrementOverrides, equipmentLoadIncrement } from './src/featu
   K.settings = 'mmg.settings.v1';
   K.workoutSchema = 'mmg.workoutSchema.v4';
   K.historySchema = 'mmg.historySchema.v2';
-  [K.fav,K.workout,K.profile,K.meta,K.equipmentProfileActive,K.diary,K.kbju,K.tips,K.coach,K.rest,K.recentSearch,K.recentExercises,K.settings,K.calculatorHistory].forEach(function(key){indexedAppStateKeys[key]=true;});
-  [K.history,K.customExercises,K.equipmentProfiles,K.exercisePreferences,K.nutritionLog,K.plan].forEach(function(key){indexedRepositoryKeys[key]=true;});
+  [K.fav,K.workout,K.profile,K.meta,K.equipmentProfileActive,K.kbju,K.tips,K.coach,K.rest,K.recentSearch,K.recentExercises,K.settings,K.calculatorHistory].forEach(function(key){indexedAppStateKeys[key]=true;});
+  [K.history,K.customExercises,K.equipmentProfiles,K.exercisePreferences,K.nutritionLog,K.diary,K.plan].forEach(function(key){indexedRepositoryKeys[key]=true;});
 
   var DEFAULT_PROFILE = { goal:'', level:'', place:'', days:'', typicalSessionMinutes:'', equipmentAvailability:[], focus:'balanced', limitations:[], recoveryBaseline:'mid', done:false, skipped:false };
 
@@ -2101,7 +2107,7 @@ import { cleanLoadIncrementOverrides, equipmentLoadIncrement } from './src/featu
     }
     return clean;
   }
-  function saveDiary() { store.set(K.diary, JSON.stringify(S.diary.slice(0, 400))); }
+  function saveDiary() { store.set(K.diary, JSON.stringify(cleanMeasurementsFn(S.diary))); }
   function saveTips() { store.set(K.tips, JSON.stringify(S.tips)); }
   function saveSettings() { store.set(K.settings, JSON.stringify(S.settings)); }
   function applyReadability() {
@@ -2146,8 +2152,8 @@ import { cleanLoadIncrementOverrides, equipmentLoadIncrement } from './src/featu
     var fallbackHistory = Array.isArray(h) ? h.filter(function (x) { return x && Array.isArray(x.items); }) : [];
     S.history = Array.isArray(databaseHistory) ? databaseHistory : fallbackHistory;
 
-    var d = store.json(K.diary, []);
-    S.diary = Array.isArray(d) ? d.filter(function (x) { return x && x.date; }).slice(0, 400) : [];
+    var d = historyRepository ? databaseMeasurements : store.json(K.diary, []);
+    S.diary = cleanMeasurementsFn(d);
 
     var kb = store.json(K.kbju, null);
     S.kbjuLast = (kb && typeof kb === 'object' && kb.target) ? kb : null;
@@ -4624,7 +4630,7 @@ import { cleanLoadIncrementOverrides, equipmentLoadIncrement } from './src/featu
         };
       });
       if (!clean.length) { showToast(t('ioNothing')); return; }
-      S.diary = clean.sort(function (a, b) { return a.date < b.date ? 1 : -1; }).slice(0, 400);
+      S.diary = cleanMeasurementsFn(clean.sort(function (a, b) { return a.date < b.date ? 1 : -1; }));
       saveDiary(); renderProgress(); renderDashIfVisible();
       showToast(t('ioImported', { n: clean.length }));
     });
@@ -5988,7 +5994,7 @@ import { cleanLoadIncrementOverrides, equipmentLoadIncrement } from './src/featu
      Correctness -> data integrity -> usability -> accessibility -> performance.
      This layer deliberately preserves the proven V4 business logic and contracts.
      ======================================================================== */
-  var APP_VERSION = '2026.10-r62-i18n-coverage';
+  var APP_VERSION = '2026.10-r63-measurements-store';
   var BACKUP_SCHEMA = 10;
   K.restTimer = 'mmg.restTimer.v2';
   K.lastBackup = 'mmg.lastBackup.v1';
@@ -6141,6 +6147,7 @@ import { cleanLoadIncrementOverrides, equipmentLoadIncrement } from './src/featu
     return validateBackupField(name, raw, {
       exerciseExists: function(id){ return !!BY_ID[id]; }, exerciseLimit: EX.length,
       normalizeWorkoutRecord: normalizeWorkoutRecord, cleanNutritionDays: cleanNutritionDays,
+      cleanMeasurements: cleanMeasurementsFn,
       cleanCalculatorResults: cleanCalculatorResultsFn, cleanLoadIncrementOverrides: cleanLoadIncrementOverrides, cleanCustomExercises: cleanCustomExercises,
       cleanEquipmentProfiles: cleanEquipmentProfiles, cleanExercisePreferences: cleanExercisePreferences,
       restorePlan: restorePlanV7, serializePlan: serialisePlanV7, now: Date.now()
@@ -6297,7 +6304,7 @@ import { cleanLoadIncrementOverrides, equipmentLoadIncrement } from './src/featu
     Object.keys(memoryStore).filter(function(key){return key.indexOf('mmg.recovery.')===0;}).forEach(function(key){store.remove(key);});
     if(storageOk){try{for(var i=window.localStorage.length-1;i>=0;i--){var key=window.localStorage.key(i);if(key&&key.indexOf('mmg.recovery.')===0)window.localStorage.removeItem(key);}}catch(e){}}
     var cleared = historyRepository ? flushAppStateWrites().then(function(){
-      return Promise.all([historyRepository.replaceAll([]), historyRepository.replaceNutritionDays([]), historyRepository.replaceCustomExercises([]), historyRepository.replaceEquipmentProfiles([]), historyRepository.replaceExercisePreferences({}), historyRepository.clearProgram()]);
+      return Promise.all([historyRepository.replaceAll([]), historyRepository.replaceNutritionDays([]), historyRepository.replaceMeasurements([]), historyRepository.replaceCustomExercises([]), historyRepository.replaceEquipmentProfiles([]), historyRepository.replaceExercisePreferences({}), historyRepository.clearProgram()]);
     }).then(function(){return historyRepository.clearUserState();}) : Promise.resolve();
     cleared.then(function(){
       DATA_KEYS.forEach(function(name){var key=K[name];if(!key)return;delete memoryStore[key];if(storageOk){try{window.localStorage.removeItem(key);}catch(e){}}});
@@ -6729,6 +6736,7 @@ import { cleanLoadIncrementOverrides, equipmentLoadIncrement } from './src/featu
       cleanEquipmentProfiles = persistence.cleanEquipmentProfiles;
       cleanIdbExercisePreferences = persistence.cleanExercisePreferences;
       cleanNutritionDays = persistence.cleanNutritionDays;
+      cleanMeasurementsFn = persistence.cleanMeasurements;
       databaseCustomExercises = cleanCustomExercises(store.json(K.customExercises, []));
       databaseEquipmentProfiles = cleanEquipmentProfiles(store.json(K.equipmentProfiles, []));
       historyRepository = await persistence.createHistoryRepository();
@@ -6740,6 +6748,9 @@ import { cleanLoadIncrementOverrides, equipmentLoadIncrement } from './src/featu
       var legacyAppState = {};
       Object.keys(indexedAppStateKeys).forEach(function(key){var value=store.get(key);if(value!==null)legacyAppState[key]=value;});
       databaseAppState = await historyRepository.migrateLegacyUserState(legacyAppState);
+      databaseMeasurements = await historyRepository.migrateLegacyMeasurements(store.json(K.diary, []), K.diary);
+      delete databaseAppState[K.diary];
+      memoryStore[K.diary] = JSON.stringify(databaseMeasurements);
       databaseProgram = await historyRepository.migrateLegacyProgram(store.get(K.plan), K.plan);
       delete databaseAppState[K.plan];
       if (databaseProgram == null) delete memoryStore[K.plan]; else memoryStore[K.plan] = databaseProgram;
@@ -6762,6 +6773,9 @@ import { cleanLoadIncrementOverrides, equipmentLoadIncrement } from './src/featu
       databaseCustomExercises = cleanCustomExercises(store.json(K.customExercises, []));
       databaseEquipmentProfiles = cleanEquipmentProfiles(store.json(K.equipmentProfiles, []));
       databaseExercisePreferences = cleanIdbExercisePreferences(store.json(K.exercisePreferences, {}));
+      var fallbackMeasurements = store.json(K.diary, []), legacyMeasurements = [];
+      try { legacyMeasurements = JSON.parse(databaseAppState[K.diary] || '[]'); } catch (_legacyMeasurementsError) {}
+      databaseMeasurements = cleanMeasurementsFn((Array.isArray(fallbackMeasurements) ? fallbackMeasurements : []).concat(Array.isArray(legacyMeasurements) ? legacyMeasurements : []));
       databaseProgram = store.get(K.plan);
       databaseCalculatorResults = cleanCalculatorResultsFn(store.json(K.calculatorHistory, []));
       indexedAppStateReady = false;

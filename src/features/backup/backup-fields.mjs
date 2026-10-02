@@ -45,7 +45,11 @@ export function validateBackupField(name, raw, adapters = {}) {
     });
   }
   if (name === 'history') return stringify(Array.isArray(value) ? value.filter((item) => item && Array.isArray(item.items)) : []);
-  if (name === 'diary') return stringify(Array.isArray(value) ? value.filter((item) => item && typeof item.date === 'string').slice(0, 400) : []);
+  if (name === 'diary') {
+    if (!Array.isArray(value) || typeof adapters.cleanMeasurements !== 'function') return null;
+    const clean = adapters.cleanMeasurements(value);
+    return clean.length === value.length ? stringify(clean) : null;
+  }
   if (name === 'nutritionLog') {
     if (!Array.isArray(value) || typeof adapters.cleanNutritionDays !== 'function') return null;
     const clean = adapters.cleanNutritionDays(value);
