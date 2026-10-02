@@ -1189,22 +1189,26 @@ test('all three themes resolve coherent tokens, persist and keep library informa
   }
 });
 
-test('visible interface text keeps a readable 12px minimum on every main route', async ({ page }) => {
+test('visible interface text keeps a readable 14px minimum on every main route', async ({ page }) => {
   for (const route of ['home', 'library', 'workout', 'progress', 'program', 'nutrition', 'knowledge', 'tools', 'settings']) {
     await page.goto(`/index.html#${route}`);
     await expect(page.locator('html')).toHaveAttribute('data-route-ready', route);
     await expect(page.locator('#mmg-boot')).toHaveCount(0);
-    const undersized = await page.evaluate(() => Array.from(document.querySelectorAll('body *'))
+    const audit = await page.evaluate(() => ({
+      undersized: Array.from(document.querySelectorAll('body *'))
       .filter((element) => {
-        if (element.children.length || !element.innerText?.trim() || !element.getBoundingClientRect().width) return false;
+        if (element.children.length || !element.innerText?.trim() || !element.getBoundingClientRect().width || element.closest('.sr-only,[aria-hidden="true"]')) return false;
         for (let node = element; node && node !== document.body; node = node.parentElement) {
           const style = getComputedStyle(node);
           if (style.display === 'none' || style.visibility === 'hidden' || Number(style.opacity) === 0) return false;
         }
-        return Number.parseFloat(getComputedStyle(element).fontSize) < 12;
+        return Number.parseFloat(getComputedStyle(element).fontSize) < 14;
       })
-      .map((element) => ({ text: element.innerText.trim().slice(0, 60), className: String(element.className || '') })));
-    expect(undersized, `${route} has visible text below 12px`).toEqual([]);
+      .map((element) => ({ text: element.innerText.trim().slice(0, 60), className: String(element.className || '') })),
+      overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
+    }));
+    expect(audit.undersized, `${route} has visible text below 14px`).toEqual([]);
+    expect(audit.overflow, `${route} has horizontal overflow`).toBe(false);
   }
 });
 

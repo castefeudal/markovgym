@@ -25,7 +25,7 @@ Do not use state colors as decoration. Avoid gold trim, repeated glow, glass eff
 
 ## Typography and spacing
 
-Use the system UI stack already declared in `app.css`. The shared `styles/features/readability.css` layer keeps interface captions and controls at 12 px or larger and reading copy at 14 px or larger; give essential text more room when the layout allows. Keep body text at a readable line height and use tabular numerals for load, reps, time, and measurements. Existing spacing uses a compact 4/8/12/16/24/32 px rhythm. Prefer the existing spacing custom properties and component rules over one off values.
+Use the system UI stack already declared in `app.css`. The shared `styles/features/readability.css` layer keeps visible labels, captions, and controls at 14 px or larger and reading copy at 16 px or larger. Keep body text at a readable line height and use tabular numerals for load, reps, time, and measurements. Existing spacing uses a compact 4/8/12/16/24/32 px rhythm. Prefer the existing spacing custom properties and component rules over one off values.
 
 ## Components and states
 
