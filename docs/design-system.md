@@ -25,7 +25,7 @@ Do not use state colors as decoration. Avoid gold trim, repeated glow, glass eff
 
 ## Typography and spacing
 
-Use the system UI stack already declared in `app.css`. Keep body text at a readable size and line height; use tabular numerals for load, reps, time, and measurements. Existing spacing uses a compact 4/8/12/16/24/32 px rhythm. Prefer the existing spacing custom properties and component rules over one off values.
+Use the system UI stack already declared in `app.css`. The shared `styles/features/readability.css` layer keeps interface captions and controls at 12 px or larger and reading copy at 14 px or larger; give essential text more room when the layout allows. Keep body text at a readable line height and use tabular numerals for load, reps, time, and measurements. Existing spacing uses a compact 4/8/12/16/24/32 px rhythm. Prefer the existing spacing custom properties and component rules over one off values.
 
 ## Components and states
 
@@ -37,7 +37,7 @@ Use the system UI stack already declared in `app.css`. Keep body text at a reada
 
 ## Stylesheet ownership
 
-The generated shell loads the style layers in this order: `styles/tokens.css`, `styles/reset.css`, `styles/base.css`, `styles/components.css`, `styles/layout.css`, `styles/features/legacy-product.css`, `app.css`, the feature sheets, then `lab.css`. This preserves the previous cascade while giving tokens, reset, typography, shared components, layout and feature rules clear homes.
+The generated shell loads the style layers in this order: `styles/tokens.css`, `styles/reset.css`, `styles/base.css`, `styles/components.css`, `styles/layout.css`, `styles/features/legacy-product.css`, `app.css`, the feature sheets, `lab.css`, then the shared readability rules. This preserves the previous cascade while giving tokens, reset, typography, shared components, layout and feature rules clear homes.
 
 `styles/features/legacy-product.css` is a documented migration boundary for older product components. `app.css` currently holds the later presentation and theme overrides; move rules from it into the owning layer only when the resulting cascade is verified. Feature rules live beside their feature markup (`exercise.css`, `program.css`, `workout.css`, `nutrition.css`). Every stylesheet must be linked by the index builder, precached by the service worker, copied by Pages, and covered by artifact-drift checks. The aggregate modular-layer budget prevents this split from becoming unbounded.
 

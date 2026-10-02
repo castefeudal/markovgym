@@ -1,0 +1,80 @@
+/* Readable minimums for real interface copy, labels and controls. */
+:root{
+  --type-min-caption:12px;
+  --type-min-copy:14px;
+}
+
+.tiny{font-size:max(.78rem,12.5px);line-height:1.6}
+.small{font-size:max(.875rem,14px);line-height:1.65}
+small{font-size:max(.75rem,var(--type-min-caption))}
+b,strong{font-size:max(1em,var(--type-min-caption))}
+p,.lede,.note,.v7-next-copy,.theme-choice-copy small{line-height:1.65}
+
+.eyebrow,.hero-panel .eyebrow,
+body[data-v8-returning="true"] .section-head .eyebrow,
+.v10-pulse-head .eyebrow,.v10-balance-head .eyebrow,
+.console-row>legend,.console-opt,.console-progress b,.console-hint,
+.v8-context-side,.v8-context-meta,.v8-context-shortcut,.v8-context-kicker,
+.hero-presets .chip,.filter-fav .tiny,.results-count,.active-chips .chip,
+.filter-btn,.filter-btn span,.filter-btn b,.chip,.meta-tag,.card-meta .meta-tag,
+.btn-sm,.card-actions .btn,.card-actions .btn:first-child,.card-target,
+.card-badge,.card-status,.card-specs span,.results-insights em,
+.filter-group summary,.filter-group summary b,.workout-kpi span,
+.workout-fields label,.intel-metric span,.modal-section-kicker,.modal-kicker,
+.run-tech-cues span,.v7-context-card>span,.v7-command small,
+.theme-choice-copy small,.section-brief-meta span,.form-section-label,
+.v8-more-label,.workout-sub .meta-tag,.v10-plan-status,.prog-axis,
+.v7-home-date,.mobile-app-nav a,.mobile-app-nav button,
+.run-current-inputs label,.workout-progression,.v10-pulse-metrics span,
+.v10-pulse-metrics small,.v10-week-timeline i,.v10-week-timeline span,
+.v10-balance-metrics span,.v10-zone-load b,.v10-zone-load em,
+.v10-plan-progress span,.reading-choice b,.reading-choice small,
+.v7-primary-nav>.v7-nav-link,.nav-group>button,
+.v10-library-quick>span,.v10-library-quick-btn,.wizard-step-status,
+.wizard-summary-item span,.wizard-tab,.wizard-tab b,.v7-wizard-intro .num,
+.mobile-filter-bar .btn,.mobile-filter-bar .mfb-count,
+.qa-s,.input-unit-suffix,.coach-toggle,.history-filters>label,
+.history-filters .history-pr-filter,.run-note-field,.run-set-tools button,
+.nutrition-week-metrics span,.nutrition-trend-metrics span,
+.nutrition-trend-metrics small,.nutrition-log-row span,.nutrition-log-row small,
+.v10-pulse-head .eyebrow,.v10-balance-head .eyebrow,
+.console-row .tiny,.console .tiny{
+  font-size:max(.75rem,var(--type-min-caption))
+}
+.results-insights b{font-size:max(.75rem,var(--type-min-caption))}
+
+.field>label,.v7-wizard-form .field>label,
+#tools label.field>span,#tools .field>label span,
+.history-filters>label,.form-section-label,
+#progress .form-section-label,#nutrition .form-section-label,
+.section-brief-meta span,.v7-setting-card>.small,
+.v7-diagnostics-list dt,.v7-diagnostics-list dd,
+.cnote-a,#coach-lib .cnote-a,#coach-workout .cnote-a,
+#modal .modal-coach-section .cnote-a,
+.kb-t span,#knowledge .kb-t span,.hist-session-note,
+.hist-set-extra,.nutrition-log-row strong{
+  font-size:max(.875rem,var(--type-min-copy));
+  line-height:1.6;
+}
+
+#cmdk-open .cmdk-key{font-size:var(--type-min-caption)}
+#tools small{font-size:var(--type-min-caption)}
+.brand-name span{font-size:var(--type-min-caption);letter-spacing:.2em}
+.hero-stats b{font-size:max(1rem,16px)}
+.form-section-icon{font-size:var(--type-min-caption)}
+.v7-setting-card>.small{grid-column:1;margin-top:3px}
+.v7-setting-actions .reading-choice b{font-size:var(--type-min-caption)}
+.v7-setting-actions .reading-choice small{font-size:var(--type-min-caption);line-height:1.45}
+.kb-cat,#knowledge .kb-cat{font-size:var(--type-min-caption)}
+.kb-load-row span{font-size:max(.875rem,var(--type-min-copy));line-height:1.55}
+.cnote-kicker,#coach-lib .cnote-kicker,#coach-workout .cnote-kicker,
+#modal .modal-coach-section .cnote-kicker{font-size:var(--type-min-caption)}
+.filter-group summary{min-height:40px}
+.v7-session-tools>summary,.cnote-why>summary{font-size:var(--type-min-caption)}
+.v7-plan-wizard .wizard-tab{font-size:var(--type-min-caption)}
+.v7-wizard-intro .num{font-size:var(--type-min-caption)}
+
+@media(max-width:640px){
+  .hero-stats b{font-size:max(.95rem,15px)}
+  .v7-setting-card>.small{grid-column:1}
+}

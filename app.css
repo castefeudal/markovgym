@@ -3009,31 +3009,6 @@ html[data-reading="large"]{font-size:108%}
 .modal-head h2,.gym-tool-card h2,.plan-day-head b{text-wrap:balance}
 p,.lede,.small,.tiny,.note,.v7-next-copy,.theme-choice-copy small{text-wrap:pretty}
 
-/* Raise the information floor: nothing important should look like legal copy. */
-.card-target,.card-badge,.card-specs span,.results-insights em,
-.filter-group summary,.workout-kpi span,.workout-fields label,.intel-metric span,
-.modal-section-kicker,.modal-kicker,.run-tech-cues span,.v8-context-kicker,
-.v7-context-card>span,.v7-command small,.theme-choice-copy small,
-.section-brief-meta span,.form-section-label,.v8-more-label,.workout-sub .meta-tag,
-.v10-plan-status,.prog-axis,.eyebrow,
-.console-row>legend,.console-opt,.console-progress b,.console-hint,
-.v8-context-side,.v8-context-meta,.v8-context-shortcut,.v8-context-kicker,
-.hero-presets .chip,.filter-fav .tiny,.results-count,.active-chips .chip,
-.filter-btn,.chip,.meta-tag,.btn-sm,.card-actions .btn,.card-actions .btn:first-child,.card-status,
-.v7-home-date,.mobile-app-nav a,.mobile-app-nav button,
-.run-current-inputs label,.workout-progression,.v10-pulse-metrics span,
-.v10-pulse-metrics small,.v10-week-timeline i,.v10-week-timeline span,
-.v10-balance-head .eyebrow,.v10-balance-metrics span,.v10-zone-load b,
-.v10-zone-load em,.v10-plan-progress span,.reading-choice b,.reading-choice small,
-.hero-panel .eyebrow,body[data-v8-returning="true"] .section-head .eyebrow,
-.v10-pulse-head .eyebrow,.v10-balance-head .eyebrow,
-#run .run-current-inputs label,.console-row .tiny,.console .tiny{
-  font-size:max(.75rem,12px)
-}
-.tiny{font-size:max(.78rem,12.5px);line-height:1.6}
-.small{font-size:max(.875rem,14px);line-height:1.65}
-.v7-primary-nav>.v7-nav-link,.nav-group>button{font-size:max(.875rem,14px)}
-
 .input,.select,textarea,.btn,.icon-btn{min-height:42px}
 .btn-sm{min-height:38px}
 .filter-btn{font-size:.73rem}

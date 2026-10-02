@@ -1190,6 +1190,25 @@ test('all three themes resolve coherent tokens, persist and keep library informa
   }
 });
 
+test('visible interface text keeps a readable 12px minimum on every main route', async ({ page }) => {
+  for (const route of ['home', 'library', 'workout', 'progress', 'program', 'nutrition', 'knowledge', 'tools', 'settings']) {
+    await page.goto(`/index.html#${route}`);
+    await expect(page.locator('html')).toHaveAttribute('data-route-ready', route);
+    await expect(page.locator('#mmg-boot')).toHaveCount(0);
+    const undersized = await page.evaluate(() => Array.from(document.querySelectorAll('body *'))
+      .filter((element) => {
+        if (element.children.length || !element.innerText?.trim() || !element.getBoundingClientRect().width) return false;
+        for (let node = element; node && node !== document.body; node = node.parentElement) {
+          const style = getComputedStyle(node);
+          if (style.display === 'none' || style.visibility === 'hidden' || Number(style.opacity) === 0) return false;
+        }
+        return Number.parseFloat(getComputedStyle(element).fontSize) < 12;
+      })
+      .map((element) => ({ text: element.innerText.trim().slice(0, 60), className: String(element.className || '') })));
+    expect(undersized, `${route} has visible text below 12px`).toEqual([]);
+  }
+});
+
 
 test('flagship restores saved programme on home and exposes the weekly pulse', async ({ page }) => {
   await page.addInitScript(() => {

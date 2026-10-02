@@ -1,4 +1,4 @@
-const VERSION = '2026.10-r64-readable-type';
+const VERSION = '2026.10-r65-readable-throughout';
 const PREFIX = 'mmg-gym-';
 const SHELL = `${PREFIX}shell-${VERSION}`;
 const MEDIA = `${PREFIX}media-${VERSION}`;
@@ -16,6 +16,7 @@ const PRECACHE = [
   './styles/features/program.css',
   './styles/features/workout.css',
   './styles/features/nutrition.css',
+  './styles/features/readability.css',
   './app.js',
   './src/app/router.mjs',
   './src/features/command-palette/search.mjs',

@@ -1,7 +1,7 @@
 import { readFile, writeFile } from 'node:fs/promises';
 
 const body = await readFile(new URL('../app-body.html', import.meta.url), 'utf8');
-const BUILD_VERSION = '2026.10-r64-readable-type';
+const BUILD_VERSION = '2026.10-r65-readable-throughout';
 const structuredData = {
   '@context': 'https://schema.org',
   '@type': 'SoftwareApplication',
@@ -47,7 +47,7 @@ const bootCss = `
   .mmg-boot-mark { display: grid; grid-template-columns: 42px 1fr; gap: 14px; align-items: center; }
   .mmg-boot-mark svg { width: 42px; height: 42px; }
   .mmg-boot-brand { font: 750 12px/1.25 system-ui, sans-serif; letter-spacing: .11em; }
-  .mmg-boot-brand span { display: block; margin-top: 3px; color: var(--mmg-boot-muted); font-size: 10px; letter-spacing: .22em; }
+  .mmg-boot-brand span { display: block; margin-top: 3px; color: var(--mmg-boot-muted); font-size: 12px; letter-spacing: .2em; }
   .mmg-boot-rail { position: relative; height: 2px; margin: 32px 0 14px; overflow: hidden; background: var(--mmg-boot-line); }
   .mmg-boot-rail::after { content: ""; position: absolute; inset: 0 auto 0 -35%; width: 35%; background: var(--mmg-boot-accent); animation: mmg-boot-measure 1.15s ease-in-out infinite; }
   .mmg-boot-status { margin: 0; color: var(--mmg-boot-muted); font: 520 13px/1.5 system-ui, sans-serif; }
@@ -116,6 +116,7 @@ const index = `<!doctype html>
   <link rel="stylesheet" href="./styles/features/workout.css?v=${BUILD_VERSION}">
   <link rel="stylesheet" href="./styles/features/nutrition.css?v=${BUILD_VERSION}">
   <link rel="stylesheet" href="./lab.css?v=${BUILD_VERSION}">
+  <link rel="stylesheet" href="./styles/features/readability.css?v=${BUILD_VERSION}">
   <style>${bootCss}</style>
   <script type="application/ld+json">${JSON.stringify(structuredData)}</script>
 </head>
