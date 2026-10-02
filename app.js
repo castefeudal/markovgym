@@ -73,6 +73,7 @@ import { cleanLoadIncrementOverrides, equipmentLoadIncrement } from './src/featu
   var storageWarnings = [];
   var lastLocalError = null;
   var historyRepository = null;
+  var exercisePreferenceWrite = Promise.resolve();
   var indexedAppStateKeys = Object.create(null);
   var indexedRepositoryKeys = Object.create(null);
   var indexedAppStateReady = false;
@@ -545,12 +546,17 @@ import { cleanLoadIncrementOverrides, equipmentLoadIncrement } from './src/featu
   function saveExercisePreferences() {
     var serialized = JSON.stringify(S.exercisePreferences);
     store.set(K.exercisePreferences, serialized);
-    if (historyRepository) historyRepository.replaceExercisePreferences(S.exercisePreferences).then(function () {
-      databaseExercisePreferences = cleanIdbExercisePreferences(S.exercisePreferences);
+    if (!historyRepository) return Promise.resolve();
+    var snapshot = cleanIdbExercisePreferences(S.exercisePreferences);
+    exercisePreferenceWrite = exercisePreferenceWrite.catch(function () {}).then(function () {
+      return historyRepository.replaceExercisePreferences(snapshot);
+    }).then(function () {
+      databaseExercisePreferences = snapshot;
     }).catch(function () {
       storageWarnings.push({ key: K.exercisePreferences, type: 'indexeddb-write', at: Date.now() });
       try { if (storageOk) window.localStorage.setItem(K.exercisePreferences, serialized); } catch (_fallbackError) {}
     });
+    return exercisePreferenceWrite;
   }
   function cleanExercisePreferences(value) {
     return normalizeExercisePreferences(value, function(id) { return !!BY_ID[id]; }, EX.length);
@@ -5976,7 +5982,7 @@ import { cleanLoadIncrementOverrides, equipmentLoadIncrement } from './src/featu
      Correctness -> data integrity -> usability -> accessibility -> performance.
      This layer deliberately preserves the proven V4 business logic and contracts.
      ======================================================================== */
-  var APP_VERSION = '2026.10-r69-readable-type-floor';
+  var APP_VERSION = '2026.10-r70-readable-storage-stability';
   var BACKUP_SCHEMA = 10;
   K.restTimer = 'mmg.restTimer.v2';
   K.lastBackup = 'mmg.lastBackup.v1';

@@ -1,4 +1,4 @@
-const VERSION = '2026.10-r69-readable-type-floor';
+const VERSION = '2026.10-r70-readable-storage-stability';
 const PREFIX = 'mmg-gym-';
 const SHELL = `${PREFIX}shell-${VERSION}`;
 const MEDIA = `${PREFIX}media-${VERSION}`;
