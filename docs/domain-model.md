@@ -29,6 +29,7 @@ The browser entry is an ES module. `src/app/router.mjs` is the shared route regi
 | Nutrition calculation | Current macro target calculation and last result. Daily NutritionDay records join by date with body measurements for adaptive expenditure; the Lab requires at least seven paired days and reports coverage, uncertainty, confidence, and its edge-mean smoothing window. |
 | Weight trend | `src/features/progress/weight-trend.mjs` reports the latest scale value, an arithmetic mean of readings in the latest 7 calendar days, a 7-day change against the previous window, a per-week 21-day rate, and measurement coverage. It leaves comparisons blank until each compared window contains at least three measurements; it does not interpolate missing days. |
 | Diary analytics | `src/features/progress/diary-analytics.mjs` calculates dated deltas and averages from finite diary values, sorting records by their dates and allowing the averaging clock to be injected for deterministic checks. |
+| Progress summary | `src/features/progress/summary.mjs` composes the recorded comparison windows and returns a verdict key from pure, explicit goal thresholds. The app shell only maps that key to localized copy and renders the metrics. |
 | Backup field validation | `src/features/backup/backup-fields.mjs` validates the versioned backup envelope and sanitizes each serialized field without browser access. Application adapters provide the exercise catalog, IndexedDB-backed collection cleaners, and plan migration functions; staged import and rollback remain in the app persistence coordinator. |
 | Calculator result | A local result with calculator id, timestamp, submitted inputs, concise output, formula version, and evidence reference when available. The most recent 500 records live in IndexedDB `userState` and are included in version 10 backups. |
 
@@ -60,4 +61,4 @@ Developer diagnostics expose schema and migration state, local record counts, cu
 
 ## Planned model boundaries
 
-The selected programme block is part of the versioned active-program record. ProgressSignal is still derived in feature logic rather than stored as a versioned domain record. CalculatorResult records are persisted in the existing `userState` collection and included in schema v10 backups; move them to a dedicated collection only with a versioned migration.
+The selected programme block is part of the versioned active-program record. ProgressSignal is derived by the pure progress summary and weight-trend modules rather than stored as a second, drift-prone aggregate. CalculatorResult records are persisted in the existing `userState` collection and included in schema v10 backups; move them to a dedicated collection only with a versioned migration.

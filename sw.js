@@ -1,4 +1,4 @@
-const VERSION = '2026.10-r66-semantic-theme-tokens';
+const VERSION = '2026.10-r67-progress-summary-domain';
 const PREFIX = 'mmg-gym-';
 const SHELL = `${PREFIX}shell-${VERSION}`;
 const MEDIA = `${PREFIX}media-${VERSION}`;
@@ -49,6 +49,7 @@ const PRECACHE = [
   './src/features/nutrition/nutrition-analytics.mjs',
   './src/features/progress/weight-trend.mjs',
   './src/features/progress/diary-analytics.mjs',
+  './src/features/progress/summary.mjs',
   './data/content.json',
   './data/exercises-compact.json',
   './manifest.webmanifest',

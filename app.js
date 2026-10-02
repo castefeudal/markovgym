@@ -20,6 +20,7 @@ import { progressionTrackingType } from './src/features/workout/progression-adap
 import { cleanExercisePreferences as normalizeExercisePreferences, exercisePreference as getExercisePreference, exercisePreferenceScore as rankByPreference, EXERCISE_PREFERENCE_VALUES } from './src/features/exercise/preferences.mjs';
 import { buildWeeklyPlan } from './src/features/program/plan-builder.mjs';
 import { diaryAverage, diaryDelta as calculateDiaryDelta } from './src/features/progress/diary-analytics.mjs';
+import { progressSummary, progressVerdictKey } from './src/features/progress/summary.mjs';
 import { backupEnvelopeError, parseBackupJson, validateBackupField } from './src/features/backup/backup-fields.mjs';
 import { cleanLoadIncrementOverrides, equipmentLoadIncrement } from './src/features/workout/equipment-increments.mjs';
 
@@ -3978,9 +3979,10 @@ import { cleanLoadIncrementOverrides, equipmentLoadIncrement } from './src/featu
       return;
     }
 
-    var d7 = diaryDelta('weight', 7), d14 = diaryDelta('weight', 14), d30 = diaryDelta('weight', 30);
-    var waist30 = diaryDelta('waist', 30);
-    var avg7 = diaryAvg('weight', 7);
+    var summary = progressSummary(S.diary, S.profile.goal);
+    var d7 = summary.weightDelta7Kg, d14 = summary.weightDelta14Kg, d30 = summary.weightDelta30Kg;
+    var waist30 = summary.waistDelta30Cm;
+    var avg7 = summary.averageWeight7Kg;
     var fmtD = function (v, unit) {
       if (v === null) return '—';
       return (v > 0 ? '+' : '') + v.toFixed(1) + ' ' + unit;
@@ -3999,7 +4001,7 @@ import { cleanLoadIncrementOverrides, equipmentLoadIncrement } from './src/featu
         '<div class="kpi"><span>' + esc(t('diary30')) + '</span><b>' + esc(fmtD(d30, t('kg'))) + '</b></div>' +
         '<div class="kpi"><span>' + esc(t('diaryWaist')) + '</span><b>' + esc(fmtD(waist30, t('cm'))) + '</b></div>' +
       '</div>' +
-      '<p class="v8-muted-copy">' + esc(diaryVerdict(d14, waist30)) + '</p>' +
+      '<p class="v8-muted-copy">' + esc(t(summary.verdictKey)) + '</p>' +
       progressCoachNoteV10() +
       '<div class="prog-log">' + S.diary.slice(0, 30).map(function (d) {
         var bits = [];
@@ -4018,18 +4020,7 @@ import { cleanLoadIncrementOverrides, equipmentLoadIncrement } from './src/featu
   }
 
   function diaryVerdict(d14, waist30) {
-    if (d14 === null) return t('diaryNoTrend');
-    var goal = S.profile.goal;
-    if (goal === 'fat') {
-      if (d14 < -0.2) return t('diaryFatOk');
-      if (waist30 !== null && waist30 < -1) return t('diaryFatWaist');
-      return t('diaryFatFlat');
-    }
-    if (goal === 'muscle' || goal === 'strength') {
-      if (d14 > 0.1) return t('diaryGainOk');
-      return t('diaryGainFlat');
-    }
-    return t('diaryNeutral');
+    return t(progressVerdictKey(S.profile.goal, d14, waist30));
   }
 
   /* ---------- 16.8 БАЗА ЗНАНИЙ ------------------------------------------- */
@@ -5994,7 +5985,7 @@ import { cleanLoadIncrementOverrides, equipmentLoadIncrement } from './src/featu
      Correctness -> data integrity -> usability -> accessibility -> performance.
      This layer deliberately preserves the proven V4 business logic and contracts.
      ======================================================================== */
-  var APP_VERSION = '2026.10-r66-semantic-theme-tokens';
+  var APP_VERSION = '2026.10-r67-progress-summary-domain';
   var BACKUP_SCHEMA = 10;
   K.restTimer = 'mmg.restTimer.v2';
   K.lastBackup = 'mmg.lastBackup.v1';
