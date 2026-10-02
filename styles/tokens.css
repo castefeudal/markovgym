@@ -9,8 +9,8 @@
   --font-display:"Unbounded","Manrope",system-ui,sans-serif;
   --font-ui:"Manrope",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
 
-  --step--2:clamp(.688rem,.66rem + .12vw,.75rem);
-  --step--1:clamp(.813rem,.78rem + .15vw,.875rem);
+  --step--2:clamp(.75rem,.75rem + .08vw,.8125rem);
+  --step--1:clamp(.875rem,.86rem + .12vw,.9375rem);
   --step-0:clamp(.938rem,.91rem + .14vw,1rem);
   --step-1:clamp(1.063rem,1.01rem + .26vw,1.188rem);
   --step-2:clamp(1.25rem,1.15rem + .5vw,1.5rem);
@@ -107,4 +107,3 @@ html[data-theme="ivory"]{
   --shadow-3:0 28px 60px -28px rgba(21,23,26,.34);
   --media-bg:#EFECE5;
 }
-

@@ -700,13 +700,13 @@ h1,h2{font-family:var(--font-display)}
 .section-alt{background:var(--v8-workspace);border-color:var(--v8-line)}
 .eyebrow{
   gap:10px;margin-bottom:10px;color:var(--v8-brass);
-  font-family:var(--font-ui);font-size:.66rem;font-weight:790;letter-spacing:.17em;
+  font-family:var(--font-ui);font-size:.78rem;font-weight:790;letter-spacing:.12em;
 }
 .eyebrow::before{width:25px;height:5px;opacity:.72}
 .lede,.section-head p{color:var(--v8-text-2);line-height:1.62}
 .num{font-variant-numeric:tabular-nums lining-nums;font-feature-settings:"tnum" 1,"lnum" 1}
-.tiny{font-size:.7rem;line-height:1.45;color:var(--v8-text-3)}
-.small{font-size:.82rem;line-height:1.55;color:var(--v8-text-2)}
+.tiny{font-size:.78rem;line-height:1.5;color:var(--v8-text-3)}
+.small{font-size:.875rem;line-height:1.6;color:var(--v8-text-2)}
 body [hidden]{display:none}
 .hero-grid>*,.hero-main,.hero-panel,.hero-search,.hero-presets,.v7-home-grid>*,.v7-home-context>*,.library-layout>*,.workout-layout>*,.tool-layout>*{min-width:0;max-width:100%}
 
@@ -748,10 +748,10 @@ body [hidden]{display:none}
 .brand-name b{font-size:13px;letter-spacing:.035em}
 .brand-name span{font-size:8px;letter-spacing:.34em}
 .v7-primary-nav{gap:1px}
-.v7-primary-nav>.v7-nav-link{padding:8px 10px;border-radius:7px;font-size:.77rem;font-weight:660;color:var(--v8-text-2)}
+.v7-primary-nav>.v7-nav-link{padding:8px 10px;border-radius:7px;font-size:.875rem;font-weight:660;color:var(--v8-text-2)}
 .v7-primary-nav>.v7-nav-link:hover{background:var(--v8-surface);color:var(--v8-text)}
 .v7-primary-nav>.v7-nav-link[aria-current="page"]{background:transparent;color:var(--v8-text);box-shadow:inset 0 -2px 0 var(--v8-signal)}
-.nav-group>button{font-size:.77rem;color:var(--v8-text-2)}
+.nav-group>button{font-size:.875rem;color:var(--v8-text-2)}
 .nav-menu{border-radius:var(--v8-radius-md);border-color:var(--v8-line-strong);background:var(--v8-overlay);box-shadow:var(--v8-shadow-overlay)}
 .nav-menu a{border-radius:8px}
 .nav-menu a:hover{background:var(--v8-surface)}
@@ -789,12 +789,12 @@ body[data-v8-returning="true"] .v8-context-bar{
 }
 .v8-context-inner{max-width:var(--v8-app-max);min-height:var(--v8-context-h);margin-inline:auto;padding-inline:var(--v8-gutter);display:flex;align-items:center;justify-content:space-between;gap:18px}
 .v8-context-copy{display:flex;align-items:baseline;gap:12px;min-width:0}
-.v8-context-kicker{font-size:.61rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--v8-brass);white-space:nowrap}
+.v8-context-kicker{font-size:.75rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--v8-brass);white-space:nowrap}
 .v8-context-title{font-size:.86rem;font-weight:760;color:var(--v8-text);white-space:nowrap}
-.v8-context-meta{font-size:.7rem;color:var(--v8-text-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.v8-context-side{display:flex;align-items:center;gap:12px;flex:none;color:var(--v8-text-3);font-size:.66rem}
+.v8-context-meta{font-size:.8rem;color:var(--v8-text-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.v8-context-side{display:flex;align-items:center;gap:12px;flex:none;color:var(--v8-text-3);font-size:.78rem}
 .v8-context-local{display:inline-flex;align-items:center;gap:7px}.v8-context-local::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--color-success)}
-.v8-context-shortcut{padding:3px 7px;border:1px solid var(--v8-line);border-radius:6px;font-size:.61rem;color:var(--v8-text-3)}
+.v8-context-shortcut{padding:3px 7px;border:1px solid var(--v8-line);border-radius:6px;font-size:.75rem;color:var(--v8-text-3)}
 
 /* 05. ROUTE RHYTHM / HEADERS ------------------------------------------------ */
 body[data-v7-route] main{min-height:calc(100dvh - var(--v8-header-h))}
@@ -1931,8 +1931,8 @@ html[data-theme="obsidian"]{
   --v8-signal-hi:#b8d2fb;
   --v8-signal-soft:rgba(143,184,247,.105);
   --v8-text:#f5f7fa;
-  --v8-text-2:#b5beca;
-  --v8-text-3:#818c9a;
+  --v8-text-2:#c4ccd6;
+  --v8-text-3:#a3adba;
 
   --color-bg-primary:var(--v8-canvas);
   --color-bg-secondary:var(--v8-workspace);
@@ -2327,8 +2327,8 @@ html[data-theme="obsidian"]{
   --v8-signal-hi:#b8d4ff;
   --v8-signal-soft:rgba(134,182,255,.11);
   --v8-text:#f6f8fb;
-  --v8-text-2:#b9c2ce;
-  --v8-text-3:#84909f;
+  --v8-text-2:#c4ccd6;
+  --v8-text-3:#a3adba;
   --bg-canvas:var(--v8-canvas);
   --bg-surface:var(--v8-surface);
   --bg-elevated:var(--v8-raised);
@@ -2382,8 +2382,8 @@ html[data-theme="soft"]{
   --v8-signal-hi:#285f9f;
   --v8-signal-soft:rgba(63,114,181,.095);
   --v8-text:#172330;
-  --v8-text-2:#526171;
-  --v8-text-3:#5d6d7e;
+  --v8-text-2:#465665;
+  --v8-text-3:#4b5b6d;
   --bg-canvas:var(--v8-canvas);
   --bg-surface:var(--v8-surface);
   --bg-elevated:var(--v8-raised);
@@ -2437,8 +2437,8 @@ html[data-theme="ivory"]{
   --v8-signal-hi:#365f88;
   --v8-signal-soft:rgba(79,113,151,.085);
   --v8-text:#1a1e23;
-  --v8-text-2:#585f68;
-  --v8-text-3:#68717b;
+  --v8-text-2:#4f5761;
+  --v8-text-3:#535e6a;
   --bg-canvas:var(--v8-canvas);
   --bg-surface:var(--v8-surface);
   --bg-elevated:var(--v8-raised);
@@ -3015,9 +3015,24 @@ p,.lede,.small,.tiny,.note,.v7-next-copy,.theme-choice-copy small{text-wrap:pret
 .modal-section-kicker,.modal-kicker,.run-tech-cues span,.v8-context-kicker,
 .v7-context-card>span,.v7-command small,.theme-choice-copy small,
 .section-brief-meta span,.form-section-label,.v8-more-label,.workout-sub .meta-tag,
-.v10-plan-status,.prog-axis{font-size:max(.64rem,10.25px)}
-.tiny{font-size:max(.69rem,11px)}
-.small{font-size:max(.78rem,12.5px)}
+.v10-plan-status,.prog-axis,.eyebrow,
+.console-row>legend,.console-opt,.console-progress b,.console-hint,
+.v8-context-side,.v8-context-meta,.v8-context-shortcut,.v8-context-kicker,
+.hero-presets .chip,.filter-fav .tiny,.results-count,.active-chips .chip,
+.filter-btn,.chip,.meta-tag,.btn-sm,.card-actions .btn,.card-actions .btn:first-child,.card-status,
+.v7-home-date,.mobile-app-nav a,.mobile-app-nav button,
+.run-current-inputs label,.workout-progression,.v10-pulse-metrics span,
+.v10-pulse-metrics small,.v10-week-timeline i,.v10-week-timeline span,
+.v10-balance-head .eyebrow,.v10-balance-metrics span,.v10-zone-load b,
+.v10-zone-load em,.v10-plan-progress span,.reading-choice b,.reading-choice small,
+.hero-panel .eyebrow,body[data-v8-returning="true"] .section-head .eyebrow,
+.v10-pulse-head .eyebrow,.v10-balance-head .eyebrow,
+#run .run-current-inputs label,.console-row .tiny,.console .tiny{
+  font-size:max(.75rem,12px)
+}
+.tiny{font-size:max(.78rem,12.5px);line-height:1.6}
+.small{font-size:max(.875rem,14px);line-height:1.65}
+.v7-primary-nav>.v7-nav-link,.nav-group>button{font-size:max(.875rem,14px)}
 
 .input,.select,textarea,.btn,.icon-btn{min-height:42px}
 .btn-sm{min-height:38px}

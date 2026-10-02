@@ -1147,12 +1147,29 @@ test('all three themes resolve coherent tokens, persist and keep library informa
     const resolved = await page.evaluate(() => {
       const root = getComputedStyle(document.documentElement);
       const card = getComputedStyle(document.querySelector('#grid .card'));
+      const luminance = value => {
+        const rgb = value.match(/[\d.]+/g).slice(0, 3).map(channel => {
+          const normalized = Number(channel) / 255;
+          return normalized <= 0.04045 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4;
+        });
+        return rgb[0] * 0.2126 + rgb[1] * 0.7152 + rgb[2] * 0.0722;
+      };
+      const muted = getComputedStyle(document.documentElement).getPropertyValue('--v8-text-3').trim();
+      const surface = getComputedStyle(document.documentElement).getPropertyValue('--v8-surface').trim();
+      const contrast = (left, right) => {
+        const a = luminance(left.startsWith('#') ? `rgb(${left.match(/[\da-f]{2}/gi).map(part => parseInt(part, 16)).join(',')})` : left);
+        const b = luminance(right.startsWith('#') ? `rgb(${right.match(/[\da-f]{2}/gi).map(part => parseInt(part, 16)).join(',')})` : right);
+        return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+      };
       return {
         canvas: root.getPropertyValue('--v8-canvas').trim().toLowerCase(),
         signal: root.getPropertyValue('--v8-signal').trim().toLowerCase(),
         scheme: root.colorScheme,
         cardBackground: card.backgroundImage + ' ' + card.backgroundColor,
         cardText: getComputedStyle(document.querySelector('#grid .card-title')).color,
+        cardTargetFont: Number.parseFloat(getComputedStyle(document.querySelector('#grid .card-target')).fontSize),
+        cardMetaFont: Number.parseFloat(getComputedStyle(document.querySelector('#grid .card-specs span')).fontSize),
+        mutedContrast: contrast(muted, surface),
         insightCount: document.querySelectorAll('#results-insights > span').length,
         cardSpecs: document.querySelectorAll('#grid .card-specs span').length,
         stored: localStorage.getItem('mmg.theme.v2'),
@@ -1165,6 +1182,9 @@ test('all three themes resolve coherent tokens, persist and keep library informa
     expect(resolved.stored).toBe(spec.theme);
     expect(resolved.insightCount).toBe(4);
     expect(resolved.cardSpecs).toBeGreaterThanOrEqual(2);
+    expect(resolved.cardTargetFont).toBeGreaterThanOrEqual(12);
+    expect(resolved.cardMetaFont).toBeGreaterThanOrEqual(12);
+    expect(resolved.mutedContrast).toBeGreaterThanOrEqual(4.5);
     expect(resolved.cardBackground).not.toBe('');
     expect(resolved.cardText).not.toBe('');
   }

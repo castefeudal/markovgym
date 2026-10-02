@@ -1,4 +1,4 @@
-const VERSION = '2026.10-r63-measurements-store';
+const VERSION = '2026.10-r64-readable-type';
 const PREFIX = 'mmg-gym-';
 const SHELL = `${PREFIX}shell-${VERSION}`;
 const MEDIA = `${PREFIX}media-${VERSION}`;
