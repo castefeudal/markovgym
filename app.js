@@ -21,6 +21,7 @@ import { cleanExercisePreferences as normalizeExercisePreferences, exercisePrefe
 import { buildWeeklyPlan } from './src/features/program/plan-builder.mjs';
 import { diaryAverage, diaryDelta as calculateDiaryDelta } from './src/features/progress/diary-analytics.mjs';
 import { progressSummary, progressVerdictKey } from './src/features/progress/summary.mjs';
+import { progressChartModel } from './src/features/progress/chart-model.mjs';
 import { backupEnvelopeError, parseBackupJson, validateBackupField } from './src/features/backup/backup-fields.mjs';
 import { cleanLoadIncrementOverrides, equipmentLoadIncrement } from './src/features/workout/equipment-increments.mjs';
 
@@ -3944,30 +3945,20 @@ import { cleanLoadIncrementOverrides, equipmentLoadIncrement } from './src/featu
       sleep:{unit:t('hrs'), digits:1, label:S.lang==='en'?'Sleep':'Сон'}
     }[progressMetric] || {unit:t('kg'),digits:1,label:S.lang==='en'?'Weight':'Вес'};
     var field = progressMetric;
-    var pts = S.diary.filter(function(d){return typeof d[field] === 'number' && isFinite(d[field]);}).slice(0,60).reverse();
-    if (pts.length < 2) return '<div class="v10-chart-empty"><b>'+esc(cfg.label)+'</b><p class="tiny">'+esc(S.lang==='en'?'Add at least two entries to see a trend.':'Добавь минимум две записи, чтобы увидеть динамику.')+'</p></div>';
+    var model = progressChartModel(S.diary, field);
+    if (model.status !== 'ready') return '<div class="v10-chart-empty"><b>'+esc(cfg.label)+'</b><p class="tiny">'+esc(S.lang==='en'?'Add at least two entries to see a trend.':'Добавь минимум две записи, чтобы увидеть динамику.')+'</p></div>';
 
-    var W=560,H=200,PADL=42,PADR=10,PADT=14,PADB=24;
-    var values=pts.map(function(p){return p[field];});
-    var min=Math.min.apply(null,values),max=Math.max.apply(null,values);
-    var floor = field==='sleep' ? .5 : 1;
-    if(max-min<floor){max=max+floor/2;min=min-floor/2;}
-    var pad=(max-min)*.12;min-=pad;max+=pad;
-    var x=function(i){return PADL+(i/(pts.length-1))*(W-PADL-PADR);};
-    var y=function(v){return PADT+(1-(v-min)/(max-min))*(H-PADT-PADB);};
-    var line=pts.map(function(p,i){return(i?'L':'M')+x(i).toFixed(1)+' '+y(p[field]).toFixed(1);}).join(' ');
-    var avg=pts.map(function(_,i){var from=Math.max(0,i-6),slice=values.slice(from,i+1);return slice.reduce(function(a,b){return a+b;},0)/slice.length;});
-    var avgLine=avg.map(function(v,i){return(i?'L':'M')+x(i).toFixed(1)+' '+y(v).toFixed(1);}).join(' ');
+    var W=model.width,H=model.height,PADL=model.padding.left,PADR=model.padding.right;
     var grid='',labels='';
-    for(var g=0;g<=3;g++){
-      var val=min+((max-min)*g)/3,yy=y(val).toFixed(1);
+    model.ticks.forEach(function(tick){
+      var yy=tick.y.toFixed(1);
       grid+='<line class="prog-grid" x1="'+PADL+'" y1="'+yy+'" x2="'+(W-PADR)+'" y2="'+yy+'"/>';
-      labels+='<text class="prog-axis" x="4" y="'+(Number(yy)+3.5).toFixed(1)+'">'+val.toFixed(cfg.digits)+'</text>';
-    }
-    var first=pts[0].date.slice(5),last=pts[pts.length-1].date.slice(5);
+      labels+='<text class="prog-axis" x="4" y="'+tick.labelY.toFixed(1)+'">'+tick.value.toFixed(cfg.digits)+'</text>';
+    });
+    var first=model.firstDate.slice(5),last=model.lastDate.slice(5);
     labels+='<text class="prog-axis" x="'+PADL+'" y="'+(H-6)+'">'+esc(first)+'</text><text class="prog-axis" x="'+(W-PADR)+'" y="'+(H-6)+'" text-anchor="end">'+esc(last)+'</text>';
-    var dots=pts.map(function(p,i){return'<circle class="prog-dot" cx="'+x(i).toFixed(1)+'" cy="'+y(p[field]).toFixed(1)+'" r="3"><title>'+esc(p.date+' · '+p[field].toFixed(cfg.digits)+' '+cfg.unit)+'</title></circle>';}).join('');
-    return '<div class="prog-chart"><svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(cfg.label+' · '+pts.length)+'">'+grid+labels+'<path class="prog-avg" d="'+avgLine+'"/><path class="prog-line" d="'+line+'"/>'+dots+'</svg><p class="tiny v8-chart-legend">'+esc(cfg.label+' · '+(S.lang==='en'?'solid = entries, dashed = rolling average':'сплошная = записи, пунктир = скользящее среднее'))+'</p></div>';
+    var dots=model.points.map(function(point){return'<circle class="prog-dot" cx="'+point.x.toFixed(1)+'" cy="'+point.y.toFixed(1)+'" r="3"><title>'+esc(point.date+' · '+point.value.toFixed(cfg.digits)+' '+cfg.unit)+'</title></circle>';}).join('');
+    return '<div class="prog-chart"><svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(cfg.label+' · '+model.count)+'">'+grid+labels+'<path class="prog-avg" d="'+model.averagePath+'"/><path class="prog-line" d="'+model.linePath+'"/>'+dots+'</svg><p class="tiny v8-chart-legend">'+esc(cfg.label+' · '+(S.lang==='en'?'solid = entries, dashed = rolling average':'сплошная = записи, пунктир = скользящее среднее'))+'</p></div>';
   }
 
   function renderProgress() {
@@ -5985,7 +5976,7 @@ import { cleanLoadIncrementOverrides, equipmentLoadIncrement } from './src/featu
      Correctness -> data integrity -> usability -> accessibility -> performance.
      This layer deliberately preserves the proven V4 business logic and contracts.
      ======================================================================== */
-  var APP_VERSION = '2026.10-r67-progress-summary-domain';
+  var APP_VERSION = '2026.10-r68-progress-chart-model';
   var BACKUP_SCHEMA = 10;
   K.restTimer = 'mmg.restTimer.v2';
   K.lastBackup = 'mmg.lastBackup.v1';
