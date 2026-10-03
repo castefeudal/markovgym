@@ -22,6 +22,7 @@ import { buildWeeklyPlan } from './src/features/program/plan-builder.mjs';
 import { diaryAverage, diaryDelta as calculateDiaryDelta } from './src/features/progress/diary-analytics.mjs';
 import { progressSummary, progressVerdictKey } from './src/features/progress/summary.mjs';
 import { progressChartModel } from './src/features/progress/chart-model.mjs';
+import { renderProgressChart } from './src/features/progress/chart-view.mjs';
 import { backupEnvelopeError, parseBackupJson, validateBackupField } from './src/features/backup/backup-fields.mjs';
 import { cleanLoadIncrementOverrides, equipmentLoadIncrement } from './src/features/workout/equipment-increments.mjs';
 
@@ -3952,19 +3953,13 @@ import { cleanLoadIncrementOverrides, equipmentLoadIncrement } from './src/featu
     }[progressMetric] || {unit:t('kg'),digits:1,label:S.lang==='en'?'Weight':'Вес'};
     var field = progressMetric;
     var model = progressChartModel(S.diary, field);
-    if (model.status !== 'ready') return '<div class="v10-chart-empty"><b>'+esc(cfg.label)+'</b><p class="tiny">'+esc(S.lang==='en'?'Add at least two entries to see a trend.':'Добавь минимум две записи, чтобы увидеть динамику.')+'</p></div>';
-
-    var W=model.width,H=model.height,PADL=model.padding.left,PADR=model.padding.right;
-    var grid='',labels='';
-    model.ticks.forEach(function(tick){
-      var yy=tick.y.toFixed(1);
-      grid+='<line class="prog-grid" x1="'+PADL+'" y1="'+yy+'" x2="'+(W-PADR)+'" y2="'+yy+'"/>';
-      labels+='<text class="prog-axis" x="4" y="'+tick.labelY.toFixed(1)+'">'+tick.value.toFixed(cfg.digits)+'</text>';
+    return renderProgressChart(model, {
+      label: cfg.label,
+      unit: cfg.unit,
+      digits: cfg.digits,
+      emptyText: S.lang==='en'?'Add at least two entries to see a trend.':'Добавь минимум две записи, чтобы увидеть динамику.',
+      legendText: S.lang==='en'?'solid = entries, dashed = rolling average':'сплошная = записи, пунктир = скользящее среднее',
     });
-    var first=model.firstDate.slice(5),last=model.lastDate.slice(5);
-    labels+='<text class="prog-axis" x="'+PADL+'" y="'+(H-6)+'">'+esc(first)+'</text><text class="prog-axis" x="'+(W-PADR)+'" y="'+(H-6)+'" text-anchor="end">'+esc(last)+'</text>';
-    var dots=model.points.map(function(point){return'<circle class="prog-dot" cx="'+point.x.toFixed(1)+'" cy="'+point.y.toFixed(1)+'" r="3"><title>'+esc(point.date+' · '+point.value.toFixed(cfg.digits)+' '+cfg.unit)+'</title></circle>';}).join('');
-    return '<div class="prog-chart"><svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(cfg.label+' · '+model.count)+'">'+grid+labels+'<path class="prog-avg" d="'+model.averagePath+'"/><path class="prog-line" d="'+model.linePath+'"/>'+dots+'</svg><p class="tiny v8-chart-legend">'+esc(cfg.label+' · '+(S.lang==='en'?'solid = entries, dashed = rolling average':'сплошная = записи, пунктир = скользящее среднее'))+'</p></div>';
   }
 
   function renderProgress() {
@@ -5982,7 +5977,7 @@ import { cleanLoadIncrementOverrides, equipmentLoadIncrement } from './src/featu
      Correctness -> data integrity -> usability -> accessibility -> performance.
      This layer deliberately preserves the proven V4 business logic and contracts.
      ======================================================================== */
-  var APP_VERSION = '2026.10-r70-readable-storage-stability';
+  var APP_VERSION = '2026.10-r71-progress-chart-view';
   var BACKUP_SCHEMA = 10;
   K.restTimer = 'mmg.restTimer.v2';
   K.lastBackup = 'mmg.lastBackup.v1';

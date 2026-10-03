@@ -1,7 +1,7 @@
 import { readFile, writeFile } from 'node:fs/promises';
 
 const body = await readFile(new URL('../app-body.html', import.meta.url), 'utf8');
-const BUILD_VERSION = '2026.10-r70-readable-storage-stability';
+const BUILD_VERSION = '2026.10-r71-progress-chart-view';
 const structuredData = {
   '@context': 'https://schema.org',
   '@type': 'SoftwareApplication',

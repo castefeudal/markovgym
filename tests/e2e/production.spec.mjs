@@ -1153,16 +1153,16 @@ test('all three themes resolve coherent tokens, persist and keep library informa
         });
         return rgb[0] * 0.2126 + rgb[1] * 0.7152 + rgb[2] * 0.0722;
       };
-      const muted = getComputedStyle(document.documentElement).getPropertyValue('--v8-text-3').trim();
-      const surface = getComputedStyle(document.documentElement).getPropertyValue('--v8-surface').trim();
+      const muted = root.getPropertyValue('--text-muted').trim();
+      const surface = root.getPropertyValue('--bg-surface').trim();
       const contrast = (left, right) => {
         const a = luminance(left.startsWith('#') ? `rgb(${left.match(/[\da-f]{2}/gi).map(part => parseInt(part, 16)).join(',')})` : left);
         const b = luminance(right.startsWith('#') ? `rgb(${right.match(/[\da-f]{2}/gi).map(part => parseInt(part, 16)).join(',')})` : right);
         return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
       };
       return {
-        canvas: root.getPropertyValue('--v8-canvas').trim().toLowerCase(),
-        signal: root.getPropertyValue('--v8-signal').trim().toLowerCase(),
+        canvas: root.getPropertyValue('--bg-canvas').trim().toLowerCase(),
+        signal: root.getPropertyValue('--accent').trim().toLowerCase(),
         scheme: root.colorScheme,
         cardBackground: card.backgroundImage + ' ' + card.backgroundColor,
         cardText: getComputedStyle(document.querySelector('#grid .card-title')).color,

@@ -1,4 +1,4 @@
-const VERSION = '2026.10-r70-readable-storage-stability';
+const VERSION = '2026.10-r71-progress-chart-view';
 const PREFIX = 'mmg-gym-';
 const SHELL = `${PREFIX}shell-${VERSION}`;
 const MEDIA = `${PREFIX}media-${VERSION}`;
@@ -51,6 +51,7 @@ const PRECACHE = [
   './src/features/progress/diary-analytics.mjs',
   './src/features/progress/summary.mjs',
   './src/features/progress/chart-model.mjs',
+  './src/features/progress/chart-view.mjs',
   './data/content.json',
   './data/exercises-compact.json',
   './manifest.webmanifest',
