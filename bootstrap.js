@@ -94,9 +94,9 @@ import { normalizeRouteHash, subscribeToHashChanges } from './src/app/router.mjs
     var bar = document.createElement('div');
     bar.id = 'mmg-update';
     bar.setAttribute('role', 'status');
-    bar.style.cssText = 'position:fixed;left:50%;bottom:max(16px,env(safe-area-inset-bottom));z-index:11000;transform:translateX(-50%);display:flex;align-items:center;gap:12px;width:min(calc(100% - 24px),520px);padding:12px 14px;border:1px solid rgba(134,182,255,.32);border-radius:14px;background:#111820;color:#f6f8fb;box-shadow:0 18px 50px rgba(0,0,0,.28);font:500 14px/1.5 system-ui,sans-serif;pointer-events:none';
-    bar.innerHTML = '<span style="flex:1">Доступна новая версия MARKOV MADE GYM.</span><button type="button" style="min-height:40px;padding:0 14px;border:0;border-radius:10px;background:#86b6ff;color:#07101b;font:700 14px system-ui,sans-serif;cursor:pointer">Обновить</button>';
-    bar.querySelector('button').style.pointerEvents = 'auto';
+    bar.className = 'mmg-update';
+    var english = document.documentElement.lang === 'en';
+    bar.innerHTML = '<span>' + (english ? 'A new MARKOV MADE GYM version is ready.' : 'Доступна новая версия MARKOV MADE GYM.') + '</span><button type="button" class="btn btn-primary btn-sm">' + (english ? 'Update' : 'Обновить') + '</button>';
     bar.querySelector('button').addEventListener('click', function () {
       var waiting = registration.waiting;
       if (waiting) {

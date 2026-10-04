@@ -1,7 +1,6 @@
 import { readFile, writeFile } from 'node:fs/promises';
 
-const body = await readFile(new URL('../app-body.html', import.meta.url), 'utf8');
-const BUILD_VERSION = '2026.10-r71-progress-chart-view';
+const BUILD_VERSION = '2026.10-r72-fitness-os';
 const structuredData = {
   '@context': 'https://schema.org',
   '@type': 'SoftwareApplication',
@@ -104,19 +103,9 @@ const index = `<!doctype html>
     } catch (_) {}
   })();
   </script>
-  <link rel="stylesheet" href="./styles/tokens.css?v=${BUILD_VERSION}">
-  <link rel="stylesheet" href="./styles/reset.css?v=${BUILD_VERSION}">
-  <link rel="stylesheet" href="./styles/base.css?v=${BUILD_VERSION}">
-  <link rel="stylesheet" href="./styles/components.css?v=${BUILD_VERSION}">
-  <link rel="stylesheet" href="./styles/layout.css?v=${BUILD_VERSION}">
-  <link rel="stylesheet" href="./styles/features/legacy-product.css?v=${BUILD_VERSION}">
   <link rel="stylesheet" href="./app.css?v=${BUILD_VERSION}">
-  <link rel="stylesheet" href="./styles/features/exercise.css?v=${BUILD_VERSION}">
-  <link rel="stylesheet" href="./styles/features/program.css?v=${BUILD_VERSION}">
-  <link rel="stylesheet" href="./styles/features/workout.css?v=${BUILD_VERSION}">
-  <link rel="stylesheet" href="./styles/features/nutrition.css?v=${BUILD_VERSION}">
-  <link rel="stylesheet" href="./lab.css?v=${BUILD_VERSION}">
-  <link rel="stylesheet" href="./styles/features/readability.css?v=${BUILD_VERSION}">
+  <link rel="modulepreload" href="./assets/runtime/application.js">
+  <link rel="preload" href="./ui.html" as="fetch" crossorigin="anonymous">
   <style>${bootCss}</style>
   <script type="application/ld+json">${JSON.stringify(structuredData)}</script>
 </head>
@@ -134,8 +123,9 @@ const index = `<!doctype html>
       </div>
     </div>
   </div>
-${body}
-  <script type="module" src="./app.js?v=${BUILD_VERSION}"></script>
+  <div id="app-root"></div>
+  <noscript><p style="color:var(--mmg-boot-text);padding:24px">Для MARKOV MADE GYM нужен JavaScript. Enable JavaScript to use MARKOV MADE GYM.</p><a href="./legacy-base.html">Резервный экран / Backup screen</a></noscript>
+  <script type="module" src="./src/app/entry.mjs?v=${BUILD_VERSION}"></script>
 </body>
 </html>
 `;

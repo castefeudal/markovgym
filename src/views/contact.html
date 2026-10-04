@@ -1,0 +1,98 @@
+<section class="section section-alt" id="contact" aria-labelledby="contact-title">
+    <div class="container lead-layout">
+      <div class="lead-copy">
+        <div>
+          <p class="eyebrow" data-i18n="lead.eyebrow">Персональная работа</p>
+          <h2 id="contact-title" data-i18n="lead.title">Когда инструментов уже недостаточно</h2>
+          <p class="prose v8-prose-offset" data-i18n="lead.text">Библиотека, КБЖУ и стартовый план закрывают выбор и структуру. Персональная работа нужна там, где решает контекст: травмы и ограничения, плотный график, застой в результатах, подготовка к конкретному сроку.</p>
+        </div>
+        <ul class="lead-list">
+          <li><b>01</b><span><strong data-i18n="lead.i1t">Разбор.</strong> <span data-i18n="lead.i1p">Точка старта, ограничения, график и реальная цель.</span></span></li>
+          <li><b>02</b><span><strong data-i18n="lead.i2t">Программа.</strong> <span data-i18n="lead.i2p">Упражнения, объём, прогрессия и питание под твою неделю.</span></span></li>
+          <li><b>03</b><span><strong data-i18n="lead.i3t">Сопровождение.</strong> <span data-i18n="lead.i3p">Контроль динамики и корректировки, когда что-то идёт не по плану.</span></span></li>
+        </ul>
+        <div class="note" data-i18n="lead.note">Чем отличается от готовой программы: готовая схема одинакова для всех, персональная — собирается под твои ограничения и меняется по ходу.</div>
+        <a class="btn btn-solid" href="https://t.me/markovmade" target="_blank" rel="noopener noreferrer" data-i18n="cta.telegram">Написать в Telegram</a>
+      </div>
+
+      <form class="lead-form panel" id="lead-form" novalidate>
+        <div class="lead-form-head">
+          <b class="v8-lead-form-title" data-i18n="lead.formTitle">Быстрая заявка</b>
+          <b data-i18n="lead.formTime">≈ 15 секунд</b>
+        </div>
+
+        <div class="form-grid">
+          <div class="field span-all" data-field="l-name"><label for="l-name" data-i18n="lead.name">Имя</label>
+            <input class="input" id="l-name" autocomplete="name" placeholder="Как к тебе обращаться" data-i18n-ph="lead.namePh" aria-describedby="err-l-name">
+            <p class="field-error" id="err-l-name" role="alert"></p></div>
+          <div class="field span-all" data-field="l-contact"><label for="l-contact" data-i18n="lead.contact">Telegram или другой контакт</label>
+            <input class="input" id="l-contact" autocomplete="username" placeholder="@username, email или телефон" data-i18n-ph="lead.contactPh" aria-describedby="err-l-contact">
+            <p class="field-error" id="err-l-contact" role="alert"></p></div>
+          <div class="field span-all" data-field="l-goal"><label id="l-goal-l" data-i18n="lead.goal">Цель</label>
+            <div class="pills" id="l-goal" role="group" aria-labelledby="l-goal-l">
+              <button class="pill" type="button" data-goal="fat" data-i18n="lead.gFat">Снизить жир</button>
+              <button class="pill" type="button" data-goal="muscle" data-i18n="lead.gMuscle">Набрать мышцы</button>
+              <button class="pill" type="button" data-goal="strength" data-i18n="lead.gStrength">Увеличить силу</button>
+              <button class="pill" type="button" data-goal="program" data-i18n="lead.gProgram">Составить программу</button>
+              <button class="pill" type="button" data-goal="nutrition" data-i18n="lead.gNutrition">Разобраться с питанием</button>
+              <button class="pill" type="button" data-goal="return" data-i18n="lead.gReturn">Вернуться после перерыва</button>
+              <button class="pill" type="button" data-goal="other" data-i18n="lead.gOther">Другое</button>
+            </div>
+            <p class="field-error" id="err-l-goal" role="alert"></p></div>
+        </div>
+
+        <div class="lead-actions">
+          <button class="btn btn-primary btn-wide" id="lead-send" type="submit" data-i18n="lead.send">Обсудить задачу с Павлом</button>
+          <a class="btn btn-solid btn-wide" id="lead-direct" href="https://t.me/markovmade" target="_blank" rel="noopener noreferrer" data-i18n="lead.direct">Написать сразу в Telegram</a>
+        </div>
+
+        <div id="lead-result" aria-live="polite"></div>
+
+        <details class="plan-adv" id="lead-more">
+          <summary data-i18n="lead.moreT">Добавить детали — Павел быстрее поймёт задачу</summary>
+          <p class="tiny v8-lead-more-time" data-i18n="lead.moreTime">Ещё 1–2 минуты. Все поля необязательные.</p>
+          <div class="form-grid">
+            <div class="field"><label for="l-exp" data-i18n="lead.exp">Опыт тренировок</label>
+              <select class="select" id="l-exp">
+                <option value="" data-i18n="lead.notSet">Не указано</option>
+                <option value="beginner" data-i18n="lead.expBeginner">Начинаю или возвращаюсь</option>
+                <option value="medium" data-i18n="lead.expMedium">Тренируюсь регулярно</option>
+                <option value="advanced" data-i18n="lead.expAdvanced">Больше двух лет</option>
+              </select></div>
+            <div class="field"><label for="l-format" data-i18n="lead.format">Формат</label>
+              <select class="select" id="l-format">
+                <option value="" data-i18n="lead.notSet">Не указано</option>
+                <option value="online" data-i18n="lead.fOnline">Онлайн-сопровождение</option>
+                <option value="consult" data-i18n="lead.fConsult">Разбор и консультация</option>
+                <option value="program" data-i18n="lead.fProgram">Персональная программа</option>
+              </select></div>
+            <div class="field"><label for="l-start" data-i18n="lead.start">Когда готов начать</label>
+              <select class="select" id="l-start">
+                <option value="" data-i18n="lead.notSet">Не указано</option>
+                <option value="now" data-i18n="lead.sNow">Сейчас</option>
+                <option value="week" data-i18n="lead.sWeek">В течение недели</option>
+                <option value="month" data-i18n="lead.sMonth">В этом месяце</option>
+                <option value="later" data-i18n="lead.sLater">Пока изучаю варианты</option>
+              </select></div>
+            <div class="field"><label for="l-schedule" data-i18n="lead.schedule">График</label>
+              <input class="input" id="l-schedule" placeholder="3 тренировки в неделю, вечером" data-i18n-ph="lead.schedulePh" autocomplete="off"></div>
+            <div class="field span-all"><label for="l-limits" data-i18n="lead.limits">Травмы и ограничения</label>
+              <input class="input" id="l-limits" placeholder="Что беспокоит или что нельзя делать" data-i18n-ph="lead.limitsPh" autocomplete="off"></div>
+            <div class="field span-all"><label for="l-nutrition" data-i18n="lead.nutrition">Питание сейчас</label>
+              <input class="input" id="l-nutrition" placeholder="Считаю калории / питаюсь как получится" data-i18n-ph="lead.nutritionPh" autocomplete="off"></div>
+            <div class="field span-all"><label for="l-tried" data-i18n="lead.tried">Что уже пробовал</label>
+              <textarea class="textarea v8-textarea-compact" id="l-tried" placeholder="Какие программы и подходы уже были и чем закончились" data-i18n-ph="lead.triedPh"></textarea></div>
+            <div class="field span-all"><label for="l-when" data-i18n="lead.when">Удобное время связи</label>
+              <input class="input" id="l-when" placeholder="Будни после 19:00" data-i18n-ph="lead.whenPh" autocomplete="off"></div>
+          </div>
+        </details>
+
+        <div>
+          <p class="tiny v8-lead-asks-title" data-i18n="lead.asksT">Или выбери готовую тему — текст соберётся сам:</p>
+          <div class="pills" id="lead-asks"></div>
+        </div>
+
+        <p class="tiny" data-i18n="lead.privacy">Форма ничего никуда не отправляет сама: она собирает текст заявки и открывает Telegram, где ты отправляешь его сам. Статус «отправлено» здесь не показывается, потому что подтвердить отправку сайт не может.</p>
+      </form>
+    </div>
+  </section>

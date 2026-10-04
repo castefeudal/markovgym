@@ -11,7 +11,8 @@ for (const key of ['NO_PROXY', 'no_proxy']) {
 export default defineConfig({
   testDir: './tests/e2e',
   timeout: 60_000,
-  workers: 1,
+  expect: { timeout: 15_000 },
+  workers: process.env.CI ? 2 : 3,
   fullyParallel: false,
   reporter: [['list'], ['json', { outputFile: 'artifacts/e2e-results.json' }]],
   use: {

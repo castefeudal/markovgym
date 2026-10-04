@@ -1,0 +1,72 @@
+<section class="section section-alt" id="progress" aria-labelledby="progress-title">
+    <div class="container">
+      <div class="section-head section-head--structured">
+        <div class="section-title-block">
+          <p class="eyebrow" data-i18n="prog.eyebrow">Обратная связь</p>
+          <h2 id="progress-title" data-i18n="prog.title">Мой прогресс</h2>
+        </div>
+        <div class="section-brief">
+          <span class="section-brief-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 18V6M4 18h16M7 15l3-4 3 2 4-6 2 2"/></svg></span>
+          <div>
+            <p data-i18n="prog.text">Короткий дневник для динамики веса, талии, сна и самочувствия — без регистрации и отправки данных.</p>
+            <div class="section-brief-meta"><span data-i18n="ux.progressLocal">только в браузере</span><span data-i18n="ux.progressTrend">смотрим динамику</span><span data-i18n="ux.progressOptional">необязательно</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="prog-layout">
+        <form class="tool-form panel" id="prog-form" novalidate>
+          <div class="form-grid progress-form-grid">
+            <div class="form-section-label span-all"><span class="form-section-icon" aria-hidden="true">01</span><span data-i18n="ux.progressMeasures">Измерения</span></div>
+            <div class="field span-all"><label for="g-date" data-i18n="prog.date">Дата</label>
+              <input class="input" id="g-date" type="date"></div>
+            <div class="field" data-field="g-weight"><label for="g-weight" data-i18n="prog.weight">Вес, кг</label>
+              <input class="input" id="g-weight" type="number" inputmode="decimal" step="0.1" min="30" max="300" placeholder="80.4" aria-describedby="err-g-weight">
+              <p class="field-error" id="err-g-weight" role="alert"></p></div>
+            <div class="field" data-field="g-waist"><label for="g-waist" data-i18n="prog.waist">Талия, см</label>
+              <input class="input" id="g-waist" type="number" inputmode="decimal" step="0.5" min="40" max="200" placeholder="82" aria-describedby="err-g-waist">
+              <p class="field-error" id="err-g-waist" role="alert"></p></div>
+            <div class="form-section-label span-all"><span class="form-section-icon" aria-hidden="true">02</span><span data-i18n="ux.progressState">Состояние</span></div>
+            <div class="field"><label for="g-sleep" data-i18n="prog.sleep">Сон, часов</label>
+              <input class="input" id="g-sleep" type="number" inputmode="decimal" step="0.5" min="0" max="16" placeholder="7.5"></div>
+            <div class="field"><label for="g-mood" data-i18n="prog.mood">Самочувствие</label>
+              <select class="select" id="g-mood">
+                <option value="3" selected data-i18n="prog.m3">Нормально</option>
+                <option value="5" data-i18n="prog.m5">Отлично</option>
+                <option value="4" data-i18n="prog.m4">Хорошо</option>
+                <option value="2" data-i18n="prog.m2">Так себе</option>
+                <option value="1" data-i18n="prog.m1">Плохо</option>
+              </select></div>
+            <div class="field"><label for="g-hunger" data-i18n="prog.hunger">Голод</label>
+              <select class="select" id="g-hunger">
+                <option value="1" data-i18n="prog.hun1">Спокойный</option>
+                <option value="2" selected data-i18n="prog.hun2">Умеренный</option>
+                <option value="3" data-i18n="prog.hun3">Сильный</option>
+              </select></div>
+            <div class="field"><label for="g-fatigue" data-i18n="prog.fatigue">Усталость</label>
+              <select class="select" id="g-fatigue">
+                <option value="1" data-i18n="prog.f1">Низкая</option>
+                <option value="2" selected data-i18n="prog.f2">Средняя</option>
+                <option value="3" data-i18n="prog.f3">Высокая</option>
+              </select></div>
+            <div class="form-section-label span-all"><span class="form-section-icon" aria-hidden="true">03</span><span data-i18n="ux.progressContext">Контекст недели</span></div>
+            <div class="field span-all"><label for="g-lift" data-i18n="prog.lift">Ключевой силовой показатель</label>
+              <input class="input" id="g-lift" placeholder="Присед 5×80 кг" data-i18n-ph="prog.liftPh" autocomplete="off"></div>
+            <div class="field span-all"><label for="g-note" data-i18n="prog.note">Комментарий</label>
+              <textarea class="textarea v8-textarea-compact" id="g-note" placeholder="Что важно запомнить об этой неделе" data-i18n-ph="prog.notePh"></textarea></div>
+          </div>
+          <button class="btn btn-primary btn-wide" id="prog-save" type="submit" data-i18n="prog.save">Сохранить запись</button>
+          <div class="data-tools">
+            <button class="btn btn-quiet btn-sm" id="prog-export" type="button" data-i18n="prog.export">Экспорт JSON</button>
+            <button class="btn btn-quiet btn-sm" id="prog-import" type="button" data-i18n="prog.import">Импорт JSON</button>
+            <button class="btn btn-quiet btn-sm btn-danger" id="prog-clear" type="button" data-i18n="prog.clear">Очистить дневник</button>
+          </div>
+          <label class="sr-only" for="prog-io" data-i18n="prog.ioL">Записи дневника в формате JSON</label>
+          <textarea class="textarea io-area" id="prog-io" spellcheck="false" hidden placeholder="[ ... ]"></textarea>
+        </form>
+
+        <div class="tool-out panel" id="prog-out" aria-live="polite"></div>
+      </div>
+      <div class="guides" id="guides-progress"></div>
+    </div>
+  </section>

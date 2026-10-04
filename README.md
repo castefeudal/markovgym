@@ -74,20 +74,19 @@ The application is currently delivered as a static GitHub Pages PWA while being 
 Key files:
 
 ```text
-app-body.html                 source body for the generated shell
+src/views/                    authored shell and feature markup
+app-body.html                 generated compatibility body
+ui.html                       compact deferred markup
+styles/source/                canonical tokens, foundation and feature styles
+assets/runtime/               compiled ESM runtime and dynamic chunks
 scripts/build-index.mjs       deterministic index builder
 index.html                    generated production entry
-app.js                        ES module entry and current core UI orchestration
+src/app/entry.mjs             boot and markup mount
+app.js                        compatibility orchestration; extracted feature views
 src/app/state.mjs             versioned initial state shape and defaults
 src/app/router.mjs            route registry and hash parsing
 src/app/i18n.mjs               runtime translation lookup
-styles/tokens.css             semantic colors, type, spacing and motion tokens
-styles/reset.css              normalization and document defaults
-styles/base.css               shared typography and base elements
-styles/components.css         shared controls and reusable components
-styles/layout.css             responsive shell and layout rules
-styles/features/              feature-owned styles and legacy migration boundary
-app.css                       current presentation and theme overrides
+app.css                       generated single production stylesheet
 src/features/today/           pure Today next-action decision rules
 src/features/command-palette/ pure command-palette candidate search and ranking
 src/features/exercise/        preference ranking and substitution rules
@@ -95,7 +94,6 @@ src/data/                      compact exercise decoding and runtime records
 src/features/workout/         set and workout normalization, personal-record detection
 src/persistence/              local-first key/value adapter and versioned IndexedDB repositories
 gym-tools.js                  MARKOV MADE LAB UI integration
-lab.css                       Lab presentation layer
 tools/gym-calculators.mjs     original pure gym calculations
 tools/lab-calculators.mjs     expanded pure Lab calculation engine
 data/evidence/                formula/source registry
@@ -128,6 +126,8 @@ Combined foundation gate:
 npm run quality
 ```
 
+See [design system](docs/design-system.md), [budgets](docs/performance-budget.md) and [release gate](docs/quality-gate.md). The 200-case visual matrix compares committed baselines across six viewports and all themes.
+
 The Playwright matrix covers Chromium desktop, Chromium mobile, Firefox and WebKit. Accessibility tests use Axe in addition to flow-level checks.
 
 ## CI
@@ -138,9 +138,10 @@ The Playwright matrix covers Chromium desktop, Chromium mobile, Firefox and WebK
 install
 → syntax
 → unit / smoke
-→ production index build
+→ CSS / view / split runtime / production document build
+→ performance budgets
 → Chromium / Firefox / WebKit E2E
-→ accessibility checks contained in the E2E suite
+→ Axe and baseline visual comparisons
 → GitHub Pages deploy after green Quality
 ```
 

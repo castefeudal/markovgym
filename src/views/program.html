@@ -1,0 +1,111 @@
+<section class="section" id="program" aria-labelledby="program-title">
+    <div class="container">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow" data-i18n="plan.eyebrow">Структура недели</p>
+          <h2 id="program-title" data-i18n="plan.title">Стартовый план тренировок</h2>
+          <p data-i18n="plan.text">Параметры реально меняют результат: сплит, объём, повторы, отдых, кардио и конкретные упражнения подбираются из этой же базы.</p>
+        </div>
+      </div>
+
+      <div class="tool-layout">
+        <form class="tool-form panel" id="plan-form" novalidate>
+          <div class="form-grid">
+            <div class="field"><label for="p-goal" data-i18n="plan.goal">Цель</label>
+              <select class="select" id="p-goal">
+                <option value="fatloss" data-i18n="plan.goalFat">Снижение жира</option>
+                <option value="muscle" selected data-i18n="plan.goalMuscle">Набор мышц</option>
+                <option value="strength" data-i18n="plan.goalStrength">Сила</option>
+                <option value="health" data-i18n="plan.goalHealth">Здоровье и тонус</option>
+              </select></div>
+            <div class="field"><label for="p-level" data-i18n="plan.level">Уровень</label>
+              <select class="select" id="p-level">
+                <option value="beginner" data-i18n="plan.lvlBeginner">Новичок (до года)</option>
+                <option value="middle" selected data-i18n="plan.lvlMiddle">Средний (1–3 года)</option>
+                <option value="advanced" data-i18n="plan.lvlAdvanced">Продвинутый (3+ года)</option>
+              </select></div>
+            <div class="field"><label for="p-days" data-i18n="plan.days">Тренировок в неделю</label>
+              <select class="select" id="p-days">
+                <option value="2">2</option><option value="3" selected>3</option>
+                <option value="4">4</option><option value="5">5</option><option value="6">6</option>
+              </select></div>
+            <div class="field"><label for="p-time" data-i18n="plan.time">Длительность</label>
+              <select class="select" id="p-time">
+                <option value="35" data-i18n="plan.time35">35 минут</option>
+                <option value="50" data-i18n="plan.time50">50 минут</option>
+                <option value="70" selected data-i18n="plan.time70">70 минут</option>
+                <option value="90" data-i18n="plan.time90">90 минут</option>
+              </select></div>
+            <div class="field"><label for="p-block-weeks" data-i18n="plan.blockWeeks">Длительность блока</label>
+              <select class="select" id="p-block-weeks">
+                <option value="4" selected data-i18n="plan.block4">4 недели</option>
+                <option value="6" data-i18n="plan.block6">6 недель</option>
+                <option value="8" data-i18n="plan.block8">8 недель</option>
+              </select></div>
+            <div class="field"><label for="p-place" data-i18n="plan.place">Где тренируешься</label>
+              <select class="select" id="p-place">
+                <option value="gym" selected data-i18n="plan.placeGym">Зал</option>
+                <option value="home" data-i18n="plan.placeHome">Дом</option>
+                <option value="mixed" data-i18n="plan.placeMixed">Дом + зал</option>
+              </select></div>
+            <div class="field"><label for="p-focus" data-i18n="plan.focus">Приоритет</label>
+              <select class="select" id="p-focus">
+                <option value="balanced" selected data-i18n="plan.focusBalanced">Баланс всего тела</option>
+                <option value="chest" data-i18n="plan.focusChest">Грудь</option>
+                <option value="back" data-i18n="plan.focusBack">Спина</option>
+                <option value="upper legs" data-i18n="plan.focusLegs">Ноги</option>
+                <option value="shoulders" data-i18n="plan.focusShoulders">Плечи</option>
+                <option value="upper arms" data-i18n="plan.focusArms">Руки</option>
+                <option value="waist" data-i18n="plan.focusCore">Пресс и кор</option>
+              </select></div>
+          </div>
+          <details class="plan-adv">
+          <summary data-i18n="plan.advT">Дополнительные параметры</summary>
+          <div class="form-grid">
+            <div class="field"><label for="p-style" data-i18n="plan.style">Предпочитаемый стиль</label>
+              <select class="select" id="p-style">
+                <option value="balanced" data-i18n="plan.styleBalanced">Сбалансированный</option>
+                <option value="free" data-i18n="plan.styleFree">Свободные веса</option>
+                <option value="machine" data-i18n="plan.styleMachine">Тренажёры и блоки</option>
+                <option value="minimal" data-i18n="plan.styleMinimal">Минимум оборудования</option>
+              </select></div>
+            <div class="field"><label for="p-recovery" data-i18n="plan.recovery">Восстановление</label>
+              <select class="select" id="p-recovery">
+                <option value="good" data-i18n="plan.recGood">Хорошее: сплю 7+ часов</option>
+                <option value="mid" selected data-i18n="plan.recMid">Среднее</option>
+                <option value="low" data-i18n="plan.recLow">Плохое: недосып, стресс</option>
+              </select></div>
+            <div class="field"><label for="p-cardio" data-i18n="plan.cardio">Кардио</label>
+              <select class="select" id="p-cardio">
+                <option value="none" data-i18n="plan.cardioNone">Не нужно</option>
+                <option value="light" selected data-i18n="plan.cardioLight">Спокойное</option>
+                <option value="mixed" data-i18n="plan.cardioMixed">Спокойное и интервалы</option>
+              </select></div>
+            <div class="field"><label for="p-steps" data-i18n="plan.steps">Шагов в день</label>
+              <select class="select" id="p-steps">
+                <option value="low" data-i18n="plan.steps1">Меньше 5 тысяч</option>
+                <option value="mid" selected data-i18n="plan.steps2">5–8 тысяч</option>
+                <option value="high" data-i18n="plan.steps3">Больше 8 тысяч</option>
+              </select></div>
+            <div class="field span-all"><label for="p-avoid" data-i18n="plan.avoid">Движения, которые исключить</label>
+              <input class="input" id="p-avoid" placeholder="Присед со штангой, становая, отжимания на брусьях" data-i18n-ph="plan.avoidPh" autocomplete="off">
+              <p class="field-hint" data-i18n="plan.avoidHint">Через запятую. Совпадения по названию и по целевой мышце будут исключены из подбора.</p></div>
+            <div class="field span-all"><label for="p-limits" data-i18n="plan.limits">Ограничивающие зоны</label>
+              <div class="pills" id="p-limits" role="group" aria-label="Ограничивающие зоны">
+                <button class="pill" type="button" data-limit="shoulders" data-i18n="plan.limShoulders">Плечо</button>
+                <button class="pill" type="button" data-limit="back" data-i18n="plan.limBack">Поясница</button>
+                <button class="pill" type="button" data-limit="upper legs" data-i18n="plan.limKnee">Колено</button>
+                <button class="pill" type="button" data-limit="upper arms" data-i18n="plan.limElbow">Локоть</button>
+              </div>
+              <p class="field-hint" data-i18n="plan.limHint">Отмеченные зоны получат меньший объём и движения с более контролируемой траекторией. Это не медицинская рекомендация — при боли нужен врач.</p></div>
+          </div>
+        </details>
+        <button class="btn btn-primary btn-wide" id="plan-build" type="submit" data-i18n="plan.submit">Собрать план</button>
+          <p class="tiny" data-i18n="plan.disclaimer">Это стартовый каркас. При боли, травмах, ограничениях по здоровью и соревновательных целях программу нужно адаптировать индивидуально.</p>
+        </form>
+
+        <div class="tool-out panel" id="plan-out" aria-live="polite"></div>
+      </div>
+      <div class="guides" id="guides-program"></div>
+    </div>
+  </section>

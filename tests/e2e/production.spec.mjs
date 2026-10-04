@@ -635,8 +635,11 @@ test('equipment profiles constrain Library choices, survive reload and preserve 
   const importChooser = page.waitForEvent('filechooser');
   await page.locator('#data-import').click();
   const chooser = await importChooser;
+  const importNavigation = page.waitForNavigation();
   await chooser.setFiles({name:'equipment-backup.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(backup))});
   await expect.poll(() => importPreview).toMatch(/Резервная копия проверена|Backup validated/);
+  await importNavigation;
+  await expect(page.locator('html')).toHaveAttribute('data-app-ready', 'true');
   await expect.poll(() => page.evaluate(() => window.mmgDiagnostics?.activeEquipmentProfileId)).toBe(importedProfileId);
   await expect.poll(() => page.evaluate(() => window.mmgDiagnostics?.equipmentProfileCount)).toBe(5);
 });
@@ -767,6 +770,7 @@ test('distance and duration tracking stay structured from Run Mode into workout 
   expect(savedLog).toMatchObject({ distance: '2', duration: '12:30' });
   await expect(page.locator('#run-stage')).toContainText(/Все упражнения|All exercises/);
   await page.locator('#run-next').click();
+  await expect(page.locator('html')).toHaveAttribute('data-route-ready', 'progress');
   await page.goto('/index.html#workout');
   const historyItem = page.locator('#hist .hist-item').first();
   await expect(historyItem).toContainText('Своя пробежка');
@@ -952,6 +956,7 @@ test('Run Mode announces a history-backed estimated one-rep-max record', async (
   await page.locator('[data-run-remove-set]').click();
   await expect(page.locator('[data-run-set]')).toHaveCount(1);
   await page.locator('[data-run-field="reps"]').fill('5');
+  await page.locator('.run-details summary').click();
   await page.locator('[data-run-field="note"]').fill('Keep the next rep controlled');
   await expect.poll(async () => (await readIndexedUserState(page, 'mmg.workout.v2'))[0].setLog[0].note).toBe('Keep the next rep controlled');
   await page.locator('#run-next').click();
@@ -1061,6 +1066,8 @@ test('Workout superset runs in alternating rounds and survives workout storage',
   await page.locator('#run-next').click();
   await expect(page.locator('.run-finish-summary')).toBeVisible();
   await page.locator('#run-next').click();
+  await expect(page.locator('html')).toHaveAttribute('data-route-ready', 'progress');
+  await page.goto('/index.html#workout');
   await page.locator('[data-hist-detail]').first().click();
   await expect(page.locator('.hist-detail [data-group-id]')).toHaveCount(2);
   await page.locator('[data-hist-repeat]').first().click();

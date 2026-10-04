@@ -1,0 +1,114 @@
+<section class="section section-alt" id="library" aria-labelledby="library-title">
+    <div class="container">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow" data-i18n="library.eyebrow">Библиотека</p>
+          <h2 id="library-title" data-i18n="library.title">Найди упражнение и проверь технику</h2>
+          <p data-i18n="library.text">Поиск и фильтры работают по всей базе. Из карточки можно открыть технику, сохранить движение или добавить его в сегодняшнюю тренировку.</p>
+        </div>
+        <button class="btn btn-quiet" id="reset-all" type="button" data-i18n="library.resetAll">Очистить подбор</button>
+      </div>
+
+      <div class="library-layout">
+        <aside class="filters" id="filters" data-open="false" aria-label="Фильтры библиотеки" data-i18n-aria="aria.filters">
+          <div class="filters-head">
+            <b data-i18n="filters.title">Фильтры</b>
+            <button class="icon-btn" id="filters-close" type="button" aria-label="Закрыть фильтры" data-i18n-aria="aria.filtersClose">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+            </button>
+          </div>
+
+          <div class="filters-body">
+            <section class="equipment-profile" aria-labelledby="equipment-profile-title">
+              <label id="equipment-profile-title" for="equipment-profile-select"></label>
+              <select class="select" id="equipment-profile-select"></select>
+              <div class="equipment-profile-actions">
+                <button class="btn btn-quiet btn-sm" id="equipment-profile-save" type="button"></button>
+                <button class="btn btn-quiet btn-sm btn-danger" id="equipment-profile-delete" type="button" hidden></button>
+              </div>
+              <p class="tiny" id="equipment-profile-help"></p>
+            </section>
+            <div class="filter-fav">
+              <button class="chip" id="fav-only" type="button" aria-pressed="false">
+                <span data-i18n="filters.favOnly">Только избранное</span><b class="num" id="fav-count">0</b>
+              </button>
+              <button class="btn btn-quiet btn-sm btn-danger" id="fav-clear" type="button" data-i18n="filters.favClear">Очистить избранное</button>
+              <p class="tiny" data-i18n="filters.favHint">Избранное хранится в этом браузере и не пропадает после перезагрузки.</p>
+            </div>
+
+            <details class="filter-group" open>
+              <summary><span data-i18n="filters.zone">Зона тела</span><b class="num" id="count-bp">0</b></summary>
+              <div class="filter-list" id="filter-bp" role="group" aria-label="Зона тела" data-i18n-aria="filters.zone"></div>
+            </details>
+
+            <details class="filter-group" open>
+              <summary><span data-i18n="filters.muscle">Целевая мышца</span><b class="num" id="count-mu">0</b></summary>
+              <div class="filter-mini-search"><label class="sr-only" for="filter-search-muscle" data-i18n="musnav.filterMuscle">Поиск по мышцам</label><input id="filter-search-muscle" type="search" autocomplete="off" placeholder="Найти мышцу…" data-i18n-ph="musnav.filterMusclePh"></div>
+              <div class="filter-list" id="filter-mu" role="group" aria-label="Целевая мышца" data-i18n-aria="filters.muscle"></div>
+            </details>
+
+            <details class="filter-group" open>
+              <summary><span data-i18n="filters.equipment">Оборудование</span><b class="num" id="count-eq">0</b></summary>
+              <div class="filter-mini-search"><label class="sr-only" for="filter-search-eq" data-i18n="musnav.filterEquipment">Поиск по оборудованию</label><input id="filter-search-eq" type="search" autocomplete="off" placeholder="Найти оборудование…" data-i18n-ph="musnav.filterEquipmentPh"></div>
+              <div class="filter-list" id="filter-eq" role="group" aria-label="Оборудование" data-i18n-aria="filters.equipment"></div>
+            </details>
+          </div>
+
+          <div class="filters-foot">
+            <button class="btn btn-solid" id="filters-reset" type="button" data-i18n="filters.reset">Сбросить</button>
+            <button class="btn btn-primary" id="filters-apply" type="button"><span data-i18n="filters.apply">Показать</span>&nbsp;<span class="num" id="filters-apply-count">0</span></button>
+          </div>
+        </aside>
+
+        <div>
+          <div class="results-head">
+            <div class="results-tools">
+              <button class="switch" id="coach-switch" type="button" aria-pressed="true" aria-label="Режим тренера" data-i18n-aria="aria.coach"></button>
+              <label class="coach-toggle" for="coach-switch" data-i18n="lib.coachMode">Режим тренера</label>
+              <div class="search-box" id="search-box" data-filled="false">
+                <svg class="search-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></svg>
+                <label class="sr-only" for="search" data-i18n="library.searchLabel">Поиск по библиотеке</label>
+                <input class="input" id="search" type="search" placeholder="Название, мышца или оборудование…" data-i18n-ph="library.searchPh" autocomplete="off">
+                <button class="search-clear" id="search-clear" type="button" aria-label="Очистить поиск" data-i18n-aria="aria.searchClear">×</button>
+              </div>
+              <button class="btn btn-quiet btn-sm" id="custom-exercise-open" type="button" data-i18n="custom.create">Создать своё упражнение</button>
+              <label class="sr-only" for="sort" data-i18n="library.sortLabel">Сортировка</label>
+              <select class="select sort-select" id="sort">
+                <option value="recommended" data-i18n="sort.recommended">Сначала базовые</option>
+                <option value="name" data-i18n="sort.name">По названию</option>
+                <option value="muscle" data-i18n="sort.muscle">По мышце</option>
+                <option value="equipment" data-i18n="sort.equipment">По оборудованию</option>
+                <option value="favorites" data-i18n="sort.favorites">Избранные сверху</option>
+              </select>
+              <div class="seg" id="density" role="group" aria-label="Плотность сетки" data-i18n-aria="aria.density">
+                <button type="button" data-density="compact" aria-pressed="false" data-i18n="density.compact">Плотно</button>
+                <button type="button" data-density="default" aria-pressed="true" data-i18n="density.default">Обычно</button>
+                <button type="button" data-density="roomy" aria-pressed="false" data-i18n="density.roomy">Крупно</button>
+              </div>
+            </div>
+
+            <div class="v10-library-quick" aria-label="Быстрые сценарии">
+              <span id="v10-library-quick-label">Быстрый выбор</span>
+              <div id="v10-library-quick-presets"></div>
+            </div>
+
+            <div class="results-meta">
+              <p class="results-count" id="results-count" role="status" aria-live="polite"></p>
+              <div class="active-chips" id="active-chips"></div>
+              <div class="results-insights" id="results-insights" tabindex="0" aria-label="Аналитика подборки"></div>
+            </div>
+          </div>
+
+          <div id="coach-lib" aria-live="polite"></div>
+
+          <div class="grid" id="grid" data-density="default"></div>
+
+          <div class="load-row" id="load-row">
+            <p class="small" id="load-note"></p>
+            <button class="btn btn-solid" id="load-more" type="button">Показать ещё 60</button>
+            <button class="btn btn-quiet" id="show-all" type="button" data-i18n="library.showAll">Показать все</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>

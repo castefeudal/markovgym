@@ -2,10 +2,11 @@ import { readFile, readdir } from 'node:fs/promises';
 import { gzipSync } from 'node:zlib';
 
 const budgets = [
-  { file: 'app.js', raw: 600_000, gzip: 180_000 },
-  { file: 'app.css', raw: 230_000, gzip: 50_000 },
-  { directory: 'styles', label: 'modular CSS layers', raw: 95_000, gzip: 24_000 },
-  { file: 'index.html', raw: 150_000, gzip: 40_000 },
+  { file: 'app.js', raw: 440_000, gzip: 125_000 },
+  { file: 'app.css', raw: 255_000, gzip: 46_000 },
+  { file: 'ui.html', raw: 117_000, gzip: 28_000 },
+  { file: 'index.html', raw: 10_000, gzip: 4_000 },
+  { directory: 'assets/runtime', label: 'production JS (all chunks)', raw: 480_000, gzip: 160_000 },
   { file: 'gym-tools.js', raw: 50_000, gzip: 16_000 },
 ];
 
@@ -14,7 +15,7 @@ async function listCssFiles(directory) {
   const nested = await Promise.all(entries.map((entry) => {
     const child = `${directory}/${entry.name}`;
     if (entry.isDirectory()) return listCssFiles(child);
-    return entry.isFile() && entry.name.endsWith('.css') ? [child] : [];
+    return entry.isFile() && /\.(css|js)$/.test(entry.name) ? [child] : [];
   }));
   return nested.flat();
 }

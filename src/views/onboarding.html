@@ -1,0 +1,88 @@
+<section class="hero" aria-labelledby="hero-title">
+    <div class="container hero-grid">
+      <div class="hero-main">
+        <p class="eyebrow" data-i18n="hero.eyebrow">MARKOV MADE GYM</p>
+        <h1 id="hero-title"><span data-i18n="hero.title1">Тренировка начинается</span> <span data-i18n="hero.title2">с точного выбора.</span></h1>
+        <p class="hero-lede" data-i18n="hero.lede">Выбери движение, собери тренировку и отслеживай прогресс — в одной локальной системе без регистрации.</p>
+        <p class="eyebrow hero-byline" data-i18n="hero.byline">Авторская система Павла Маркова</p>
+        <div class="hero-actions">
+          <a class="btn btn-primary" href="#library" data-i18n="hero.ctaPrimary">Открыть библиотеку</a>
+          <button class="btn btn-solid" id="hero-cta-lead" type="button" data-i18n="hero.ctaSecondary">Обсудить цель с Павлом</button>
+        </div>
+        <form class="hero-search" id="hero-form" role="search">
+          <label class="sr-only" for="hero-search" data-i18n="hero.searchLabel">Поиск по библиотеке упражнений</label>
+          <input class="input" id="hero-search" type="search" placeholder="Жим лёжа, грудь, гантели…" data-i18n-ph="hero.searchPh" autocomplete="off">
+          <button class="btn btn-primary" type="submit" data-i18n="hero.searchGo">Найти</button>
+        </form>
+        <div class="hero-presets" role="group" aria-label="Быстрые подборки" data-i18n-aria="aria.presets">
+          <button class="chip" type="button" data-preset="chest" data-i18n="preset.chest">Грудь</button>
+          <button class="chip" type="button" data-preset="back" data-i18n="preset.back">Спина</button>
+          <button class="chip" type="button" data-preset="legs" data-i18n="preset.legs">Ноги</button>
+          <button class="chip" type="button" data-preset="shoulders" data-i18n="preset.shoulders">Плечи</button>
+          <button class="chip" type="button" data-preset="arms" data-i18n="preset.arms">Руки</button>
+          <button class="chip" type="button" data-preset="abs" data-i18n="preset.abs">Пресс</button>
+          <button class="chip" type="button" data-preset="home" data-i18n="preset.home">Дом</button>
+        </div>
+        <div class="hero-stats">
+          <div><b class="num" id="stat-total">1324</b><span data-i18n="hero.statTotal">упражнения в базе</span></div>
+          <div><b class="num" id="stat-zones">10</b><span data-i18n="hero.statZones">зон тела</span></div>
+          <div><b class="num" id="stat-equip">28</b><span data-i18n="hero.statEquip">видов оборудования</span></div>
+          <div><b class="num" id="stat-fav">0</b><span data-i18n="hero.statFav">в твоём избранном</span></div>
+        </div>
+      </div>
+
+      <aside class="hero-panel panel" aria-labelledby="hero-panel-title">
+        <div class="hero-panel-head">
+          <div>
+            <p class="eyebrow" data-i18n="console.eyebrow">Быстрый старт с Павлом</p>
+            <h2 id="hero-panel-title" data-i18n="console.title">Четыре ответа — и понятно, с чего начать</h2>
+            <p class="small hero-panel-summary" data-i18n="console.text">Цель, место, опыт и время — четыре параметра, из которых собирается стартовый сценарий тренировки.</p>
+          </div>
+          <img class="hero-panel-logo" src="images/gym-mark.svg" width="512" height="512" alt="MARKOV MADE GYM — фитнес-направление Павла Маркова" data-i18n-alt="console.logoAlt" decoding="async" fetchpriority="high">
+        </div>
+
+        <div class="console">
+          <div class="console-progress" aria-live="polite">
+            <div class="console-progress-track" aria-hidden="true"><span id="console-progress-bar"></span></div>
+            <b id="console-progress-label">0 / 4</b>
+          </div>
+          <fieldset class="console-row">
+            <legend class="tiny" id="cq-goal-l" data-i18n="console.qGoal">Задача</legend>
+            <div class="console-opts" role="group" aria-labelledby="cq-goal-l" data-console="goal">
+              <button class="console-opt" type="button" data-v="fat" data-i18n="console.goalFat">Снизить жир</button>
+              <button class="console-opt" type="button" data-v="muscle" data-i18n="console.goalMuscle">Набрать мышцы</button>
+              <button class="console-opt" type="button" data-v="strength" data-i18n="console.goalStrength">Вырасти в силе</button>
+              <button class="console-opt" type="button" data-v="health" data-i18n="console.goalHealth">Здоровье и тонус</button>
+            </div>
+          </fieldset>
+          <fieldset class="console-row">
+            <legend class="tiny" id="cq-place-l" data-i18n="console.qPlace">Где тренируетесь</legend>
+            <div class="console-opts" role="group" aria-labelledby="cq-place-l" data-console="place">
+              <button class="console-opt" type="button" data-v="gym" data-i18n="console.placeGym">В зале</button>
+              <button class="console-opt" type="button" data-v="home" data-i18n="console.placeHome">Дома</button>
+              <button class="console-opt" type="button" data-v="mixed" data-i18n="console.placeMixed">Когда как</button>
+            </div>
+          </fieldset>
+          <fieldset class="console-row">
+            <legend class="tiny" id="cq-level-l" data-i18n="console.qLevel">Опыт</legend>
+            <div class="console-opts" role="group" aria-labelledby="cq-level-l" data-console="level">
+              <button class="console-opt" type="button" data-v="beginner" data-i18n="console.lvlBeginner">Начинаю</button>
+              <button class="console-opt" type="button" data-v="medium" data-i18n="console.lvlMedium">Тренируюсь регулярно</button>
+              <button class="console-opt" type="button" data-v="advanced" data-i18n="console.lvlAdvanced">Больше двух лет</button>
+            </div>
+          </fieldset>
+          <fieldset class="console-row">
+            <legend class="tiny" id="cq-time-l" data-i18n="console.qTime">Сколько времени есть сегодня</legend>
+            <div class="console-opts" role="group" aria-labelledby="cq-time-l" data-console="time">
+              <button class="console-opt" type="button" data-v="30" data-i18n="console.time30">30 минут</button>
+              <button class="console-opt" type="button" data-v="50" data-i18n="console.time50">50 минут</button>
+              <button class="console-opt" type="button" data-v="70" data-i18n="console.time70">70 минут</button>
+            </div>
+          </fieldset>
+
+          <div class="console-out" id="console-out" hidden aria-live="polite"></div>
+          <p class="tiny console-hint" id="console-hint">Ответьте на четыре коротких вопроса — рекомендация появится после последнего выбора.</p>
+        </div>
+      </aside>
+    </div>
+  </section>

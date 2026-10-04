@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      refresh_visual_baselines:
+        description: Generate Linux baselines for deliberate review (never deploys)
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -15,45 +20,96 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  quality:
+  foundation:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v5
-
       - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
+      - run: npm ci
       - name: Syntax, build, performance budget and unit checks
         run: npm run quality
+      - name: Generated production assets must be current
+        run: git diff --exit-code -- index.html ui.html app-body.html app.css sw.js assets/runtime assets/runtime-manifest.json
 
-      - name: Generated index must be current
-        run: git diff --exit-code -- index.html
-
-      - name: Cache Playwright browsers
-        uses: actions/cache@v4
+  behavior:
+    needs: foundation
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - project: desktop
+            browser: chromium
+          - project: mobile
+            browser: chromium
+          - project: firefox
+            browser: firefox
+          - project: webkit
+            browser: webkit
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-${{ hashFiles('package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-playwright-
-
-      - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium firefox webkit
-
-      - name: E2E and accessibility
-        run: npm run e2e
-
+          key: ${{ runner.os }}-playwright-${{ matrix.browser }}-${{ hashFiles('package-lock.json') }}
+      - run: npx playwright install --with-deps ${{ matrix.browser }}
+      - name: Behavior, persistence, keyboard and Axe
+        run: npx playwright test production.spec.mjs accessibility.spec.mjs session-safety.spec.mjs --project=${{ matrix.project }} --workers=2
       - name: Upload failure artifacts
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-artifacts
+          name: behavior-${{ matrix.project }}-artifacts
+          path: |
+            artifacts/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  visual:
+    needs: foundation
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-chromium-${{ hashFiles('package-lock.json') }}
+      - run: npx playwright install --with-deps chromium
+      - name: Visual regression, themes, viewports and overlay Axe
+        if: ${{ !inputs.refresh_visual_baselines }}
+        run: npm run visual -- --workers=3
+      - name: Generate Linux baselines for review
+        if: ${{ inputs.refresh_visual_baselines }}
+        run: npm run visual -- --workers=3 --update-snapshots
+      - name: Upload baselines (accept only after the entire Quality run succeeds)
+        if: ${{ inputs.refresh_visual_baselines && success() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-baselines
+          path: tests/e2e/visual.spec.mjs-snapshots/*linux.png
+          retention-days: 7
+      - name: Upload failure artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-failure-artifacts
           path: |
             artifacts/
             test-results/

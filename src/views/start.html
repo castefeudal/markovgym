@@ -1,0 +1,58 @@
+<section class="section section-alt" id="start" aria-labelledby="start-title">
+    <div class="container">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow" data-i18n="start.eyebrow">Быстрый старт</p>
+          <h2 id="start-title" data-i18n="start.title">Три способа войти в базу</h2>
+          <p data-i18n="start.text">Выбери сценарий — фильтры выставятся сами, а библиотека сразу покажет подходящие движения.</p>
+        </div>
+      </div>
+      <div class="starts">
+        <button class="start-card" type="button" data-preset="home" data-premium-index="01">
+          <span class="rail" aria-hidden="true"></span>
+          <b data-i18n="start.homeTitle">Тренируюсь дома</b>
+          <span data-i18n="start.homeText">Собственный вес, резинки и гантели — без зала и тренажёров.</span>
+        </button>
+        <button class="start-card" type="button" data-preset="gym" data-premium-index="02">
+          <span class="rail" aria-hidden="true"></span>
+          <b data-i18n="start.gymTitle">Тренируюсь в зале</b>
+          <span data-i18n="start.gymText">Штанга, блоки, тренажёры и машина Смита — полный доступ к базе.</span>
+        </button>
+        <button class="start-card" type="button" data-preset="swap" data-premium-index="03">
+          <span class="rail" aria-hidden="true"></span>
+          <b data-i18n="start.swapTitle">Нужна замена движению</b>
+          <span data-i18n="start.swapText">Тренажёр занят или упражнение не идёт — подберём вариант на ту же мышцу.</span>
+        </button>
+      </div>
+
+      <h3 class="eyebrow v8-section-inline-title" data-i18n="start.qaTitle">Быстрые действия</h3>
+      <div class="qa-grid">
+        <button class="qa" type="button" data-qa="find">
+          <span class="qa-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></svg></span>
+          <span><b class="qa-t" data-i18n="qa.findT">Найти упражнение</b><span class="qa-s" data-i18n="qa.findS">Поиск по мышце, движению или оборудованию</span></span>
+        </button>
+        <button class="qa" type="button" data-qa="workout">
+          <span class="qa-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 9v6M20 9v6M7 6v12M17 6v12M7 12h10"/></svg></span>
+          <span><b class="qa-t" data-i18n="qa.workoutT">Собрать тренировку</b><span class="qa-s" data-i18n="qa.workoutS">Порядок, подходы, отдых и таймер</span></span>
+        </button>
+        <button class="qa" type="button" data-qa="kbju">
+          <span class="qa-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="4" y="3" width="16" height="18" rx="3"/><path d="M8 8h8M8 12h8M8 16h4"/></svg></span>
+          <span><b class="qa-t" data-i18n="qa.kbjuT">Рассчитать КБЖУ</b><span class="qa-s" data-i18n="qa.kbjuS">Норма калорий, макросы и что отслеживать</span></span>
+        </button>
+        <button class="qa" type="button" data-qa="ask">
+          <span class="qa-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 15a3 3 0 0 1-3 3H8l-4 3V6a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3Z"/></svg></span>
+          <span><b class="qa-t" data-i18n="qa.askT">Задать вопрос Павлу</b><span class="qa-s" data-i18n="qa.askS">Быстрая заявка за 15 секунд</span></span>
+        </button>
+      </div>
+
+      <div class="hero-peek v8-hero-peek" id="hero-peek" hidden>
+        <img id="hero-peek-img" alt="" loading="lazy" decoding="async" width="74" height="74">
+        <div>
+          <span class="tiny" data-i18n="hero.peekLabel">Случайное движение</span>
+          <strong id="hero-peek-name">—</strong>
+          <span id="hero-peek-meta">—</span>
+        </div>
+        <button class="btn btn-quiet btn-sm" id="hero-peek-open" type="button" data-i18n="hero.peekOpen">Открыть</button>
+      </div>
+    </div>
+  </section>

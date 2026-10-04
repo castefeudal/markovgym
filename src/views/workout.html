@@ -1,0 +1,85 @@
+<section class="section" id="workout" aria-labelledby="workout-title">
+    <div class="container">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow" data-i18n="workout.eyebrow">Сегодняшняя сессия</p>
+          <h2 id="workout-title" data-i18n="workout.title">Моя тренировка</h2>
+          <p data-i18n="workout.text">Избранное — это долгая база движений. Тренировка — то, что ты делаешь сегодня: порядок, подходы, повторы, вес и отметка о выполнении.</p>
+        </div>
+        <a class="btn btn-quiet" href="#library" data-i18n="workout.add">Добавить упражнения</a>
+      </div>
+
+      <div class="workout-layout">
+        <aside class="workout-side panel">
+          <div class="workout-kpis">
+            <div class="workout-kpi"><b class="num" id="w-count">0</b><span data-i18n="workout.kpiEx">упражн.</span></div>
+            <div class="workout-kpi"><b class="num" id="w-sets">0</b><span data-i18n="workout.kpiSets">подходов</span></div>
+            <div class="workout-kpi"><b class="num" id="w-time">0</b><span data-i18n="workout.kpiTime">мин</span></div>
+          </div>
+          <p class="tiny" id="w-progress" data-i18n="workout.progressEmpty">Выполнено: 0 из 0</p>
+          <div class="workout-side-actions">
+            <button class="btn btn-primary" id="w-run" type="button" data-i18n="workout.run">Начать тренировку</button>
+            <button class="btn btn-solid" id="w-copy" type="button" data-i18n="workout.copy">Скопировать текстом</button>
+            <button class="btn btn-solid" id="w-share" type="button" data-i18n="workout.share">Поделиться</button>
+          </div>
+
+          <div class="timer" id="timer" data-run="false">
+            <b class="timer-clock" id="timer-clock">1:30</b>
+            <div class="timer-presets" role="group" aria-label="Длительность отдыха" data-i18n-aria="aria.rest">
+              <button class="chip" type="button" data-rest="60">60</button>
+              <button class="chip" type="button" data-rest="90" aria-pressed="true">90</button>
+              <button class="chip" type="button" data-rest="120">120</button>
+              <button class="chip" type="button" data-rest="180">180</button>
+            </div>
+            <div class="timer-adjust" role="group" aria-label="Коррекция таймера" data-i18n-aria="v3.timerAdjust"><button type="button" id="timer-minus" aria-label="Уменьшить таймер на 15 секунд" data-i18n-aria="v3.timerMinus">−15</button><button type="button" id="timer-plus" aria-label="Увеличить таймер на 15 секунд" data-i18n-aria="v3.timerPlus">+15</button><button type="button" id="timer-skip" aria-label="Пропустить отдых" data-i18n-aria="v3.timerSkip">×</button></div>
+            <button class="btn btn-solid btn-sm" id="timer-toggle" type="button" data-i18n="workout.timerStart">Старт отдыха</button>
+          </div>
+
+          <div class="field"><label for="w-name" data-i18n="workout.nameL">Название тренировки</label>
+            <input class="input" id="w-name" placeholder="Верх тела, день 1" data-i18n-ph="workout.namePh" autocomplete="off"></div>
+          <div class="field"><label for="w-date" data-i18n="workout.dateL">Дата</label>
+            <input class="input" id="w-date" type="date"></div>
+          <div class="field"><label for="w-note" data-i18n="workout.noteL">Заметка к тренировке</label>
+            <textarea class="textarea v8-textarea-compact" id="w-note" placeholder="Самочувствие, что получилось, что перенести" data-i18n-ph="workout.notePh"></textarea></div>
+
+          <div class="workout-side-actions">
+            <button class="btn btn-solid btn-sm" id="w-finish" type="button" data-i18n="workout.finish">Завершить и сохранить</button>
+            <button class="btn btn-quiet btn-sm" id="w-print" type="button" data-i18n="workout.print">Печать или PDF</button>
+            <button class="btn btn-quiet btn-sm btn-danger" id="w-clear" type="button" data-i18n="workout.clear">Очистить тренировку</button>
+          </div>
+          <p class="tiny" data-i18n="workout.saveHint">Тренировка сохраняется на этом устройстве. Аккаунт не нужен.</p>
+
+          <details class="guide v8-guide-offset">
+            <summary data-i18n="workout.ioT">Экспорт и импорт</summary>
+            <div class="v8-io-grid">
+              <div class="data-tools">
+                <button class="btn btn-quiet btn-sm" id="w-export" type="button" data-i18n="workout.export">Экспорт JSON</button>
+                <button class="btn btn-quiet btn-sm" id="w-import" type="button" data-i18n="workout.import">Импорт JSON</button>
+              </div>
+              <label class="sr-only" for="w-io" data-i18n="workout.ioL">Данные тренировки в формате JSON</label>
+              <textarea class="textarea io-area" id="w-io" spellcheck="false" placeholder="{ ... }"></textarea>
+            </div>
+          </details>
+        </aside>
+        <div class="workout-main">
+          <div class="v10-workout-balance" id="v10-workout-balance" hidden></div>
+          <div class="workout-list" id="workout-list"></div>
+          <div id="coach-workout" aria-live="polite"></div>
+          <div class="guides" id="guides-workout"></div>
+
+          <h3 class="eyebrow v8-section-inline-title" data-i18n="workout.histT">Последние тренировки</h3>
+          <div class="history-filters" id="history-filters">
+            <label><span>Поиск</span><input id="history-query" type="search" autocomplete="off" placeholder="Тренировка, упражнение, заметка"></label>
+            <label><span>С даты</span><input id="history-from" type="date"></label>
+            <label><span>По дату</span><input id="history-to" type="date"></label>
+            <label><span>Программа</span><select id="history-programme"><option value="">Все</option></select></label>
+            <label><span>Упражнение</span><select id="history-exercise"><option value="">Все</option></select></label>
+            <label><span>Минуты от</span><input id="history-duration-min" type="number" min="0" inputmode="numeric"></label>
+            <label><span>до</span><input id="history-duration-max" type="number" min="0" inputmode="numeric"></label>
+            <label class="history-pr-filter"><input id="history-pr-only" type="checkbox"><span>Есть PR</span></label>
+          </div>
+          <div class="hist" id="hist"></div>
+        </div>
+      </div>
+    </div>
+  </section>

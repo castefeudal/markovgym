@@ -6,7 +6,7 @@ import { CORE_TRANSLATIONS, LEGACY_ENGLISH } from '../src/app/catalog.mjs';
 
 const repo = new URL('../', import.meta.url);
 const appSource = readFileSync(new URL('app.js', repo), 'utf8');
-const shellSource = readFileSync(new URL('index.html', repo), 'utf8');
+const shellSource = readFileSync(new URL('app-body.html', repo), 'utf8');
 
 test('core catalog is immutable bilingual runtime data with complete entries', () => {
   assert.equal(Object.isFrozen(CORE_TRANSLATIONS), true);

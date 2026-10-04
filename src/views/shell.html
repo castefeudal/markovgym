@@ -1,0 +1,462 @@
+<a class="skip-link" href="#library" data-i18n="skip">Перейти к библиотеке упражнений</a>
+
+<noscript>
+  <div class="noscript-bar" role="alert">
+    <strong>В браузере отключён JavaScript.</strong>
+    Библиотека упражнений, конструктор тренировки, расчёт КБЖУ и план недели работают на стороне браузера,
+    поэтому без JavaScript они недоступны. Включи его в настройках браузера или напиши напрямую —
+    <a href="https://t.me/markovmade" rel="noopener">Telegram&nbsp;@markovmade</a>.
+    <span lang="en">JavaScript is disabled — the exercise library, workout builder, macro calculator and weekly
+    plan all run in the browser and need it enabled.</span>
+  </div>
+</noscript>
+
+<header class="topbar">
+  <div class="container topbar-inner">
+    <a class="brand" href="#home" aria-label="MARKOV MADE GYM — на главную">
+      <svg class="brand-mark" viewBox="0 0 40 40" role="img" aria-hidden="true" focusable="false">
+        <rect x="1" y="1" width="38" height="38" rx="9" fill="none" stroke="currentColor" stroke-opacity=".28"/>
+        <path d="M9 29V11h4.4l6.6 10.2L26.6 11H31v18h-4.3V18.9l-5.9 9.1h-1.6l-5.9-9.1V29z" fill="var(--accent)"/>
+        <path d="M9 33h22" stroke="var(--accent)" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="1.6 3.4" opacity=".7"/>
+      </svg>
+      <span class="brand-name"><b>MARKOV MADE</b><span>GYM</span></span>
+    </a>
+
+    <nav class="nav-links v7-primary-nav" id="nav-links" aria-label="Основные разделы">
+      <a class="v7-nav-link" href="#home" data-v7-nav="home">Сегодня</a>
+      <a class="v7-nav-link" href="#library" data-v7-nav="library">Библиотека</a>
+      <a class="v7-nav-link" href="#workout" data-v7-nav="workout">Тренировка</a>
+      <a class="v7-nav-link" href="#progress" data-v7-nav="progress">Прогресс</a>
+      <div class="nav-group" data-navgroup="more" data-open="false">
+        <button type="button" aria-expanded="false" aria-controls="navmenu-more"><span data-v7-nav="more">Ещё</span><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg></button>
+        <div class="nav-menu" id="navmenu-more">
+          <a href="#program"><b data-v7-more="program">Программа</b><span data-v7-more-sub="program">Структура недели и старт следующей тренировки</span></a>
+          <a href="#nutrition"><b data-v7-more="nutrition">Питание</b><span data-v7-more-sub="nutrition">Калории, макросы и сверка с прогрессом</span></a>
+          <a href="#knowledge"><b data-v7-more="knowledge">База знаний</b><span data-v7-more-sub="knowledge">Практические разборы по контексту</span></a>
+          <a href="#method"><b data-v7-more="method">Метод</b><span data-v7-more-sub="method">Как система принимает решения</span></a>
+          <a href="#settings"><b data-v7-more="settings">Настройки</b><span data-v7-more-sub="settings">Интерфейс, логирование и данные</span></a>
+          <a href="#about"><b data-v7-more="about">Павел Марков</b><span data-v7-more-sub="about">Автор, принципы и границы системы</span></a>
+        </div>
+      </div>
+    </nav>
+
+    <div class="nav-tools">
+      <div class="seg" id="lang-switch" role="group" aria-label="Язык интерфейса" data-i18n-aria="aria.lang">
+        <button type="button" data-lang="ru" aria-pressed="true">RU</button>
+        <button type="button" data-lang="en" aria-pressed="false">EN</button>
+      </div>
+      <button class="icon-btn" id="theme-toggle" type="button" aria-label="Переключить тему" data-i18n-aria="aria.theme">
+        <svg viewBox="0 0 24 24" aria-hidden="true" class="ico-dark"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5Z"/></svg>
+        <svg viewBox="0 0 24 24" aria-hidden="true" class="ico-light" hidden><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M4.2 4.2l1.6 1.6M18.2 18.2l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.2 19.8l1.6-1.6M18.2 5.8l1.6-1.6"/></svg>
+      </button>
+      <button class="icon-btn" id="cmdk-open" type="button" aria-label="Быстрый поиск по системе" data-i18n-aria="aria.cmdk">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></svg>
+        <span class="cmdk-key" aria-hidden="true">Ctrl K</span>
+      </button>
+      <button class="btn btn-primary btn-sm nav-cta" id="nav-cta" type="button" data-i18n="nav.cta">Обсудить цель</button>
+      <button class="icon-btn nav-burger" id="nav-burger" type="button" aria-expanded="false" aria-controls="mobile-nav" aria-label="Открыть меню" data-i18n-aria="aria.menuOpen">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<div class="mobile-nav" id="mobile-nav" data-open="false" role="dialog" aria-modal="true" aria-label="Меню" data-i18n-aria="aria.menu">
+  <button class="icon-btn mnav-close" id="nav-close" type="button" aria-label="Закрыть меню" data-i18n-aria="aria.menuClose">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+  </button>
+  <div class="v7-mobile-menu-head"><p class="eyebrow">MARKOV MADE OS</p><h2 data-v7-mobile-title>Разделы системы</h2></div>
+  <a class="mnav-link" href="#home"><span data-v7-nav="home">Сегодня</span><span>→</span></a>
+  <a class="mnav-link" href="#library"><span data-v7-nav="library">Библиотека</span><span>→</span></a>
+  <a class="mnav-link" href="#workout"><span data-v7-nav="workout">Тренировка</span><span>→</span></a>
+  <a class="mnav-link" href="#progress"><span data-v7-nav="progress">Прогресс</span><span>→</span></a>
+  <a class="mnav-link" href="#program"><span data-v7-more="program">Программа</span><span>→</span></a>
+  <a class="mnav-link" href="#nutrition"><span data-v7-more="nutrition">Питание</span><span>→</span></a>
+  <a class="mnav-link" href="#knowledge"><span data-v7-more="knowledge">База знаний</span><span>→</span></a>
+  <a class="mnav-link" href="#method"><span data-v7-more="method">Метод</span><span>→</span></a>
+  <a class="mnav-link" href="#settings"><span data-v7-more="settings">Настройки</span><span>→</span></a>
+  <a class="mnav-link" href="#about"><span data-v7-more="about">Павел Марков</span><span>→</span></a>
+  <div class="mnav-prefs">
+    <div class="seg" id="lang-switch-m" role="group" aria-label="Язык интерфейса" data-i18n-aria="aria.lang">
+      <button type="button" data-lang="ru" aria-pressed="true">RU</button>
+      <button type="button" data-lang="en" aria-pressed="false">EN</button>
+    </div>
+    <div class="seg" id="theme-switch-m" role="group" aria-label="Тема оформления" data-i18n-aria="aria.themeGroup">
+      <button type="button" data-theme="obsidian" aria-pressed="true" data-i18n="theme.dark">Тёмная</button>
+      <button type="button" data-theme="soft" aria-pressed="false" data-i18n="theme.soft">Мягкая</button>
+      <button type="button" data-theme="ivory" aria-pressed="false" data-i18n="theme.light">Светлая</button>
+    </div>
+  </div>
+</div>
+
+
+
+
+<div class="v8-context-bar" id="v8-context-bar" role="region" aria-label="Контекст текущего раздела">
+  <div class="v8-context-inner">
+    <div class="v8-context-copy">
+      <span class="v8-context-kicker" id="v8-context-kicker">MARKOV MADE</span>
+      <h1 class="v8-context-title" id="v8-context-title">—</h1>
+      <small class="v8-context-meta" id="v8-context-meta">—</small>
+    </div>
+    <div class="v8-context-side">
+      <div class="v10-context-actions" id="v10-context-actions"></div>
+      <span class="v8-context-local"><span id="v8-context-local-text">Локально сохранено</span></span>
+      <span class="v8-context-shortcut" aria-hidden="true">⌘ K</span>
+    </div>
+  </div>
+</div>
+
+<main id="top">
+
+  <!-- V7 HOME / RETURNING USER APP SHELL ------------------------------------ -->
+  <!-- view:home -->
+
+
+  <!-- HERO ---------------------------------------------------------------- -->
+  <!-- view:onboarding -->
+
+
+  <!-- МОЯ СИСТЕМА ------------------------------------------------------------- -->
+  <!-- view:system -->
+
+  <!-- БЫСТРЫЙ СТАРТ -------------------------------------------------------- -->
+  <!-- view:start -->
+
+
+  <!-- СИСТЕМА MARKOV MADE ---------------------------------------------------- -->
+  <!-- view:method -->
+
+  <!-- МЫШЦЫ ---------------------------------------------------------------- -->
+  <!-- view:muscles -->
+
+  <!-- БИБЛИОТЕКА ----------------------------------------------------------- -->
+  <!-- view:library -->
+
+  <!-- ТЕКУЩАЯ ТРЕНИРОВКА ---------------------------------------------------- -->
+  <!-- view:workout -->
+
+  <!-- КБЖУ ------------------------------------------------------------------ -->
+  <!-- view:nutrition -->
+
+  <!-- ПЛАН ------------------------------------------------------------------ -->
+  <!-- view:program -->
+
+
+  <!-- ПРОГРЕСС ---------------------------------------------------------------- -->
+  <!-- view:progress -->
+
+  <!-- БАЗА ЗНАНИЙ ------------------------------------------------------------- -->
+  <!-- view:knowledge -->
+
+  <!-- ОБ АВТОРЕ --------------------------------------------------------------- -->
+  <!-- view:about -->
+
+  <!-- КАК ПОЛЬЗОВАТЬСЯ ------------------------------------------------------ -->
+  <!-- view:how -->
+
+  <!-- FAQ ------------------------------------------------------------------- -->
+  <!-- view:faq -->
+
+  <!-- ПЕРСОНАЛЬНАЯ РАБОТА ---------------------------------------------------- -->
+  <!-- view:contact -->
+
+
+  <!-- V7 MORE --------------------------------------------------------------- -->
+  <!-- view:more -->
+
+  <!-- V7 SETTINGS ----------------------------------------------------------- -->
+  <!-- view:settings -->
+</main>
+
+<footer class="footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <div class="footer-brand-row">
+          <img class="brand-emblem" src="images/gym-mark.svg" width="512" height="512" loading="lazy" decoding="async" alt="MARKOV MADE GYM — фитнес-направление Павла Маркова" data-i18n-alt="console.logoAlt">
+          <a class="brand" href="#home" aria-label="MARKOV MADE GYM">
+            <svg class="brand-mark" viewBox="0 0 40 40" aria-hidden="true" focusable="false">
+              <rect x="1" y="1" width="38" height="38" rx="9" fill="none" stroke="currentColor" stroke-opacity=".28"/>
+              <path d="M9 29V11h4.4l6.6 10.2L26.6 11H31v18h-4.3V18.9l-5.9 9.1h-1.6l-5.9-9.1V29z" fill="var(--accent)"/>
+              <path d="M9 33h22" stroke="var(--accent)" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="1.6 3.4" opacity=".7"/>
+            </svg>
+            <span class="brand-name"><b>MARKOV MADE</b><span>GYM</span></span>
+          </a>
+        </div>
+        <p class="small" data-i18n="footer.text">Библиотека упражнений, техника, конструктор тренировки, КБЖУ и стартовый план недели. Проект Павла Маркова / MarkovMade.</p>
+      </div>
+      <div class="footer-links">
+        <div class="footer-col">
+          <b data-i18n="footer.colProduct">Инструменты</b>
+          <a href="#library" data-i18n="nav.library">Упражнения</a>
+          <a href="#workout" data-i18n="nav.workout">Тренировка</a>
+          <a href="#nutrition" data-i18n="nav.nutrition">КБЖУ</a>
+          <a href="#program" data-i18n="nav.program">План недели</a>
+          <a href="#progress" data-i18n="nav.progress">Прогресс</a>
+        </div>
+        <div class="footer-col">
+          <b data-i18n="footer.colMethod">Метод</b>
+          <a href="#method" data-i18n="nav.method">Система MARKOV MADE</a>
+          <a href="#knowledge" data-i18n="nav.knowledge">База знаний</a>
+          <a href="#how" data-i18n="mnav.how">Как пользоваться</a>
+          <a href="#faq" data-i18n="nav.faq">FAQ</a>
+        </div>
+        <div class="footer-col">
+          <b data-i18n="footer.colHelp">Павел Марков</b>
+          <a href="#about" data-i18n="nav.about">Об авторе</a>
+          <a href="#contact" data-i18n="nav.contact">Персональная работа</a>
+          <a href="https://t.me/markovmade" target="_blank" rel="noopener noreferrer">Telegram</a>
+        </div>
+      </div>
+    </div>
+    <div class="footer-legal v8-footer-data">
+      <div class="v8-footer-data-grid">
+        <b class="tiny v8-footer-data-title" data-i18n="data.title">Мои данные</b>
+        <p class="tiny v8-footer-data-copy" data-i18n="data.text">Настройки, избранное, тренировки, история, планы, расчёты и дневник хранятся только в этом браузере. На сервер ничего не уходит, аккаунта нет. Очистка данных браузера удалит их безвозвратно — поэтому есть экспорт.</p>
+        <div class="data-tools">
+          <button class="btn btn-quiet btn-sm" id="data-export" type="button" data-i18n="data.export">Выгрузить все данные</button>
+          <button class="btn btn-quiet btn-sm" id="data-import" type="button" data-i18n="data.import">Загрузить из файла</button>
+          <button class="btn btn-quiet btn-sm btn-danger" id="data-clear" type="button" data-i18n="data.clear">Удалить все данные</button>
+        </div>
+        <label class="sr-only" for="data-io" data-i18n="data.ioL">Все данные в формате JSON</label>
+        <textarea class="textarea io-area" id="data-io" spellcheck="false" hidden placeholder="{ ... }"></textarea>
+      </div>
+    </div>
+    <div class="footer-legal">
+      <span>© <span id="year">2026</span> Павел Марков / MarkovMade</span>
+      <span data-i18n="footer.legal">Материалы носят информационный характер и не заменяют консультацию врача.</span>
+    </div>
+  </div>
+</footer>
+
+<!-- ОВЕРЛЕИ ------------------------------------------------------------------ -->
+<div class="scrim" id="scrim" data-open="false" hidden></div>
+
+<div class="mobile-filter-bar" id="mfb" data-open="false">
+  <button class="btn btn-solid btn-sm" id="mfb-open" type="button">
+    <span data-i18n="mfb.filters">Фильтры</span><span class="mfb-count" id="mfb-count" hidden>0</span>
+  </button>
+  <button class="btn btn-solid btn-sm" id="mfb-workout" type="button" hidden>
+    <span data-i18n="mfb.workout">Тренировка</span><span class="mfb-count" id="mfb-wcount">0</span>
+  </button>
+  <button class="btn btn-primary btn-sm" id="mfb-ask" type="button" data-i18n="mfb.ask">Павлу</button>
+  <span class="tiny" id="mfb-active"></span>
+</div>
+
+<div class="modal" id="modal" data-open="false">
+  <div class="modal-backdrop" data-close-modal></div>
+  <div class="modal-box modal-box-exercise" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal-head modal-head-exercise">
+      <div class="modal-head-copy">
+        <p class="modal-kicker" id="modal-kicker">—</p>
+        <h2 id="modal-title">—</h2>
+        <p class="modal-head-sub" id="modal-head-sub">Полный разбор техники, контроля и прогрессии</p>
+      </div>
+      <button class="icon-btn" id="modal-close" type="button" aria-label="Закрыть" data-i18n-aria="aria.close">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </div>
+
+    <div class="modal-scroll modal-scroll-exercise" id="modal-scroll">
+      <aside class="modal-visual" aria-label="Демонстрация упражнения">
+        <div class="modal-media" id="modal-media">
+          <img id="modal-img" alt="" width="640" height="480" decoding="async">
+          <div class="modal-media-chrome">
+            <span class="modal-media-status" id="modal-media-status">GIF · полный кадр</span>
+            <button class="modal-media-expand" id="modal-media-expand" type="button" aria-label="Развернуть демонстрацию упражнения">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5"/></svg>
+              <span id="modal-media-expand-label">Развернуть</span>
+            </button>
+          </div>
+        </div>
+        <div class="modal-quick" id="modal-quick" aria-label="Краткий профиль упражнения"></div>
+      </aside>
+
+      <article class="modal-info">
+        <nav class="modal-tabs" id="modal-tabs" aria-label="Навигация по разбору упражнения">
+          <button type="button" data-modal-jump="modal-technique" aria-current="true">Техника</button>
+          <button type="button" data-modal-jump="modal-cues-section">Подсказки</button>
+          <button type="button" data-modal-jump="modal-errors-section">Ошибки</button>
+          <button type="button" data-modal-jump="modal-dose-section">Прогрессия</button>
+          <button type="button" data-modal-jump="modal-swap-section">Замены</button>
+        </nav>
+
+        <section class="modal-section modal-overview" id="modal-overview">
+          <div class="modal-section-head">
+            <p class="modal-section-kicker" id="modal-overview-kicker">Профиль движения</p>
+            <h3 id="modal-overview-title">Что важно знать до первого повтора</h3>
+          </div>
+          <div class="modal-facts modal-facts-grid" id="modal-facts"></div>
+        </section>
+
+        <section class="modal-section modal-technique-section" id="modal-technique">
+          <div class="modal-section-head">
+            <p class="modal-section-kicker" id="modal-technique-kicker">Пошагово</p>
+            <h3 id="modal-technique-title">Техника выполнения</h3>
+            <p class="modal-section-lede" id="modal-technique-lede">Сначала посмотри полный цикл на GIF, затем пройди шаги сверху вниз.</p>
+          </div>
+          <ol class="modal-steps modal-steps-detailed" id="modal-steps"></ol>
+        </section>
+
+        <section class="modal-section" id="modal-cues-section">
+          <div class="modal-section-head">
+            <p class="modal-section-kicker" id="modal-cues-kicker">Контроль движения</p>
+            <h3 id="modal-cues-title">Ключевые подсказки</h3>
+          </div>
+          <div class="modal-cue-grid" id="modal-cues"></div>
+        </section>
+
+        <section class="modal-section modal-coach-section" id="modal-coach-section">
+          <div id="modal-coach"></div>
+        </section>
+
+        <section class="modal-section modal-errors-section" id="modal-errors-section">
+          <div class="modal-section-head">
+            <p class="modal-section-kicker" id="modal-errors-kicker">Самопроверка</p>
+            <h3 id="modal-errors-title">Частые ошибки и когда остановиться</h3>
+          </div>
+          <div class="modal-alert-grid" id="modal-errors"></div>
+        </section>
+
+        <section class="modal-section" id="modal-dose-section">
+          <div class="modal-section-head">
+            <p class="modal-section-kicker" id="modal-dose-kicker">Нагрузка</p>
+            <h3 id="modal-dose-title">Дозировка и прогрессия</h3>
+          </div>
+          <div id="modal-dose"></div>
+        </section>
+
+        <section class="modal-section" id="modal-swap-section">
+          <div class="modal-section-head">
+            <p class="modal-section-kicker" id="modal-swap-kicker">Альтернатива</p>
+            <h3 id="modal-swap-title">Нужна замена</h3>
+            <p class="modal-section-lede" id="modal-swap-lede">Выбери причину — покажем ближайшие варианты по целевой мышце и доступному оборудованию.</p>
+          </div>
+          <div class="swap-reasons" id="swap-reasons" role="group" aria-label="Причина замены" data-i18n-aria="aria.swapWhy"></div>
+          <p class="swap-hint" id="swap-hint" data-i18n="modal.swapHint">Выбери причину — покажем ближайшие альтернативы по целевой мышце и доступному оборудованию.</p>
+          <div class="swap-list" id="swap-list"></div>
+        </section>
+
+        <div class="note note-warn modal-safety-note" data-i18n="modal.warning">Боль, онемение или резкий дискомфорт — сигнал остановиться и заменить движение, а не терпеть. При травмах и ограничениях упражнение нужно адаптировать.</div>
+      </article>
+    </div>
+
+    <div class="modal-foot modal-foot-exercise">
+      <button class="btn btn-primary" id="modal-add" type="button" data-i18n="modal.add">Добавить в тренировку</button>
+      <button class="btn btn-solid" id="modal-fav" type="button" aria-pressed="false">Сохранить</button>
+      <button class="btn btn-quiet" id="modal-copy" type="button" data-i18n="modal.copy">Скопировать</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal custom-exercise-dialog" id="custom-exercise-dialog" data-open="false" role="dialog" aria-modal="true" aria-labelledby="custom-exercise-title" aria-hidden="true" inert>
+  <div class="modal-backdrop" data-close="custom-exercise-dialog"></div>
+  <div class="modal-box" role="document">
+    <div class="modal-head">
+      <div><p class="modal-kicker" id="custom-exercise-kicker"></p><h2 id="custom-exercise-title"></h2></div>
+      <button class="icon-btn" id="custom-exercise-close" type="button" aria-label="Закрыть" data-i18n-aria="aria.close">×</button>
+    </div>
+    <div class="custom-exercise-scroll">
+      <p class="small" id="custom-exercise-intro"></p>
+      <p class="custom-exercise-error" id="custom-exercise-error" role="status" aria-live="polite" hidden></p>
+      <form id="custom-exercise-form">
+        <div class="custom-exercise-grid">
+          <div class="field"><label for="custom-name-ru" id="custom-name-ru-label"></label><input class="input" id="custom-name-ru" name="nameRu" maxlength="120" required></div>
+          <div class="field"><label for="custom-name-en" id="custom-name-en-label"></label><input class="input" id="custom-name-en" name="nameEn" maxlength="120" required></div>
+          <div class="field"><label for="custom-zone" id="custom-zone-label"></label><select class="select" id="custom-zone" name="zone" required></select></div>
+          <div class="field"><label for="custom-target" id="custom-target-label"></label><select class="select" id="custom-target" name="target" required></select></div>
+          <div class="field"><label for="custom-secondary" id="custom-secondary-label"></label><select class="select custom-secondary-select" id="custom-secondary" name="secondary" multiple size="4"></select></div>
+          <div class="field"><label for="custom-equipment" id="custom-equipment-label"></label><select class="select" id="custom-equipment" name="equip" required></select></div>
+          <div class="field"><label for="custom-pattern" id="custom-pattern-label"></label><select class="select" id="custom-pattern" name="movementPattern"></select></div>
+          <div class="field"><label for="custom-tracking" id="custom-tracking-label"></label><select class="select" id="custom-tracking" name="trackingType"></select></div>
+          <div class="field"><label for="custom-laterality" id="custom-laterality-label"></label><select class="select" id="custom-laterality" name="laterality"></select></div>
+          <label class="custom-compound"><input id="custom-compound" name="compound" type="checkbox"><span id="custom-compound-label"></span></label>
+          <div class="field"><label for="custom-sets" id="custom-sets-label"></label><input class="input" id="custom-sets" name="defaultSets" type="number" min="1" max="20" value="3" required></div>
+          <div class="field"><label for="custom-reps" id="custom-reps-label"></label><input class="input" id="custom-reps" name="defaultRepRange" maxlength="24" value="8–12" required></div>
+          <div class="field"><label for="custom-rest" id="custom-rest-label"></label><input class="input" id="custom-rest" name="defaultRest" type="number" min="15" max="900" step="5" value="90" required></div>
+          <div class="field"><label for="custom-increment" id="custom-increment-label"></label><input class="input" id="custom-increment" name="loadIncrement" type="number" min="0.1" max="100" step="0.1" value="2.5" required></div>
+          <div class="field custom-notes-field"><label for="custom-notes" id="custom-notes-label"></label><textarea class="textarea" id="custom-notes" name="notes" maxlength="1000"></textarea></div>
+          <div class="field custom-image-field"><label for="custom-image" id="custom-image-label"></label><input class="input" id="custom-image" name="image" type="file" accept="image/png,image/jpeg,image/webp"></div>
+        </div>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-quiet" id="custom-exercise-cancel" type="button"></button>
+      <button class="btn btn-primary" id="custom-exercise-save" type="submit" form="custom-exercise-form"></button>
+    </div>
+  </div>
+</div>
+
+<div class="cmdk" id="cmdk" data-open="false">
+  <div class="cmdk-backdrop" data-close-cmdk></div>
+  <div class="cmdk-box" role="dialog" aria-modal="true" aria-label="Быстрый поиск" data-i18n-aria="aria.cmdk">
+    <label class="sr-only" for="cmdk-input" data-i18n="cmdk.label">Быстрый поиск по упражнениям и разделам</label>
+    <input class="cmdk-input" id="cmdk-input" type="text" autocomplete="off" placeholder="Упражнение, мышца или раздел…" data-i18n-ph="cmdk.ph" role="combobox" aria-expanded="true" aria-controls="cmdk-results" aria-autocomplete="list">
+    <ul class="cmdk-results" id="cmdk-results" role="listbox" aria-label="Результаты" data-i18n-aria="cmdk.results"></ul>
+    <div class="cmdk-foot">
+      <span data-i18n="cmdk.hint1">↑↓ выбрать</span><span data-i18n="cmdk.hint2">Enter открыть</span><span data-i18n="cmdk.hint3">Esc закрыть</span>
+    </div>
+  </div>
+</div>
+
+
+<!-- Быстрая заявка -->
+<div class="sheet" id="lead-sheet" data-open="false" role="dialog" aria-modal="true" aria-labelledby="sheet-title" aria-hidden="true">
+  <div class="sheet-grab" aria-hidden="true"></div>
+  <div class="sheet-head">
+    <h2 id="sheet-title" data-i18n="sheet.title">Задать вопрос Павлу</h2>
+    <button class="icon-btn" id="sheet-close" type="button" aria-label="Закрыть" data-i18n-aria="aria.close">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+    </button>
+  </div>
+  <div class="sheet-body">
+    <p class="small" data-i18n="sheet.text">Выбери тему — текст сообщения соберётся сам. Перед отправкой его можно отредактировать.</p>
+    <div class="pills" id="sheet-asks"></div>
+    <div class="field"><label for="sheet-msg" data-i18n="sheet.msgL">Сообщение</label>
+      <textarea class="textarea v8-sheet-message" id="sheet-msg" placeholder="Опиши задачу в двух предложениях" data-i18n-ph="sheet.msgPh"></textarea></div>
+    <p class="tiny" data-i18n="sheet.note">Сайт не может отправить сообщение за тебя: он копирует текст и открывает Telegram, где ты нажимаешь «Отправить».</p>
+  </div>
+  <div class="sheet-foot">
+    <button class="btn btn-primary btn-wide" id="sheet-send" type="button" data-i18n="sheet.send">Скопировать и открыть Telegram</button>
+    <button class="btn btn-quiet btn-wide" id="sheet-full" type="button" data-i18n="sheet.full">Открыть полную форму</button>
+  </div>
+</div>
+
+<!-- Режим выполнения тренировки -->
+<div class="modal" id="run" data-open="false" role="dialog" aria-modal="true" aria-labelledby="run-title" aria-hidden="true">
+  <div class="modal-backdrop" data-close="run"></div>
+  <div class="modal-box" role="document">
+    <div class="modal-head">
+      <div>
+        <p class="modal-kicker" id="run-kicker">—</p>
+        <h2 id="run-title" data-i18n="run.title">Тренировка</h2>
+      </div>
+      <button class="icon-btn" id="run-close" type="button" aria-label="Закрыть" data-i18n-aria="aria.close">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </div>
+    <div class="modal-scroll">
+      <div class="run-bar" aria-hidden="true"><i id="run-bar-i" style="width:0%"></i></div>
+      <div class="run-stage" id="run-stage" aria-live="polite"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-quiet" id="run-prev" type="button" data-i18n="run.prev">Назад</button>
+      <button class="btn btn-solid" id="run-rest" type="button" data-i18n="run.rest">Отдых</button>
+      <button class="btn btn-primary" id="run-next" type="button" data-i18n="run.next">Следующий подход</button>
+    </div>
+  </div>
+</div>
+
+<button class="fab" id="fab" type="button" data-open="false">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M20 15a3 3 0 0 1-3 3H8l-4 3V6a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3Z"/></svg>
+  <span data-i18n="fab.label">Задать вопрос Павлу</span>
+</button>
+
+<div class="toast" id="toast" role="status" aria-live="polite" data-open="false"></div>
+
+<button class="to-top" id="to-top" type="button" data-open="false" aria-label="Наверх" data-i18n-aria="aria.toTop">
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6"/></svg>
+</button>
+
+<!-- ДАННЫЕ: 1324 упражнения (RU + EN). Отделены от UI-логики и разбираются один раз при старте. -->

@@ -1,0 +1,158 @@
+<section class="section section-alt" id="nutrition" aria-labelledby="nutrition-title">
+    <div class="container">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow" data-i18n="kbju.eyebrow">Питание</p>
+          <h2 id="nutrition-title" data-i18n="kbju.title">Стартовый расчёт КБЖУ</h2>
+          <p data-i18n="kbju.text">Расчёт даёт отправную точку и коридор калорий, а не точное медицинское назначение. Дальше решает динамика за 2–3 недели.</p>
+        </div>
+      </div>
+
+      <div class="tool-layout">
+        <form class="tool-form panel" id="kbju-form" novalidate>
+          <div class="form-grid nutrition-form-grid">
+            <div class="form-section-label span-all" data-i18n="ultimate.kbjuBody">Параметры тела</div>
+            <div class="field"><label for="k-sex" data-i18n="kbju.sex">Пол</label>
+              <select class="select" id="k-sex">
+                <option value="male" data-i18n="kbju.male">Мужской</option>
+                <option value="female" data-i18n="kbju.female">Женский</option>
+              </select></div>
+            <div class="field" data-field="k-age"><label for="k-age" data-i18n="kbju.age">Возраст, лет</label>
+              <input class="input num" id="k-age" type="number" inputmode="numeric" min="14" max="90" step="1" value="30" aria-describedby="err-k-age">
+              <p class="field-error" id="err-k-age" role="alert"></p></div>
+            <div class="field" data-field="k-height"><label for="k-height" data-i18n="kbju.height">Рост, см</label>
+              <input class="input num" id="k-height" type="number" inputmode="numeric" min="130" max="230" step="1" value="180" aria-describedby="err-k-height">
+              <p class="field-error" id="err-k-height" role="alert"></p></div>
+            <div class="field" data-field="k-weight"><label for="k-weight" data-i18n="kbju.weight">Вес, кг</label>
+              <input class="input num" id="k-weight" type="number" inputmode="decimal" min="35" max="250" step="0.1" value="80" aria-describedby="err-k-weight">
+              <p class="field-error" id="err-k-weight" role="alert"></p></div>
+            <div class="field" data-field="k-fat"><label for="k-fat" data-i18n="kbju.fat">% жира (если знаешь)</label>
+              <input class="input num" id="k-fat" type="number" inputmode="decimal" min="3" max="60" step="0.1" placeholder="15" aria-describedby="err-k-fat">
+              <p class="field-error" id="err-k-fat" role="alert"></p></div>
+            <div class="field" data-field="k-waist"><label for="k-waist" data-i18n="kbju.waist">Талия, см (для контроля)</label>
+              <input class="input num" id="k-waist" type="number" inputmode="decimal" min="45" max="200" step="0.1" placeholder="86" aria-describedby="err-k-waist">
+              <p class="field-error" id="err-k-waist" role="alert"></p></div>
+            <div class="form-section-label span-all" data-i18n="ultimate.kbjuActivity">Активность и тренировки</div>
+            <div class="field"><label for="k-activity" data-i18n="kbju.activity">Бытовая активность</label>
+              <select class="select" id="k-activity">
+                <option value="1.2" data-i18n="kbju.act1">Сидячая, почти без шагов</option>
+                <option value="1.375" data-i18n="kbju.act2">Низкая, 5–7 тыс. шагов</option>
+                <option value="1.55" selected data-i18n="kbju.act3">Средняя, 8–11 тыс. шагов</option>
+                <option value="1.725" data-i18n="kbju.act4">Высокая, много движения</option>
+                <option value="1.9" data-i18n="kbju.act5">Физический труд</option>
+              </select></div>
+            <div class="field"><label for="k-training" data-i18n="kbju.training">Тип тренировок</label>
+              <select class="select" id="k-training">
+                <option value="strength" selected data-i18n="kbju.trStrength">Силовые</option>
+                <option value="mixed" data-i18n="kbju.trMixed">Силовые + кардио</option>
+                <option value="endurance" data-i18n="kbju.trEndurance">Выносливость</option>
+                <option value="health" data-i18n="kbju.trHealth">Здоровье и тонус</option>
+              </select></div>
+            <div class="form-section-label span-all" data-i18n="ultimate.kbjuGoal">Цель и темп</div>
+            <div class="field"><label for="k-goal" data-i18n="kbju.goal">Цель</label>
+              <select class="select" id="k-goal">
+                <option value="cut" data-i18n="kbju.goalCut">Снижение жира</option>
+                <option value="maintain" selected data-i18n="kbju.goalMaintain">Поддержание</option>
+                <option value="lean" data-i18n="kbju.goalLean">Сухой набор</option>
+                <option value="bulk" data-i18n="kbju.goalBulk">Набор массы</option>
+              </select></div>
+            <div class="field"><label for="k-pace" data-i18n="kbju.pace">Темп изменения веса</label>
+              <select class="select" id="k-pace">
+                <option value="gentle" data-i18n="kbju.paceGentle">Мягкий</option>
+                <option value="moderate" selected data-i18n="kbju.paceModerate">Умеренный</option>
+                <option value="assertive" data-i18n="kbju.paceAssertive">Интенсивный</option>
+              </select></div>
+          </div>
+          <button class="btn btn-primary btn-wide" id="kbju-calc" type="submit" data-i18n="kbju.submit">Рассчитать КБЖУ</button>
+          <p class="tiny" data-i18n="kbju.disclaimer">Расчёт носит справочный характер и не заменяет консультацию врача или диетолога. При заболеваниях, беременности и приёме лекарств ориентиры подбирает специалист.</p>
+        </form>
+
+        <div class="tool-out panel" id="kbju-out" aria-live="polite"></div>
+      </div>
+
+      <div class="guides" id="guides-nutrition"></div>
+
+      <section class="panel nutrition-log-panel" aria-labelledby="nutrition-log-title">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow" data-i18n="nutritionLog.eyebrow">Ежедневный журнал</p>
+            <h3 id="nutrition-log-title" data-i18n="nutritionLog.title">Что получилось за день</h3>
+            <p class="small" data-i18n="nutritionLog.text">Калории и белок — обязательные поля. Остальное можно добавить по желанию; вес за эту дату попадёт и в дневник прогресса.</p>
+          </div>
+        </div>
+        <form id="nutrition-log-form" class="nutrition-log-form">
+          <div class="form-grid">
+            <div class="field"><label for="nlog-date" data-i18n="nutritionLog.date">Дата</label><input class="input" id="nlog-date" type="date" required></div>
+            <div class="field"><label for="nlog-calories" data-i18n="nutritionLog.calories">Калории, ккал *</label><input class="input" id="nlog-calories" type="number" inputmode="numeric" min="1" max="15000" step="1" required></div>
+            <div class="field"><label for="nlog-protein" data-i18n="nutritionLog.protein">Белок, г *</label><input class="input" id="nlog-protein" type="number" inputmode="decimal" min="0" max="500" step="0.1" required></div>
+            <div class="field"><label for="nlog-fat" data-i18n="nutritionLog.fat">Жиры, г</label><input class="input" id="nlog-fat" type="number" inputmode="decimal" min="0" max="1000" step="0.1"></div>
+            <div class="field"><label for="nlog-carbs" data-i18n="nutritionLog.carbs">Углеводы, г</label><input class="input" id="nlog-carbs" type="number" inputmode="decimal" min="0" max="1500" step="0.1"></div>
+            <div class="field"><label for="nlog-weight" data-i18n="nutritionLog.weight">Вес за эту дату, кг</label><input class="input" id="nlog-weight" type="number" inputmode="decimal" min="30" max="300" step="0.1"></div>
+            <div class="field"><label for="nlog-accuracy" data-i18n="nutritionLog.accuracy">Точность записи</label><select class="select" id="nlog-accuracy"><option value="unknown" data-i18n="nutritionLog.unknown">Не отмечать</option><option value="accurate" data-i18n="nutritionLog.accurate">Точно</option><option value="estimated" data-i18n="nutritionLog.estimated">Оценка</option><option value="rough" data-i18n="nutritionLog.rough">Примерно</option></select></div>
+            <div class="field span-all"><label for="nlog-note" data-i18n="nutritionLog.note">Заметка (необязательно)</label><input class="input" id="nlog-note" maxlength="240"></div>
+          </div>
+          <button class="btn btn-primary" type="submit" data-i18n="nutritionLog.save">Сохранить день</button>
+        </form>
+        <div id="nutrition-log-list" class="nutrition-log-list" aria-live="polite"></div>
+        <section class="nutrition-weekly" aria-labelledby="nutrition-weekly-title">
+          <div><h4 id="nutrition-weekly-title" data-i18n="nutritionWeek.title">Недельный ориентир</h4><p class="small" data-i18n="nutritionWeek.intro">Сверяй сумму за неделю с текущей дневной целью. Это контекст, а не долг, который нужно компенсировать.</p></div>
+          <div id="nutrition-weekly-budget" aria-live="polite"></div>
+        </section>
+        <section class="nutrition-trend" aria-labelledby="nutrition-trend-title">
+          <div><h4 id="nutrition-trend-title" data-i18n="nutritionTrend.title">Динамика веса</h4><p class="small" data-i18n="nutritionTrend.intro">Ежедневный замер остаётся виден отдельно от сглаженного тренда.</p></div>
+          <div id="nutrition-trend" aria-live="polite"></div>
+        </section>
+      </section>
+
+      <div class="tool-layout v8-tool-offset">
+        <form class="tool-form panel" id="checkin-form" novalidate>
+          <div>
+            <p class="eyebrow" data-i18n="checkin.eyebrow">Недельная сверка</p>
+            <h3 class="v8-checkin-title" data-i18n="checkin.title">Что делать с калориями дальше</h3>
+            <p class="small v8-mt-2" data-i18n="checkin.text">Заполни средние значения за две недели — сверка подскажет, менять ли калории или сначала собрать больше данных.</p>
+          </div>
+          <div class="form-grid">
+            <div class="field" data-field="c-prev"><label for="c-prev" data-i18n="checkin.prev">Средний вес прошлой недели, кг</label>
+              <input class="input" id="c-prev" type="number" inputmode="decimal" step="0.1" min="30" max="300" placeholder="80.4" aria-describedby="err-c-prev">
+              <p class="field-error" id="err-c-prev" role="alert"></p></div>
+            <div class="field" data-field="c-now"><label for="c-now" data-i18n="checkin.now">Средний вес текущей недели, кг</label>
+              <input class="input" id="c-now" type="number" inputmode="decimal" step="0.1" min="30" max="300" placeholder="80.0" aria-describedby="err-c-now">
+              <p class="field-error" id="err-c-now" role="alert"></p></div>
+            <div class="field"><label for="c-waist" data-i18n="checkin.waist">Талия за неделю</label>
+              <select class="select" id="c-waist">
+                <option value="down" data-i18n="checkin.wDown">Уменьшилась</option>
+                <option value="same" selected data-i18n="checkin.wSame">Без изменений</option>
+                <option value="up" data-i18n="checkin.wUp">Увеличилась</option>
+              </select></div>
+            <div class="field"><label for="c-strength" data-i18n="checkin.strength">Рабочие веса</label>
+              <select class="select" id="c-strength">
+                <option value="up" data-i18n="checkin.sUp">Растут</option>
+                <option value="same" selected data-i18n="checkin.sSame">Держатся</option>
+                <option value="down" data-i18n="checkin.sDown">Падают</option>
+              </select></div>
+            <div class="field"><label for="c-hunger" data-i18n="checkin.hunger">Голод</label>
+              <select class="select" id="c-hunger">
+                <option value="low" data-i18n="checkin.hLow">Спокойный</option>
+                <option value="mid" selected data-i18n="checkin.hMid">Заметный, но терпимый</option>
+                <option value="high" data-i18n="checkin.hHigh">Сильный, мешает</option>
+              </select></div>
+            <div class="field"><label for="c-sleep" data-i18n="checkin.sleep">Сон</label>
+              <select class="select" id="c-sleep">
+                <option value="good" data-i18n="checkin.slGood">7 часов и больше</option>
+                <option value="mid" selected data-i18n="checkin.slMid">6–7 часов</option>
+                <option value="bad" data-i18n="checkin.slBad">Меньше 6 часов</option>
+              </select></div>
+            <div class="field span-all"><label for="c-adherence" data-i18n="checkin.adherence">Насколько точно соблюдался рацион</label>
+              <select class="select" id="c-adherence">
+                <option value="high" data-i18n="checkin.aHigh">Почти каждый день по плану</option>
+                <option value="mid" selected data-i18n="checkin.aMid">Были отклонения в 1–2 дня</option>
+                <option value="low" data-i18n="checkin.aLow">Считал приблизительно</option>
+              </select></div>
+          </div>
+          <button class="btn btn-primary btn-wide" id="checkin-calc" type="submit" data-i18n="checkin.calc">Показать вывод</button>
+          <p class="tiny" data-i18n="checkin.hint">Логика намеренно консервативная: при недостатке данных сверка предложит подождать, а не менять рацион.</p>
+        </form>
+        <div class="tool-out panel checkin-out" id="checkin-out" aria-live="polite"></div>
+      </div>
+    </div>
+  </section>
