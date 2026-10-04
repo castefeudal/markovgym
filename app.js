@@ -8,6 +8,7 @@
             18 связывание · 14 инициализация
    ========================================================================= */
 import './bootstrap.js';
+import { createPreferenceWriter } from './src/features/exercise/preference-write-queue.mjs';
 import { workoutAlreadySaved } from './src/features/workout/save-state.mjs';
 import { progressIntelligenceHtmlView } from './src/features/progress/progressintelligence-view.mjs';
 import { renderHistoryView } from './src/features/workout/history-view.mjs';
@@ -86,7 +87,7 @@ import { cleanLoadIncrementOverrides, equipmentLoadIncrement } from './src/featu
   var storageWarnings = [];
   var lastLocalError = null;
   var historyRepository = null;
-  var exercisePreferenceWrite = Promise.resolve();
+  var writePreferenceSnapshot = createPreferenceWriter(function(){return historyRepository;});
   var indexedAppStateKeys = Object.create(null);
   var indexedRepositoryKeys = Object.create(null);
   var indexedAppStateReady = false;
@@ -561,15 +562,12 @@ import { cleanLoadIncrementOverrides, equipmentLoadIncrement } from './src/featu
     store.set(K.exercisePreferences, serialized);
     if (!historyRepository) return Promise.resolve();
     var snapshot = cleanIdbExercisePreferences(S.exercisePreferences);
-    exercisePreferenceWrite = exercisePreferenceWrite.catch(function () {}).then(function () {
-      return historyRepository.replaceExercisePreferences(snapshot);
-    }).then(function () {
+    return writePreferenceSnapshot(snapshot).then(function () {
       databaseExercisePreferences = snapshot;
     }).catch(function () {
       storageWarnings.push({ key: K.exercisePreferences, type: 'indexeddb-write', at: Date.now() });
       try { if (storageOk) window.localStorage.setItem(K.exercisePreferences, serialized); } catch (_fallbackError) {}
     });
-    return exercisePreferenceWrite;
   }
   function cleanExercisePreferences(value) {
     return normalizeExercisePreferences(value, function(id) { return !!BY_ID[id]; }, EX.length);
@@ -5959,7 +5957,8 @@ import { cleanLoadIncrementOverrides, equipmentLoadIncrement } from './src/featu
     });
     return failed;
   }
-  importAll = function(raw){
+  importAll = async function(raw){
+    if(!DATA_READY&&!await ensureData()){showToast(S.lang==='en'?'Exercise data is unavailable. Import was not applied; retry when the catalog is available.':'Каталог упражнений недоступен. Импорт не применён; повтори после загрузки каталога.', 'error');return false;}
     var report=analyzeBackup(raw);
     if(!report.ok){
       var msg=report.code==='json'?t('ioBadJson'):report.code==='future'?(S.lang==='en'?'This backup was created by a newer app version.':'Эта копия создана более новой версией приложения.'):(report.code==='invalid'?(S.lang==='en'?'Invalid fields: '+report.invalid.map(backupLabel).join(', ')+'. Current data was not changed.':'Не прошли проверку: '+report.invalid.map(backupLabel).join(', ')+'. Текущие данные не изменены.'):(S.lang==='en'?'Backup validation failed. Current data was not changed.':'Проверка резервной копии не пройдена. Текущие данные не изменены.'));
@@ -5985,7 +5984,7 @@ import { cleanLoadIncrementOverrides, equipmentLoadIncrement } from './src/featu
     if (report.staged.nutritionLog && historyRepository) indexedWrites.push(historyRepository.replaceNutritionDays(importedNutritionDays));
     if (report.staged.customExercises && historyRepository) indexedWrites.push(historyRepository.replaceCustomExercises(importedCustomExercises));
     if (report.staged.equipmentProfiles && historyRepository) indexedWrites.push(historyRepository.replaceEquipmentProfiles(importedEquipmentProfiles));
-    if (report.staged.exercisePreferences && historyRepository) indexedWrites.push(historyRepository.replaceExercisePreferences(importedExercisePreferences));
+    if (report.staged.exercisePreferences && historyRepository) indexedWrites.push(writePreferenceSnapshot(importedExercisePreferences));
     Promise.all(indexedWrites).then(async function () {
       if (importedExercisePreferences && historyRepository) {
         var persistedPreferences = await historyRepository.readExercisePreferences();
@@ -5997,7 +5996,7 @@ import { cleanLoadIncrementOverrides, equipmentLoadIncrement } from './src/featu
           });
         };
         if (!preferencesMatch(persistedPreferences)) {
-          await historyRepository.replaceExercisePreferences(importedExercisePreferences);
+          await writePreferenceSnapshot(importedExercisePreferences);
           persistedPreferences = await historyRepository.readExercisePreferences();
         }
         if (!preferencesMatch(persistedPreferences)) throw new Error('Imported exercise preferences could not be verified');
@@ -6019,7 +6018,7 @@ import { cleanLoadIncrementOverrides, equipmentLoadIncrement } from './src/featu
         if (historyRepository && previous.staged.nutritionLog) restores.push(historyRepository.replaceNutritionDays(cleanNutritionDays(jsonValue(previous.staged.nutritionLog))));
         if (historyRepository && previous.staged.customExercises) restores.push(historyRepository.replaceCustomExercises(jsonValue(previous.staged.customExercises)));
         if (historyRepository && previous.staged.equipmentProfiles) restores.push(historyRepository.replaceEquipmentProfiles(jsonValue(previous.staged.equipmentProfiles)));
-        if (historyRepository && previous.staged.exercisePreferences) restores.push(historyRepository.replaceExercisePreferences(cleanIdbExercisePreferences(jsonValue(previous.staged.exercisePreferences))));
+        if (historyRepository && previous.staged.exercisePreferences) restores.push(writePreferenceSnapshot(cleanIdbExercisePreferences(jsonValue(previous.staged.exercisePreferences))));
         Promise.all(restores).then(function () {
           if (previous.staged.customExercises) databaseCustomExercises = cleanCustomExercises(jsonValue(previous.staged.customExercises));
           if (previous.staged.nutritionLog) databaseNutritionDays = cleanNutritionDays(jsonValue(previous.staged.nutritionLog));
@@ -6039,7 +6038,7 @@ import { cleanLoadIncrementOverrides, equipmentLoadIncrement } from './src/featu
     Object.keys(memoryStore).filter(function(key){return key.indexOf('mmg.recovery.')===0;}).forEach(function(key){store.remove(key);});
     if(storageOk){try{for(var i=window.localStorage.length-1;i>=0;i--){var key=window.localStorage.key(i);if(key&&key.indexOf('mmg.recovery.')===0)window.localStorage.removeItem(key);}}catch(e){}}
     var cleared = historyRepository ? flushAppStateWrites().then(function(){
-      return Promise.all([historyRepository.replaceAll([]), historyRepository.replaceNutritionDays([]), historyRepository.replaceMeasurements([]), historyRepository.replaceCustomExercises([]), historyRepository.replaceEquipmentProfiles([]), historyRepository.replaceExercisePreferences({}), historyRepository.clearProgram()]);
+      return Promise.all([historyRepository.replaceAll([]), historyRepository.replaceNutritionDays([]), historyRepository.replaceMeasurements([]), historyRepository.replaceCustomExercises([]), historyRepository.replaceEquipmentProfiles([]), writePreferenceSnapshot({}), historyRepository.clearProgram()]);
     }).then(function(){return historyRepository.clearUserState();}) : Promise.resolve();
     cleared.then(function(){
       DATA_KEYS.forEach(function(name){var key=K[name];if(!key)return;delete memoryStore[key];if(storageOk){try{window.localStorage.removeItem(key);}catch(e){}}});

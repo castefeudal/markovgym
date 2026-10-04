@@ -21,6 +21,7 @@ const PRECACHE = [
   './src/features/today/v7home-view.mjs',
   './src/features/nutrition/nutritiontrend-view.mjs',
   './src/features/exercise/card-view.mjs',
+  './src/features/exercise/preference-write-queue.mjs',
   './app.js',
   './src/app/router.mjs',
   './src/features/command-palette/search.mjs',

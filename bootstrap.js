@@ -105,6 +105,9 @@ import { normalizeRouteHash, subscribeToHashChanges } from './src/app/router.mjs
       }
     });
     document.body.appendChild(bar);
+    var placeUpdate = function () { var main = document.querySelector('main'); if (main) main.prepend(bar); };
+    placeUpdate();
+    window.addEventListener('mmg:ready', placeUpdate, { once: true });
     window.dispatchEvent(new CustomEvent('mmg:update-ready'));
   }
 

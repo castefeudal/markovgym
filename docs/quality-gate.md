@@ -12,3 +12,5 @@ Windows and Linux baselines are separate because font rasterization differs. Upd
 If port 4173 is occupied, set MMG_E2E_PORT to a free port. Each browser context has isolated storage. Backup schema remains version 10; no data reset is required.
 
 CI runs the four browser projects and visual matrix as separate jobs after the foundation gate. Pages still waits for the overall Quality conclusion and deploys its exact main push SHA.
+
+Cold-start import tests deliberately pause optional catalog preloading. Import must load exercise references before validating a backup; if the catalog is unavailable, no data is changed. Preference persistence, import and rollback share a serialized writer so delayed edits cannot overwrite restored data. The service-worker update notice stays in document flow and is hidden during Run Mode; keyboard and file-picker checks verify that it cannot obstruct critical actions.

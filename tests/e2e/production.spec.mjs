@@ -1410,8 +1410,7 @@ test('library quick scenarios stay synchronized with filters', async ({ page }) 
   await expect(home).toHaveAttribute('aria-pressed', 'false');
 });
 
-test('command palette searches sections and opens the selected route', async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name === 'mobile', 'The command palette launcher is a desktop header control.');
+test('command palette searches sections and opens the selected route', async ({ page }) => {
   await page.goto('/index.html#home');
   await expect(page.locator('html')).toHaveAttribute('data-app-ready', 'true');
   await page.locator('#cmdk-open').click();

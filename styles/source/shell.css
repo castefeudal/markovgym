@@ -1144,3 +1144,8 @@ body[data-v8-returning="true"] .v8-context-bar {
 .cmdk-item[aria-selected="true"] {
   color: var(--text-primary);
 }
+/* @sequence 4510 */
+.mmg-update {
+  position: relative;
+  margin: 12px auto 0;
+}

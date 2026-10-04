@@ -61,13 +61,18 @@ test('an available application update cannot cover active workout controls', asy
     const banner = document.createElement('div');
     banner.id = 'mmg-update'; banner.className = 'mmg-update';
     banner.innerHTML = '<span>Обновление готово</span><button type="button" class="btn btn-primary">Обновить</button>';
-    document.body.appendChild(banner);
+    document.querySelector('main').prepend(banner);
   });
   await expect(page.locator('#mmg-update')).toBeHidden();
   await page.locator('#run-next').click();
   await expect(page.locator('.run-finish-summary')).toBeVisible();
   await page.locator('#run-close').click();
   await expect(page.locator('#mmg-update')).toBeVisible();
+  await page.evaluate(() => window.mmgV7.navigate('settings'));
+  await expect(page.locator('html')).toHaveAttribute('data-route-ready', 'settings');
+  const choosing = page.waitForEvent('filechooser');
+  await page.locator('#data-import').click();
+  await choosing;
 });
 
 test('keyboard navigation focuses the visible title of the destination', async ({ page }) => {

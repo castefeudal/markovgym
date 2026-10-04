@@ -64,7 +64,7 @@ jobs:
           key: ${{ runner.os }}-playwright-${{ matrix.browser }}-${{ hashFiles('package-lock.json') }}
       - run: npx playwright install --with-deps ${{ matrix.browser }}
       - name: Behavior, persistence, keyboard and Axe
-        run: npx playwright test production.spec.mjs accessibility.spec.mjs session-safety.spec.mjs --project=${{ matrix.project }} --workers=2
+        run: npx playwright test production.spec.mjs accessibility.spec.mjs session-safety.spec.mjs backup-cold-start.spec.mjs --project=${{ matrix.project }} --workers=2
       - name: Upload failure artifacts
         if: failure()
         uses: actions/upload-artifact@v4
