@@ -776,7 +776,7 @@ body[data-v7-route="progress"] #progress {
 /* @sequence 2109 */
 @media (max-width:430px) {
   .prog-deltas {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2,minmax(0,1fr));
   }
 }
 /* @sequence 2110 */

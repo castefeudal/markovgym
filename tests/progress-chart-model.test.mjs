@@ -2,6 +2,17 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { progressChartModel } from '../src/features/progress/chart-model.mjs';
 
+test('responsive chart geometry keeps the same measurements and averages', () => {
+  const entries = [{ date: '2026-01-01', weight: 82 }, { date: '2026-01-08', weight: 81 }];
+  const desktop = progressChartModel(entries, 'weight');
+  const mobile = progressChartModel(entries, 'weight', { width: 280 });
+  assert.equal(mobile.width, 280);
+  assert.equal(mobile.points[1].x, 270);
+  assert.deepEqual(mobile.ticks, desktop.ticks);
+  assert.deepEqual(mobile.points.map(({ date, value }) => ({ date, value })), desktop.points.map(({ date, value }) => ({ date, value })));
+  assert.deepEqual(mobile.averagePoints.map(point => point.y), desktop.averagePoints.map(point => point.y));
+});
+
 test('progress chart reports insufficient data for fewer than two valid measurements', () => {
   assert.deepEqual(progressChartModel([], 'weight'), { status: 'insufficient', count: 0, points: [] });
   const one = progressChartModel([{ date: '2026-01-01', weight: 82 }], 'weight');

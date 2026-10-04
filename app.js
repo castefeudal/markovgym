@@ -3738,7 +3738,8 @@ import { cleanLoadIncrementOverrides, equipmentLoadIncrement } from './src/featu
       sleep:{unit:t('hrs'), digits:1, label:S.lang==='en'?'Sleep':'Сон'}
     }[progressMetric] || {unit:t('kg'),digits:1,label:S.lang==='en'?'Weight':'Вес'};
     var field = progressMetric;
-    var model = progressChartModel(S.diary, field);
+    var plotWidth=Math.max(280,Math.min(1000,window.innerWidth-(window.innerWidth<=1024?128:560)));
+    var model = progressChartModel(S.diary, field, {width:plotWidth});
     return renderProgressChart(model, {
       label: cfg.label,
       unit: cfg.unit,
@@ -3767,10 +3768,12 @@ import { cleanLoadIncrementOverrides, equipmentLoadIncrement } from './src/featu
     };
 
     var st = dashSignal();
+    var verdictCopy=v7DiaryConfidence().level==='enough'?t(summary.verdictKey):(S.lang==='en'?'Keep measuring under comparable conditions. There is not enough evidence to adjust the plan yet.':'Продолжай измерения в одинаковых условиях. Данных пока недостаточно для корректировки плана.');
     var html = '<div class="v8-diary-head">' +
         '<p class="eyebrow v8-m0">' + esc(t('diaryTitle')) + '</p>' + signal(st.state, st.label) +
       '</div>' +
       progressChartTabsV10() + progressChart() +
+      '<p class="v8-muted-copy">' + esc(verdictCopy) + '</p>' +
       '<div class="prog-deltas">' +
         '<div class="kpi kpi-accent"><span>' + esc(t('diaryAvg7')) + '</span><b>' +
           (avg7 === null ? '—' : avg7.toFixed(1) + ' ' + t('kg')) + '</b></div>' +
@@ -3779,7 +3782,6 @@ import { cleanLoadIncrementOverrides, equipmentLoadIncrement } from './src/featu
         '<div class="kpi"><span>' + esc(t('diary30')) + '</span><b>' + esc(fmtD(d30, t('kg'))) + '</b></div>' +
         '<div class="kpi"><span>' + esc(t('diaryWaist')) + '</span><b>' + esc(fmtD(waist30, t('cm'))) + '</b></div>' +
       '</div>' +
-      '<p class="v8-muted-copy">' + esc(t(summary.verdictKey)) + '</p>' +
       progressCoachNoteV10() +
       '<div class="prog-log">' + S.diary.slice(0, 30).map(function (d) {
         var bits = [];
@@ -5337,6 +5339,7 @@ import { cleanLoadIncrementOverrides, equipmentLoadIncrement } from './src/featu
     };
     if (MOBILE_MQ.addEventListener) MOBILE_MQ.addEventListener('change', syncMobileBar);
     window.addEventListener('resize', debounce(syncMobileBar, 200), { passive: true });
+    window.addEventListener('resize', debounce(function(){if(v7RouteFromHash()==='progress')renderProgress();},200), { passive: true });
   }
 
   function heroPeek() {

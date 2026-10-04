@@ -13,7 +13,8 @@ function path(points) {
 }
 
 /** Pure plotting geometry for dated measurements. It returns data, never HTML. */
-export function progressChartModel(entries, field, { limit = 60, flatRange = field === 'sleep' ? 0.5 : 1 } = {}) {
+export function progressChartModel(entries, field, { limit = 60, flatRange = field === 'sleep' ? 0.5 : 1, width = WIDTH } = {}) {
+  const plotWidth = Number.isFinite(width) && width >= 240 ? width : WIDTH;
   const latest = new Map();
   for (const entry of Array.isArray(entries) ? entries : []) {
     const value = entry?.[field];
@@ -36,7 +37,7 @@ export function progressChartModel(entries, field, { limit = 60, flatRange = fie
   min -= padding;
   max += padding;
 
-  const x = (index) => PADDING.left + (index / (points.length - 1)) * (WIDTH - PADDING.left - PADDING.right);
+  const x = (index) => PADDING.left + (index / (points.length - 1)) * (plotWidth - PADDING.left - PADDING.right);
   const y = (value) => PADDING.top + (1 - (value - min) / (max - min)) * (HEIGHT - PADDING.top - PADDING.bottom);
   const positioned = points.map((point, index) => ({ ...point, x: x(index), y: y(point.value) }));
   const average = positioned.map((_, index) => {
@@ -53,7 +54,7 @@ export function progressChartModel(entries, field, { limit = 60, flatRange = fie
   return {
     status: 'ready',
     count: positioned.length,
-    width: WIDTH,
+    width: plotWidth,
     height: HEIGHT,
     padding: PADDING,
     points: positioned,

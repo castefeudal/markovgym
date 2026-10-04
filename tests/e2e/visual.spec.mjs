@@ -63,8 +63,18 @@ for (const [size, width, height] of sizes) for (const theme of themes) for (cons
     await page.setViewportSize({ width, height });
     await prepare(page, theme);
     await ready(page, route);
+    if (route === 'progress') {
+      const axisSize = await page.locator('.prog-chart text').first().evaluate(el => parseFloat(getComputedStyle(el).fontSize) * Math.abs(el.getScreenCTM().a));
+      expect(axisSize, 'chart labels must remain readable after SVG scaling').toBeGreaterThanOrEqual(14);
+      await expect(page.locator('#prog-out>.v8-muted-copy')).toContainText('Данных пока недостаточно');
+    }
     await snapshot(page, `${size}-${theme}-${route}`);
     if (['360', '1440'].includes(size)) { const results = await new AxeBuilder({ page }).analyze(); expect(results.violations.filter(v => ['serious', 'critical'].includes(v.impact)), JSON.stringify(results.violations)).toEqual([]); }
+    if (route === 'progress' && size === '1440' && theme === 'obsidian') {
+      await page.setViewportSize({ width: 390, height: 844 });
+      await expect(page.locator('.prog-chart svg')).toHaveAttribute('viewBox', '0 0 280 200');
+      expect(await page.locator('.prog-chart text').first().evaluate(el => parseFloat(getComputedStyle(el).fontSize) * Math.abs(el.getScreenCTM().a))).toBeGreaterThanOrEqual(14);
+    }
   });
 }
 
