@@ -63,6 +63,10 @@ test('mobile rest adjustments change the deadline and survive pause and reload',
   await page.locator('#run-close').click();
   const timer = page.locator('#mobile-rest-timer');
   await expect(timer).toBeVisible();
+  await timer.locator('[data-mobile-rest="plus"]').click({ trial: true });
+  // Let the modal finish closing before freezing animation/timer clocks.
+  // Only the explicit second below should affect the measured adjustment.
+  await page.clock.pauseAt(new Date(await page.evaluate(() => Date.now() + 1000)));
   const before = await page.locator('#mobile-rest-clock').textContent();
   await timer.locator('[data-mobile-rest="plus"]').click();
   await page.clock.runFor(1000);
@@ -72,6 +76,7 @@ test('mobile rest adjustments change the deadline and survive pause and reload',
   await timer.locator('[data-mobile-rest="toggle"]').click();
   await timer.locator('[data-mobile-rest="minus"]').click();
   const paused = await page.locator('#mobile-rest-clock').textContent();
+  await page.clock.resume();
   await page.reload();
   await expect(page.locator('#mmg-boot')).toHaveCount(0);
   await expect(page.locator('#mobile-rest-clock')).toHaveText(paused);
