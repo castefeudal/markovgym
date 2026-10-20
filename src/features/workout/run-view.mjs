@@ -40,12 +40,13 @@
       'assisted-weight':[{key:'reps',label:repLabel},{key:'weight',label:S.lang==='en'?'Assisted weight':'Вес с поддержкой'}],
       'bodyweight-added-weight':[{key:'reps',label:repLabel},{key:'weight',label:S.lang==='en'?'Added weight':'Дополнительный вес'}]
     };
-    var runFields=(trackingFields[tracking]||trackingFields['weight-reps']).map(function(field){
-      var initial=currentSet[field.key]||item[field.key]||(field.key==='duration'&&!ex.custom?item.reps:'');
-      var adjust=field.key==='weight'||field.key==='reps';
-      return '<label>'+esc(field.label)+(adjust?'<span class="run-value-control"><button type="button" data-run-adjust="'+field.key+'" data-direction="-1" aria-label="'+esc(S.lang==='en'?'Decrease '+field.label:'Уменьшить: '+field.label)+'">−</button>':'')+'<input type="text" inputmode="'+(field.key==='duration'?'text':'decimal')+'" data-run-field="'+field.key+'" value="'+esc(initial||'')+'">'+(adjust?'<button type="button" data-run-adjust="'+field.key+'" data-direction="1" aria-label="'+esc(S.lang==='en'?'Increase '+field.label:'Увеличить: '+field.label)+'">+</button></span>':'')+'</label>';
-    }).join('');
     var prev=runReferenceForCurrent();
+    var runFields=(trackingFields[tracking]||trackingFields['weight-reps']).map(function(field){
+      var initial=currentSet[field.key]||item[field.key]||(field.key==='duration'&&!ex.custom?item.reps:'')||(prev&&prev[field.key])||'';
+      var adjust=field.key==='weight'||field.key==='reps';
+      var inputId='run-value-'+field.key;
+      return '<div class="run-field"><label for="'+inputId+'">'+esc(field.label)+'</label>'+(adjust?'<div class="run-value-control"><button type="button" data-run-adjust="'+field.key+'" data-direction="-1" aria-controls="'+inputId+'" aria-label="'+esc(S.lang==='en'?'Decrease '+field.label:'Уменьшить: '+field.label)+'">−</button>':'')+'<input id="'+inputId+'" type="text" inputmode="'+(field.key==='duration'?'text':'decimal')+'" data-run-field="'+field.key+'" value="'+esc(initial||'')+'">'+(adjust?'<button type="button" data-run-adjust="'+field.key+'" data-direction="1" aria-controls="'+inputId+'" aria-label="'+esc(S.lang==='en'?'Increase '+field.label:'Увеличить: '+field.label)+'">+</button></div>':'')+'</div>';
+    }).join('');
     var prevValue=setPerformanceSummary(prev),prevText=prevValue||t('runNoPrev');
     var setStrip=currentLog.map(function(row,idx){var state=row.completed?'done':(idx===runState.set-1?'current':'pending');return '<button class="run-set-chip" type="button" data-state="'+state+'" data-run-set="'+(idx+1)+'" aria-pressed="'+String(state==='current')+'" aria-label="'+esc(t('runJumpSet',{i:idx+1}))+'">'+(idx+1)+'</button>';}).join('');
     var usePrev=prevValue?'<button class="run-use-prev" type="button" data-run-copy-prev><span>'+premiumIcon('progress')+esc(t('runUsePrevious'))+'</span><b>'+esc(t('runUsePreviousValue',{v:prevText}))+'</b></button>':'';

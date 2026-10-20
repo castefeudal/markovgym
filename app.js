@@ -3052,16 +3052,19 @@ import { cleanLoadIncrementOverrides, equipmentLoadIncrement } from './src/featu
     var step=name==='weight'?Math.max(.1,Number(ex&&ex.loadIncrement)||progressionIncrementForExercise(ex)||2.5):1;
     var value=Math.max(name==='reps'?1:0,current+direction*step);value=Math.round((value+Number.EPSILON)*100)/100;
     var row=ensureSetLog(item)[Math.max(0,runState.set-1)];if(row)row[name]=String(value);item[name]=String(value);saveWorkout();renderRun();
+    var control=qs('[data-run-adjust="'+name+'"][data-direction="'+direction+'"]',$('run-stage'));if(control)control.focus({preventScroll:true});
   }
 
   function addRunSet(){
     saveCurrentSetDraft();var item=S.workout[runState.ex];if(!item||Number(item.sets)>=20)return;
-    var log=ensureSetLog(item),previous=log[Math.max(0,runState.set-1)]||{};item.setLog.push(cleanSetRecord({reps:previous.reps||item.reps,weight:previous.weight||item.weight,type:previous.type||'working'}));item.sets=item.setLog.length;item.done=false;runState.set=item.sets;saveWorkout();renderWorkout();renderRun();
+    var log=ensureSetLog(item),previous=log[Math.max(0,runState.set-1)]||{};item.setLog.push(cleanSetRecord({reps:previous.reps||item.reps,weight:previous.weight||item.weight,distance:previous.distance,duration:previous.duration,type:previous.type||'working'}));item.sets=item.setLog.length;item.done=false;runState.set=item.sets;saveWorkout();renderWorkout();renderRun();
   }
 
   function removeRunSet(){
     saveCurrentSetDraft();var item=S.workout[runState.ex];if(!item||Number(item.sets)<=1)return;
-    var log=ensureSetLog(item);log.splice(Math.max(0,runState.set-1),1);item.sets=Math.max(1,log.length);item.setLog=log;item.done=log.every(function(row){return row.completed;});runState.set=Math.min(runState.set,item.sets);runState.lastPRs=[];saveWorkout();renderWorkout();renderRun();
+    var log=ensureSetLog(item),index=Math.max(0,runState.set-1);
+    if(log[index]&&log[index].completed&&!window.confirm(S.lang==='en'?'Delete this completed set? Its recorded result will be removed.':'Удалить выполненный подход? Его записанный результат будет удалён.'))return;
+    log.splice(index,1);item.sets=Math.max(1,log.length);item.setLog=log;item.done=log.every(function(row){return row.completed;});runState.set=Math.min(runState.set,item.sets);runState.lastPRs=[];saveWorkout();renderWorkout();renderRun();
   }
 
   function undoRunSet(){
@@ -5412,8 +5415,8 @@ import { cleanLoadIncrementOverrides, equipmentLoadIncrement } from './src/featu
     var minus = $('timer-minus'), plus = $('timer-plus');
     if (minus && !minus.dataset.bound) {
       minus.dataset.bound = plus.dataset.bound = '1';
-      minus.addEventListener('click', function () { restTimer.left = Math.max(0, restTimer.left - 15); renderTimer(); });
-      plus.addEventListener('click', function () { restTimer.left = Math.min(1800, restTimer.left + 15); renderTimer(); });
+      minus.addEventListener('click', function () { adjustRestTimer(-15); });
+      plus.addEventListener('click', function () { adjustRestTimer(15); });
     }
   }
 
@@ -5656,7 +5659,7 @@ import { cleanLoadIncrementOverrides, equipmentLoadIncrement } from './src/featu
 
   function ensureMobileRestTimer(){
     if($('mobile-rest-timer')) return; var el=document.createElement('div'); el.id='mobile-rest-timer'; el.className='mobile-rest-timer'; el.setAttribute('role','status'); el.innerHTML='<b id="mobile-rest-clock">0:00</b><button type="button" data-mobile-rest="minus">−15</button><button type="button" data-mobile-rest="toggle">Ⅱ</button><button type="button" data-mobile-rest="plus">+15</button>'; document.body.appendChild(el);
-    el.addEventListener('click',function(e){ var b=e.target.closest('[data-mobile-rest]'); if(!b)return; var k=b.dataset.mobileRest; if(k==='minus'){restTimer.left=Math.max(0,restTimer.left-15);renderTimer();} if(k==='plus'){restTimer.left=Math.min(1800,restTimer.left+15);renderTimer();} if(k==='toggle'){if(restTimer.running)stopTimer();else startTimer(restTimer.left||S.rest);} });
+    el.addEventListener('click',function(e){ var b=e.target.closest('[data-mobile-rest]'); if(!b)return; var k=b.dataset.mobileRest; if(k==='minus'){adjustRestTimer(-15);} if(k==='plus'){adjustRestTimer(15);} if(k==='toggle'){if(restTimer.running)stopTimer();else startTimer(restTimer.left||S.rest);} });
   }
 
   function decorateConsoleIcons(){
@@ -5727,7 +5730,7 @@ import { cleanLoadIncrementOverrides, equipmentLoadIncrement } from './src/featu
      Correctness -> data integrity -> usability -> accessibility -> performance.
      This layer deliberately preserves the proven V4 business logic and contracts.
      ======================================================================== */
-  var APP_VERSION = '2026.10-r72-fitness-os';
+  var APP_VERSION = '2026.10-r73-training-controls';
   var BACKUP_SCHEMA = 10;
   K.restTimer = 'mmg.restTimer.v2';
   K.lastBackup = 'mmg.lastBackup.v1';
@@ -5849,6 +5852,12 @@ import { cleanLoadIncrementOverrides, equipmentLoadIncrement } from './src/featu
     var left = Math.max(0,Math.ceil((Number(restTimer.endsAt||0)-Date.now())/1000));
     if (left <= 0) { finishRestTimer(); return; }
     if (left !== restTimer.left) { restTimer.left=left; renderTimer(); }
+  }
+  function adjustRestTimer(delta){
+    var now=Date.now(),left=restTimer.running?Math.max(0,Math.ceil((restTimer.endsAt-now)/1000)):restTimer.left;
+    restTimer.left=clamp(left+delta,0,1800);
+    if(restTimer.running){restTimer.endsAt=now+restTimer.left*1000;if(!restTimer.left){finishRestTimer();return;}}
+    persistRestTimer();renderTimer();
   }
   stopTimer = function(){
     clearInterval(restTimer.id); restTimer.id=0;
@@ -6132,8 +6141,6 @@ import { cleanLoadIncrementOverrides, equipmentLoadIncrement } from './src/featu
       var syncBottomLayer=function(){bottomTimer.classList.toggle('is-raised',MOBILE_MQ.matches&&bottomBar.getAttribute('data-open')==='true');};
       new MutationObserver(syncBottomLayer).observe(bottomBar,{attributes:true,attributeFilter:['data-open']}); syncBottomLayer();
     }
-    var minus=$('timer-minus'),plus=$('timer-plus');
-    [minus,plus].forEach(function(btn){if(btn)btn.addEventListener('click',function(){if(restTimer.running){restTimer.endsAt=Date.now()+Math.max(0,restTimer.left)*1000;persistRestTimer();}});});
     document.addEventListener('visibilitychange',function(){tickRestTimer();persistRestTimer();},{passive:true});
     window.addEventListener('pageshow',tickRestTimer,{passive:true});
     window.mmgDiagnostics={version:APP_VERSION,storagePersistent:storageOk,get storageWarnings(){return storageWarnings.slice();},exerciseCount:EX.length,get customExerciseCount(){return databaseCustomExercises.length;},get equipmentProfileCount(){return databaseEquipmentProfiles.length;},get activeEquipmentProfileId(){return activeEquipmentProfileId;},backupSchema:BACKUP_SCHEMA,get historySchema(){return historyRepository?historyRepository.schemaVersion:0;},get historyCount(){return Array.isArray(databaseHistory)?databaseHistory.length:S.history.length;},get nutritionCount(){return databaseNutritionDays.length;},get userStateReady(){return indexedAppStateReady;},get repositoryReady(){return !!historyRepository;},get lastLocalError(){return lastLocalError;}};
