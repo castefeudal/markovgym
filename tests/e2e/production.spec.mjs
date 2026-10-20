@@ -1051,9 +1051,13 @@ test('Workout superset runs in alternating rounds and survives workout storage',
     await page.locator('#grid [data-add="' + id + '"]').click();
   }
   await page.goto('/index.html#workout');
-  for (const workoutItem of await page.locator('.workout-item').all()) {
-    await workoutItem.locator('[data-field="sets"]').fill('1');
-    await workoutItem.locator('[data-field="sets"]').press('Tab');
+  await expect(page.locator('#mmg-boot')).toHaveCount(0);
+  await expect(page.locator('html')).toHaveAttribute('data-route-ready', 'workout');
+  for (const id of exerciseIds) {
+    const field = page.locator('.workout-item[data-id="' + id + '"] [data-field="sets"]');
+    await field.fill('1');
+    await field.press('Tab');
+    await expect.poll(async () => (await readIndexedUserState(page, 'mmg.workout.v2', [])).find(item => item.id === id)?.sets).toBe(1);
   }
   const firstItem = page.locator('.workout-item').first();
   await firstItem.locator('.workout-group-menu summary').click();
