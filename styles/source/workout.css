@@ -1695,7 +1695,7 @@ body[data-v7-route="workout"] #workout {
   grid-template-columns: repeat(2,minmax(0,1fr));
 }
 /* @sequence 1756 */
-.run-current-inputs label {
+.run-current-inputs .run-field {
   display: grid;
   grid-template-rows: auto 1fr;
   gap: 4px;

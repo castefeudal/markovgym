@@ -1,6 +1,6 @@
 import { readFile, writeFile } from 'node:fs/promises';
 
-const BUILD_VERSION = '2026.10-r72-fitness-os';
+const BUILD_VERSION = '2026.10-r73-training-controls';
 const structuredData = {
   '@context': 'https://schema.org',
   '@type': 'SoftwareApplication',

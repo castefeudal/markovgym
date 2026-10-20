@@ -41,6 +41,62 @@ test('saving the session once opens real progress and removes the repeated Save 
   await expect(page.locator('#v7-home-next')).not.toContainText('Сохранить тренировку');
 });
 
+test('Run Mode fields have unambiguous accessible names and separate adjustment controls', async ({ page }) => {
+  await seed(page);
+  const load = page.getByRole('textbox', { name: 'Вес, кг', exact: true });
+  await expect(load).toHaveValue('60');
+  await page.locator('#run-stage').getByText('Вес, кг', { exact: true }).click();
+  await expect(load).toBeFocused();
+  await expect(page.locator('.run-current-inputs label button')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Увеличить: Вес, кг', exact: true }).click();
+  await expect(load).toHaveValue('62.5');
+  await expect(page.getByRole('button', { name: 'Увеличить: Вес, кг', exact: true })).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(load).toHaveValue('65');
+});
+
+test('mobile rest adjustments change the deadline and survive pause and reload', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.clock.install();
+  await seed(page);
+  await page.locator('#run-rest').click();
+  await page.locator('#run-close').click();
+  const timer = page.locator('#mobile-rest-timer');
+  await expect(timer).toBeVisible();
+  await timer.locator('[data-mobile-rest="plus"]').click({ trial: true });
+  // Let the modal finish closing before freezing animation/timer clocks.
+  // Only the explicit second below should affect the measured adjustment.
+  await page.clock.pauseAt(new Date(await page.evaluate(() => Date.now() + 1000)));
+  const before = await page.locator('#mobile-rest-clock').textContent();
+  await timer.locator('[data-mobile-rest="plus"]').click();
+  await page.clock.runFor(1000);
+  const after = await page.locator('#mobile-rest-clock').textContent();
+  const seconds = value => value.split(':').reduce((total, part) => total * 60 + Number(part), 0);
+  expect(seconds(after) - seconds(before)).toBe(14);
+  await timer.locator('[data-mobile-rest="toggle"]').click();
+  await timer.locator('[data-mobile-rest="minus"]').click();
+  const paused = await page.locator('#mobile-rest-clock').textContent();
+  await page.clock.resume();
+  await page.reload();
+  await expect(page.locator('#mmg-boot')).toHaveCount(0);
+  await expect(page.locator('#mobile-rest-clock')).toHaveText(paused);
+});
+
+test('removing a completed set requires confirmation and cancellation preserves its result', async ({ page }) => {
+  await seed(page);
+  await page.locator('[data-run-add-set]').click();
+  await page.locator('[data-run-set="1"]').click();
+  await page.locator('#run-next').click();
+  await page.locator('[data-run-set="1"]').click();
+  page.once('dialog', dialog => dialog.dismiss());
+  await page.locator('[data-run-remove-set]').click();
+  await expect(page.locator('[data-run-set]')).toHaveCount(2);
+  await expect(page.locator('[data-run-undo]')).toBeVisible();
+  page.once('dialog', dialog => dialog.accept());
+  await page.locator('[data-run-remove-set]').click();
+  await expect(page.locator('[data-run-set]')).toHaveCount(1);
+});
+
 test('the modal traps keyboard focus and returns it to its opener', async ({ page }) => {
   await page.goto('/index.html#library');
   await expect(page.locator('#mmg-boot')).toHaveCount(0);
@@ -78,9 +134,12 @@ test('an available application update cannot cover active workout controls', asy
 test('keyboard navigation focuses the visible title of the destination', async ({ page }) => {
   await page.goto('/index.html#home');
   await expect(page.locator('html')).toHaveAttribute('data-app-ready', 'true');
+  await expect(page.locator('#mmg-boot')).toHaveCount(0);
+  await expect(page.locator('html')).toHaveAttribute('data-route-ready', 'home');
   const link = page.locator('nav a[href="#library"]:visible').first();
   await link.focus();
-  await page.keyboard.press('Enter');
+  await expect(link).toBeFocused();
+  await link.press('Enter');
   await expect(page.locator('html')).toHaveAttribute('data-route-ready', 'library');
   await expect(page.locator('#v8-context-title')).toBeFocused();
   await expect(page.locator('#v8-context-title')).toBeVisible();

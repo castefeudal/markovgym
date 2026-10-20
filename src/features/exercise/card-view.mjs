@@ -15,7 +15,7 @@
         '<span class="card-badge">' + esc(labelZone(ex.zone)) + '</span>' +
         (added ? '<span class="card-status">' + esc(t('inWorkout')) + '</span>' : '') +
         '<button class="fav-btn" type="button" data-fav="' + esc(ex.id) + '" aria-pressed="' + fav + '" aria-label="' +
-          esc(fav ? t('favRemove') : t('favAdd')) + '">' + STAR_SVG + '</button>' +
+          esc((fav ? t('favRemove') : t('favAdd')) + ': ' + name) + '">' + STAR_SVG + '</button>' +
       '</div>' +
       '<div class="card-body">' +
         '<p class="card-target">' + esc(labelMu(ex.target)) + '</p>' +
@@ -24,9 +24,9 @@
         '<div class="card-meta"><span class="meta-tag">' + premiumIcon('equipment') + esc(labelEq(ex.equip)) + '</span>' + meta + '</div>' +
         '<button class="btn btn-quiet btn-sm exercise-preference-trigger" type="button" data-pref-toggle="' + esc(ex.id) + '" aria-label="' + esc((S.lang === 'en' ? 'Set preference for ' : 'Настроить предпочтение: ') + name) + '" title="' + esc(S.lang === 'en' ? 'Personal exercise preference' : 'Личное предпочтение упражнения') + '">' + esc(exercisePreferenceLabel(exercisePreference(ex.id))) + '</button>' +
         '<div class="card-actions">' +
-          '<button class="btn btn-solid btn-sm" type="button" data-open="' + esc(ex.id) + '">' + esc(t('openTechnique')) + '</button>' +
+          '<button class="btn btn-solid btn-sm" type="button" data-open="' + esc(ex.id) + '" aria-label="' + esc(t('openTechnique') + ': ' + name) + '">' + esc(t('openTechnique')) + '</button>' +
           '<button class="btn btn-sm btn-add' + (added ? ' btn-primary' : ' btn-solid') + '" type="button" data-add="' + esc(ex.id) + '" aria-label="' +
-            esc(added ? (S.lang === 'en' ? 'Remove from workout' : 'Убрать из тренировки') : t('addToWorkout')) + '" title="' + esc(added ? t('inWorkout') : t('addToWorkout')) + '">' +
+            esc((added ? (S.lang === 'en' ? 'Remove from workout' : 'Убрать из тренировки') : t('addToWorkout')) + ': ' + name) + '" title="' + esc(added ? t('inWorkout') : t('addToWorkout')) + '">' +
             (added ? premiumIcon('check') : '+') + '</button>' +
         '</div>' +
       '</div>' +

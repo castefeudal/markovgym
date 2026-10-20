@@ -765,6 +765,10 @@ test('distance and duration tracking stay structured from Run Mode into workout 
   await expect(page.locator('[data-run-field="duration"]')).toBeVisible();
   await page.locator('[data-run-field="distance"]').fill('2');
   await page.locator('[data-run-field="duration"]').fill('12:30');
+  await page.locator('[data-run-add-set]').click();
+  await expect(page.locator('[data-run-field="distance"]')).toHaveValue('2');
+  await expect(page.locator('[data-run-field="duration"]')).toHaveValue('12:30');
+  await page.locator('[data-run-remove-set]').click();
   await page.locator('#run-next').click();
   const savedLog = (await readIndexedUserState(page, 'mmg.workout.v2'))[0].setLog[0];
   expect(savedLog).toMatchObject({ distance: '2', duration: '12:30' });
@@ -947,6 +951,7 @@ test('Run Mode announces a history-backed estimated one-rep-max record', async (
   await workoutSets.fill('1');
   await workoutSets.press('Tab');
   await page.locator('[data-v8-start-run]:visible, #w-run:visible').first().click();
+  await expect(page.locator('[data-run-field="weight"]')).toHaveValue('100');
   await page.locator('[data-run-field="weight"]').fill('105');
   const beforeStep = Number(await page.locator('[data-run-field="weight"]').inputValue());
   await page.locator('[data-run-adjust="weight"][data-direction="1"]').click();
@@ -1046,9 +1051,13 @@ test('Workout superset runs in alternating rounds and survives workout storage',
     await page.locator('#grid [data-add="' + id + '"]').click();
   }
   await page.goto('/index.html#workout');
-  for (const workoutItem of await page.locator('.workout-item').all()) {
-    await workoutItem.locator('[data-field="sets"]').fill('1');
-    await workoutItem.locator('[data-field="sets"]').press('Tab');
+  await expect(page.locator('#mmg-boot')).toHaveCount(0);
+  await expect(page.locator('html')).toHaveAttribute('data-route-ready', 'workout');
+  for (const id of exerciseIds) {
+    const field = page.locator('.workout-item[data-id="' + id + '"] [data-field="sets"]');
+    await field.fill('1');
+    await field.press('Tab');
+    await expect.poll(async () => (await readIndexedUserState(page, 'mmg.workout.v2', [])).find(item => item.id === id)?.sets).toBe(1);
   }
   const firstItem = page.locator('.workout-item').first();
   await firstItem.locator('.workout-group-menu summary').click();
