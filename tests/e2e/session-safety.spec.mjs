@@ -134,9 +134,12 @@ test('an available application update cannot cover active workout controls', asy
 test('keyboard navigation focuses the visible title of the destination', async ({ page }) => {
   await page.goto('/index.html#home');
   await expect(page.locator('html')).toHaveAttribute('data-app-ready', 'true');
+  await expect(page.locator('#mmg-boot')).toHaveCount(0);
+  await expect(page.locator('html')).toHaveAttribute('data-route-ready', 'home');
   const link = page.locator('nav a[href="#library"]:visible').first();
   await link.focus();
-  await page.keyboard.press('Enter');
+  await expect(link).toBeFocused();
+  await link.press('Enter');
   await expect(page.locator('html')).toHaveAttribute('data-route-ready', 'library');
   await expect(page.locator('#v8-context-title')).toBeFocused();
   await expect(page.locator('#v8-context-title')).toBeVisible();
